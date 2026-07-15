@@ -1,0 +1,1088 @@
+{
+  "address": "Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA",
+  "metadata": {
+    "name": "agentx_marketplace",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Solana access registry and settlement program for AgentX"
+  },
+  "instructions": [
+    {
+      "name": "consume_access",
+      "discriminator": [
+        78,
+        71,
+        77,
+        216,
+        11,
+        194,
+        243,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "listing",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listing.creator",
+                "account": "AgentListing"
+              },
+              {
+                "kind": "account",
+                "path": "listing.agent_id",
+                "account": "AgentListing"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listing"
+              },
+              {
+                "kind": "account",
+                "path": "access.owner",
+                "account": "AccessGrant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "executor",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_marketplace",
+      "discriminator": [
+        47,
+        81,
+        64,
+        0,
+        96,
+        56,
+        105,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_basis_points",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "purchase_access",
+      "discriminator": [
+        191,
+        249,
+        111,
+        210,
+        163,
+        248,
+        87,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "listing",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listing.creator",
+                "account": "AgentListing"
+              },
+              {
+                "kind": "account",
+                "path": "listing.agent_id",
+                "account": "AgentListing"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listing"
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "relations": [
+            "listing"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "register_agent",
+      "discriminator": [
+        135,
+        157,
+        66,
+        195,
+        2,
+        113,
+        175,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "listing",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "agent_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "agent_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "metadata_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "price_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "pricing_model",
+          "type": {
+            "defined": {
+              "name": "PricingModel"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_agent",
+      "discriminator": [
+        85,
+        2,
+        178,
+        9,
+        119,
+        139,
+        102,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "listing",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listing.creator",
+                "account": "AgentListing"
+              },
+              {
+                "kind": "account",
+                "path": "listing.agent_id",
+                "account": "AgentListing"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "signer": true,
+          "relations": [
+            "listing"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "metadata_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "price_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "pricing_model",
+          "type": {
+            "defined": {
+              "name": "PricingModel"
+            }
+          }
+        },
+        {
+          "name": "active",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "update_marketplace",
+      "discriminator": [
+        72,
+        12,
+        22,
+        71,
+        86,
+        113,
+        79,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "marketplace"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "new_treasury",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "new_fee_basis_points",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AccessGrant",
+      "discriminator": [
+        167,
+        55,
+        184,
+        237,
+        74,
+        242,
+        0,
+        109
+      ]
+    },
+    {
+      "name": "AgentListing",
+      "discriminator": [
+        224,
+        156,
+        61,
+        213,
+        111,
+        100,
+        43,
+        56
+      ]
+    },
+    {
+      "name": "MarketplaceConfig",
+      "discriminator": [
+        169,
+        22,
+        247,
+        131,
+        182,
+        200,
+        81,
+        124
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AccessConsumed",
+      "discriminator": [
+        169,
+        211,
+        211,
+        31,
+        252,
+        108,
+        244,
+        56
+      ]
+    },
+    {
+      "name": "AccessPurchased",
+      "discriminator": [
+        181,
+        7,
+        225,
+        172,
+        63,
+        248,
+        25,
+        38
+      ]
+    },
+    {
+      "name": "AgentRegistered",
+      "discriminator": [
+        191,
+        78,
+        217,
+        54,
+        232,
+        100,
+        189,
+        85
+      ]
+    },
+    {
+      "name": "AgentUpdated",
+      "discriminator": [
+        210,
+        179,
+        162,
+        250,
+        123,
+        250,
+        210,
+        166
+      ]
+    },
+    {
+      "name": "MarketplaceInitialized",
+      "discriminator": [
+        22,
+        167,
+        42,
+        34,
+        172,
+        55,
+        155,
+        14
+      ]
+    },
+    {
+      "name": "MarketplaceUpdated",
+      "discriminator": [
+        76,
+        144,
+        13,
+        244,
+        21,
+        28,
+        23,
+        203
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "FeeTooHigh",
+      "msg": "Marketplace fee cannot exceed 10%"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidAddress",
+      "msg": "The supplied address is invalid"
+    },
+    {
+      "code": 6002,
+      "name": "UnauthorizedAuthority",
+      "msg": "Only the marketplace authority may perform this action"
+    },
+    {
+      "code": 6003,
+      "name": "UnauthorizedCreator",
+      "msg": "Only the listing creator may perform this action"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMetadata",
+      "msg": "The listing metadata hash cannot be empty"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidFreePrice",
+      "msg": "Free listings must have a zero price"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidPaidPrice",
+      "msg": "Paid listings must have a non-zero price"
+    },
+    {
+      "code": 6007,
+      "name": "ListingPaused",
+      "msg": "This listing is paused"
+    },
+    {
+      "code": 6008,
+      "name": "CreatorCannotBeTreasury",
+      "msg": "The creator and marketplace treasury must be different accounts"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidTreasury",
+      "msg": "The marketplace treasury account is invalid"
+    },
+    {
+      "code": 6010,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6011,
+      "name": "AccessAlreadyPermanent",
+      "msg": "Permanent access has already been purchased"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidAccessOwner",
+      "msg": "The access owner is invalid"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidListing",
+      "msg": "The access grant does not belong to this listing"
+    },
+    {
+      "code": 6014,
+      "name": "UnauthorizedExecutor",
+      "msg": "The executor cannot consume this access grant"
+    },
+    {
+      "code": 6015,
+      "name": "AccessDenied",
+      "msg": "Access is not active"
+    },
+    {
+      "code": 6016,
+      "name": "SubscriptionExpired",
+      "msg": "The subscription has expired"
+    },
+    {
+      "code": 6017,
+      "name": "NoRunCredits",
+      "msg": "No run credits remain"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccessConsumed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "usage_count",
+            "type": "u64"
+          },
+          {
+            "name": "remaining_runs",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessGrant",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "permanent",
+            "type": "bool"
+          },
+          {
+            "name": "expires_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "remaining_runs",
+            "type": "u32"
+          },
+          {
+            "name": "usage_count",
+            "type": "u64"
+          },
+          {
+            "name": "last_purchase_at",
+            "type": "i64"
+          },
+          {
+            "name": "last_used_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessPurchased",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "pricing_model",
+            "type": {
+              "defined": {
+                "name": "PricingModel"
+              }
+            }
+          },
+          {
+            "name": "price_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "fee_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "remaining_runs",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentListing",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "metadata_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "pricing_model",
+            "type": {
+              "defined": {
+                "name": "PricingModel"
+              }
+            }
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "total_purchases",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "metadata_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "pricing_model",
+            "type": {
+              "defined": {
+                "name": "PricingModel"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "metadata_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "pricing_model",
+            "type": {
+              "defined": {
+                "name": "PricingModel"
+              }
+            }
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketplaceConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_basis_points",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketplaceInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_basis_points",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketplaceUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_basis_points",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricingModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Free"
+          },
+          {
+            "name": "OneTime"
+          },
+          {
+            "name": "Subscription"
+          },
+          {
+            "name": "PayPerUse"
+          }
+        ]
+      }
+    }
+  ]
+}

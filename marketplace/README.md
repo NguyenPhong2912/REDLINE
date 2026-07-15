@@ -18,11 +18,12 @@ Working now:
 - Track purchases, runs, access, notifications, votes, and creator settings locally.
 - Inspect responsive marketplace, dashboard, profile, settings, governance, and runtime views.
 
-Prepared but not deployed:
+Built and ready for a funded Devnet deployment:
 
 - `programs/agentx_marketplace` contains the Anchor marketplace, listing, and access-grant PDAs.
 - The program implements configurable fee splitting, permanent access, timed subscriptions, run credits, access consumption, events, constraints, and custom errors.
-- A wallet-funded program deployment and generated IDL are still required before the UI can replace prototype direct transfers with atomic program settlement.
+- `anchor build` produces the reviewed IDL and TypeScript contract in `src/idl` for program ID `Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA`.
+- A wallet-funded Devnet deployment and marketplace initialization are still required before the UI can replace prototype direct transfers with atomic program settlement.
 
 The app never labels seed listings as on-chain verified. Draft and demo states remain visible in the UI.
 
@@ -107,13 +108,13 @@ anchor test
 
 Before Devnet deployment:
 
-1. Run `anchor keys sync` so `declare_id!`, `Anchor.toml`, and the generated deployment keypair match.
-2. Fund the deployment wallet with Devnet SOL.
-3. Initialize the marketplace PDA with a separate treasury account and the desired fee basis points.
-4. Set `NEXT_PUBLIC_MARKETPLACE_PROGRAM_ID` to the deployed address.
-5. Generate and review the IDL client before enabling atomic program settlement in the UI.
+1. Keep the generated program keypair private and confirm it resolves to the configured program ID.
+2. Fund the deployment wallet with enough Devnet SOL for the program-data and buffer accounts.
+3. Run `anchor deploy`, then verify the executable account on Devnet.
+4. Initialize the marketplace PDA with a separate treasury account and the desired fee basis points.
+5. Use the checked-in IDL client when replacing prototype direct transfers with atomic program settlement.
 
-Program deployment spends wallet funds and requires explicit wallet approval. It is intentionally not automated by this repository.
+Program deployment spends wallet funds and requires explicit wallet approval.
 
 ## Business Model
 

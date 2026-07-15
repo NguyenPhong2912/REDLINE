@@ -8,7 +8,7 @@ import {
 
 export const MARKETPLACE_PROGRAM_ADDRESS = address(
   process.env.NEXT_PUBLIC_MARKETPLACE_PROGRAM_ID ??
-    "H6VwUUKHsBs6WdoJbye69E3124Fuo877azj9D9HqvniD",
+    "Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA",
 );
 
 const addressEncoder = getAddressEncoder();
