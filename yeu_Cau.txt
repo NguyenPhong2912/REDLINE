@@ -1,0 +1,21 @@
+Track thi đấu 1: Best Product & Business
+Trao cho đội có sản phẩm khả thi thương mại nhất.
+Track này tập trung vào khả năng xác định đúng bài toán thị trường, hiểu rõ người dùng mục tiêu, xây dựng mô hình kinh doanh hoặc doanh thu hợp lý, và chứng minh được tiềm năng go-to-market cũng như khả năng mở rộng sau cuộc thi.
+Tiêu chí đánh giá chính:
+Mức độ rõ ràng của bài toán thị trường
+Chân dung người dùng mục tiêu và nhu cầu thực tế
+Tính khả thi của mô hình kinh doanh/doanh thu
+Chiến lược go-to-market và khả năng mở rộng
+Trải nghiệm sản phẩm, tính dễ dùng và mức độ hoàn thiện prototype
+Khả năng trình bày, thuyết phục và phản biện trước Ban Giám khảo
+
+Track thi đấu 2: Best Technical Build
+Trao cho đội có chất lượng kỹ thuật cao nhất.
+Track này tập trung vào độ khó kỹ thuật, kiến trúc hệ thống, chất lượng triển khai, mức độ tận dụng hạ tầng blockchain/Solana stack, khả năng kết hợp on-chain/off-chain, code sạch và mức độ hoàn thiện sản phẩm.
+Tiêu chí đánh giá chính:
+Độ khó và chiều sâu kỹ thuật của giải pháp
+Kiến trúc on-chain/off-chain hợp lý
+Chất lượng smart contract, chương trình on-chain hoặc tích hợp blockchain
+Mức độ tận dụng Solana stack, composability, hiệu năng và hạ tầng Web3
+Chất lượng code, bảo mật, khả năng mở rộng và khả năng bảo trì
+Tính sáng tạo công nghệ và mức độ hoàn thiện demo/prototype

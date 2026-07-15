@@ -1,0 +1,10 @@
+# Workspace-local files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Anchor and Solana generated output
+marketplace/target/
+marketplace/.anchor/
+marketplace/test-ledger/

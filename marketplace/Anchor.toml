@@ -1,0 +1,23 @@
+[toolchain]
+anchor_version = "1.0.2"
+solana_version = "3.1.10"
+package_manager = "npm"
+
+[features]
+resolution = true
+
+[programs.localnet]
+agentx_marketplace = "H6VwUUKHsBs6WdoJbye69E3124Fuo877azj9D9HqvniD"
+
+[programs.devnet]
+agentx_marketplace = "H6VwUUKHsBs6WdoJbye69E3124Fuo877azj9D9HqvniD"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cargo test -p agentx-marketplace"
+
+[workspace]
+types = "src/idl/"
