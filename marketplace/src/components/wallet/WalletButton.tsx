@@ -19,6 +19,19 @@ function formatBalance(lamports: bigint | null) {
   return `${(Number(lamports) / 1_000_000_000).toFixed(3)} SOL`;
 }
 
+function getConnectionErrorMessage(cause: unknown) {
+  const message = cause instanceof Error ? cause.message.toLowerCase() : "";
+
+  if (message.includes("set up") || message.includes("initialize")) {
+    return "Open your wallet extension and finish setup, then try again.";
+  }
+  if (message.includes("reject") || message.includes("cancel")) {
+    return "The wallet connection request was cancelled.";
+  }
+
+  return "Wallet connection failed. Check your wallet and try again.";
+}
+
 export default function WalletButton() {
   const {
     connect,
@@ -33,6 +46,7 @@ export default function WalletButton() {
   const { lamports } = useBalance(address);
   const [open, setOpen] = useState(false);
   const [pendingConnector, setPendingConnector] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,9 +62,12 @@ export default function WalletButton() {
 
   async function handleConnect(connectorId: string) {
     setPendingConnector(connectorId);
+    setConnectionError(null);
     try {
       await connect(connectorId, { allowInteractiveFallback: true });
       setOpen(false);
+    } catch (cause) {
+      setConnectionError(getConnectionErrorMessage(cause));
     } finally {
       setPendingConnector(null);
     }
@@ -155,7 +172,7 @@ export default function WalletButton() {
                     <button
                       key={connector.id}
                       type="button"
-                      onClick={() => handleConnect(connector.id)}
+                      onClick={() => void handleConnect(connector.id)}
                       disabled={status === "connecting"}
                       className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-60"
                       role="menuitem"
@@ -193,10 +210,10 @@ export default function WalletButton() {
                   </div>
                 </div>
               )}
-              {Boolean(error) && (
+              {(connectionError || Boolean(error)) && (
                 <p className="mt-2 flex items-start gap-2 rounded-md bg-danger-dim p-2 text-xs text-danger">
                   <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Wallet connection failed. Please retry.
+                  {connectionError ?? "Wallet connection failed. Check your wallet and try again."}
                 </p>
               )}
             </div>

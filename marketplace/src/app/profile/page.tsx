@@ -115,7 +115,7 @@ export default function ProfilePage() {
             { label: "Agents", value: userAgents.length.toString(), icon: Bot, color: "text-primary-hover" },
             { label: "Gross volume", value: formatToken(totalEarnings, "SOL"), icon: Coins, color: "text-success" },
             { label: "Average rating", value: averageRating ? averageRating.toFixed(1) : "N/A", icon: Star, color: "text-warning" },
-            { label: "Agent users", value: totalUsers.toLocaleString(), icon: Users, color: "text-accent" },
+            { label: "Agent users", value: totalUsers.toLocaleString("en-US"), icon: Users, color: "text-accent" },
           ].map((stat, index) => {
             const Icon = stat.icon;
             return (

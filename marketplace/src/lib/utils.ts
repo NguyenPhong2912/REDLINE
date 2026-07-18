@@ -5,6 +5,8 @@
 import { clsx, type ClassValue } from "clsx";
 import type { Currency } from "@/types";
 
+const DISPLAY_LOCALE = "en-US";
+
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
@@ -12,12 +14,12 @@ export function cn(...inputs: ClassValue[]) {
 export function formatNumber(num: number): string {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
   if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-  return num.toLocaleString();
+  return num.toLocaleString(DISPLAY_LOCALE);
 }
 
 export function formatToken(amount: number, currency: Currency = "SOL"): string {
   const maximumFractionDigits = currency === "USDC" ? 2 : 3;
-  return `${amount.toLocaleString(undefined, {
+  return `${amount.toLocaleString(DISPLAY_LOCALE, {
     minimumFractionDigits: amount < 1 ? 2 : 0,
     maximumFractionDigits,
   })} ${currency}`;
@@ -28,7 +30,7 @@ export function formatSOL(amount: number): string {
 }
 
 export function formatUSD(amount: number): string {
-  return "$" + amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + amount.toLocaleString(DISPLAY_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function formatDate(dateString: string): string {
