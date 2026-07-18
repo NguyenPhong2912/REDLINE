@@ -18,14 +18,16 @@ Working now:
 - Track purchases, runs, access, notifications, votes, and creator settings locally.
 - Inspect responsive marketplace, dashboard, profile, settings, governance, and runtime views.
 
-Built and ready for a funded Devnet deployment:
+Deployed on Solana Devnet on July 18, 2026:
 
 - `programs/agentx_marketplace` contains the Anchor marketplace, listing, and access-grant PDAs.
 - The program implements configurable fee splitting, permanent access, timed subscriptions, run credits, access consumption, events, constraints, and custom errors.
-- `anchor build` produces the reviewed IDL and TypeScript contract in `src/idl` for program ID `Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA`.
-- A wallet-funded Devnet deployment and marketplace initialization are still required before the UI can replace prototype direct transfers with atomic program settlement.
+- Program [`Ccgw6...TqHA`](https://explorer.solana.com/address/Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA?cluster=devnet) is executable and upgradeable under the documented deployment authority.
+- The uploaded IDL exactly matches `src/idl/agentx_marketplace.json` and is discoverable through metadata account `8xgbLPS8CrkuoUibiq9wp69wUDmychPegTisQE81fZJT`.
+- Marketplace PDA [`3Wim1...KNV5`](https://explorer.solana.com/address/3Wim1YU4EBjwfpYSXHeZhtN884in5j9m4BPzQWdQKNV5?cluster=devnet) is initialized with a separate treasury and a 2.5% fee.
+- Public addresses, finalized transaction signatures, slots, and the IDL digest are recorded in [`deployments/devnet.json`](deployments/devnet.json).
 
-The app never labels seed listings as on-chain verified. Draft and demo states remain visible in the UI.
+The program is live, but the current browser purchase flow still uses its clearly labeled prototype direct-transfer path. Seed listings are not represented as registered on-chain until the UI is wired to `register_agent` and `purchase_access`.
 
 ## Architecture
 
@@ -106,13 +108,21 @@ npm run test:program
 anchor test
 ```
 
-Before Devnet deployment:
+For a new deployment:
 
 1. Keep the generated program keypair private and confirm it resolves to the configured program ID.
 2. Fund the deployment wallet with enough Devnet SOL for the program-data and buffer accounts.
 3. Run `anchor deploy`, then verify the executable account on Devnet.
-4. Initialize the marketplace PDA with a separate treasury account and the desired fee basis points.
-5. Use the checked-in IDL client when replacing prototype direct transfers with atomic program settlement.
+4. Upload the generated IDL with `anchor idl init`.
+5. Initialize the marketplace PDA with a funded, separate treasury account:
+
+```bash
+AGENTX_TREASURY=<TREASURY_ADDRESS> \
+AGENTX_FEE_BASIS_POINTS=250 \
+npm run migrate:devnet
+```
+
+The migration is idempotent. It verifies an existing account and stops if its treasury or fee differs from the requested configuration.
 
 Program deployment spends wallet funds and requires explicit wallet approval.
 

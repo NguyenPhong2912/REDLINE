@@ -27,7 +27,7 @@ The TypeScript helpers in `src/lib/solana/marketplace.ts` use the same seeds as 
 
 ### Browser
 
-The browser is untrusted. Paid prototype runs establish a short-lived wallet session by verifying an Ed25519 challenge, then submit the Devnet payment signature for RPC verification. Deployed authorization must read the access PDA instead of trusting local state.
+The browser is untrusted. Paid prototype runs establish a short-lived wallet session by verifying an Ed25519 challenge, then submit the Devnet payment signature for RPC verification. Production authorization must read the deployed access PDA instead of trusting local state.
 
 ### Route Handlers
 
@@ -37,21 +37,26 @@ Routes hold provider credentials and enforce request size, shape, rate limits, w
 
 The program is the intended settlement and authorization source. Account seeds, signer constraints, checked arithmetic, fee caps, treasury validation, listing status, expiration, and credit balances are enforced on-chain.
 
+## Devnet Deployment
+
+The executable program, uploaded IDL, and singleton marketplace config are live on Devnet. The checked-in deployment record contains their public addresses, finalized transaction signatures, slots, and IDL checksum. Deployment and treasury keypairs remain outside the repository.
+
 ## Prototype Gap
 
-The current UI uses a direct Devnet SOL transfer and writes the access grant to persisted browser state. This keeps the demo usable before deployment but has two known limitations:
+The current UI uses a direct Devnet SOL transfer and writes the access grant to persisted browser state. This keeps the demo usable while client integration with the deployed program is completed, but it has two known limitations:
 
 1. Payment and grant creation are not atomic.
 2. A local grant is not authoritative across devices or servers.
 
-After deployment, purchase and consume calls should be generated from the reviewed IDL, and `/api/ai/chat` should verify the access PDA plus a short-lived signed wallet session.
+Purchase and consume calls should now be generated from the reviewed IDL, and `/api/ai/chat` should verify the access PDA plus a short-lived signed wallet session.
 
 ## Scale Path
 
-1. Deploy and initialize the program on Devnet.
-2. Replace direct transfers with `purchase_access` transactions.
-3. Add wallet challenge signing and server-side PDA verification.
-4. Move metadata JSON to durable object storage or IPFS and anchor its digest.
-5. Add SPL token settlement through Token-2022 interfaces.
-6. Index events for creator analytics and marketplace search.
-7. Move rate limits and run accounting to shared infrastructure.
+Completed: deploy the program, upload its IDL, and initialize the marketplace on Devnet.
+
+1. Replace direct transfers with `purchase_access` transactions.
+2. Read access PDAs in the server authorization path.
+3. Move metadata JSON to durable object storage or IPFS and anchor its digest.
+4. Add SPL token settlement through Token-2022 interfaces.
+5. Index events for creator analytics and marketplace search.
+6. Move rate limits and run accounting to shared infrastructure.

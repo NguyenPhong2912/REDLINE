@@ -1,0 +1,17 @@
+{
+  "cluster": "devnet",
+  "deployedAt": "2026-07-18T05:21:10Z",
+  "programId": "Ccgw6kq1PQfE5zx6EpFixNEafvRMu4udzZuNWmvzTqHA",
+  "programDataAddress": "Ce1euKw23gXp41jGeAvXusQUi3AXxzdFVDYJvbA27W8B",
+  "programAuthority": "44fmBmNF1wn3jYLWM1X3zrpBaTxgJymTSUkuxxYSLe8x",
+  "programDeploySignature": "2L2zjNzJE6znLxh6FHkhKE18ZNy4GWwfbjfPU8mvQ6fuwucYeSmM8BYL4AnmCX6yfY73uvqmBegHqbMAYoQmkfkM",
+  "programDeploySlot": 477073525,
+  "idlMetadataAddress": "8xgbLPS8CrkuoUibiq9wp69wUDmychPegTisQE81fZJT",
+  "idlSha256": "24e425f34e44e81d71b95c312f439d4f7406a26a0e82747a2635605bb319ce47",
+  "marketplacePda": "3Wim1YU4EBjwfpYSXHeZhtN884in5j9m4BPzQWdQKNV5",
+  "marketplaceAuthority": "44fmBmNF1wn3jYLWM1X3zrpBaTxgJymTSUkuxxYSLe8x",
+  "treasury": "HPWcjt1spD9oDNxXZSSU5nkXvM2ZaGXGjZUvUVLQzeuE",
+  "feeBasisPoints": 250,
+  "marketplaceInitializeSignature": "4JnHVwH7qkcCjYq22shtq4Epfpj3PhHXcZcuWmGAF1h3LoTWqcVqWVbyzHk8ZuP7ZnG28pKefHUdYkiETua4x6JD",
+  "marketplaceInitializeSlot": 477076278
+}

@@ -43,11 +43,11 @@ Say: "The Anchor program keeps only settlement and access state on-chain. AI exe
 
 ## 2:50 - Close
 
-Say: "The initial wedge is security, analytics, and protocol operations for Solana teams. Revenue is a configurable settlement fee, while creators choose the access model. The next milestone is Devnet program deployment, signed wallet sessions, and event indexing."
+Say: "The initial wedge is security, analytics, and protocol operations for Solana teams. Revenue is a configurable settlement fee, while creators choose the access model. The program and marketplace config are live on Devnet; the next milestone is wiring purchases to the program and indexing its events."
 
 ## Approval Checklist
 
 - Wallet connection: user approval in the wallet.
 - Paid agent: Devnet SOL transfer approval.
 - Live AI: local `OPENAI_API_KEY` configuration.
-- Program deployment: funded deployment wallet and explicit approval.
+- Program upgrades: funded deployment wallet and explicit approval.
