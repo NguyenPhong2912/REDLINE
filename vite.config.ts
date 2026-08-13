@@ -17,6 +17,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  // GitHub Pages serves this repository from /CSaCLAB/.
+  // Keep the root path for local development and other hosts such as Netlify.
+  base: process.env.GITHUB_ACTIONS ? '/CSaCLAB/' : '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
