@@ -1,13 +1,23 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "redline",
   "private": true,
   "version": "0.0.1",
+  "description": "Guardrailed autonomous DeFi agents on Solana.",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite"
+    "build": "npm run typecheck && vite build",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@solana-program/memo": "0.13.0",
+    "@solana/kit": "8.0.0",
+    "@solana/kit-plugin-rpc": "0.18.0",
+    "@solana/kit-plugin-wallet": "0.18.0",
+    "@solana/react": "8.0.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
@@ -49,6 +59,9 @@
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
     "next-themes": "0.4.6",
+    "openai": "7.5.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-day-picker": "8.10.1",
     "react-dnd": "16.0.1",
     "react-dnd-html5-backend": "16.0.1",
@@ -56,7 +69,7 @@
     "react-popper": "2.3.0",
     "react-resizable-panels": "2.1.7",
     "react-responsive-masonry": "2.7.1",
-    "react-router": "7.13.0",
+    "react-router": "7.18.2",
     "react-slick": "0.31.0",
     "recharts": "2.15.2",
     "sonner": "2.0.3",
@@ -65,26 +78,27 @@
     "vaul": "1.1.2"
   },
   "devDependencies": {
+    "@types/node": "24.3.0",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.1.12",
-    "vite": "6.3.5"
+    "typescript": "5.9.2",
+    "vitest": "4.1.11",
+    "vite": "6.4.3"
   },
-  "peerDependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
+  "overrides": {
+    "nanoid": "3.3.18",
+    "postcss": "8.5.26",
+    "tar": "7.5.22"
   },
   "pnpm": {
     "overrides": {
-      "vite": "6.3.5"
+      "vite": "6.4.3",
+      "nanoid": "3.3.18",
+      "postcss": "8.5.26",
+      "tar": "7.5.22"
     }
   }
 }

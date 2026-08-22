@@ -16,6 +16,13 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPie,
   Pie, Cell, RadialBarChart, RadialBar,
 } from "recharts";
+import { PolicyProofButton } from "./components/PolicyProofButton";
+import { SolanaWalletControl } from "./components/SolanaWalletControl";
+import {
+  requestRiskAssessment,
+  type AgentPolicyInput,
+  type RiskAssessment,
+} from "./lib/risk-engine";
 
 /* ── palette ── */
 const M = "#00ffc4";
@@ -66,20 +73,20 @@ const pieData = [
 ];
 
 const AGENTS_DATA = [
-  { id: 1, name: "QuantTrader-Pro", tag: "DeFi Trading", pnl: "+$4,821", pnlN: 4821, up: true, status: "ACTIVE", exp: "01:42:18", apy: "12.4%", ops: 12847, winRate: 94.2, uptime: 99.8, accent: M, hash: "0x4f3a...82Bc" },
-  { id: 2, name: "ArbitrageBot-v3", tag: "Cross-DEX", pnl: "+$1,203", pnlN: 1203, up: true, status: "ACTIVE", exp: "04:11:03", apy: "8.7%", ops: 8203, winRate: 91.8, uptime: 98.9, accent: C, hash: "0x7c1d...3f09" },
-  { id: 3, name: "NLPOracle-gpt4", tag: "Oracle", pnl: "+$390", pnlN: 390, up: true, status: "ACTIVE", exp: "00:28:44", apy: "—", ops: 5829, winRate: 85.3, uptime: 99.1, accent: "#8b5cf6", hash: "0x9e2b...a4f1" },
-  { id: 4, name: "YieldOptimizer-X", tag: "Yield", pnl: "-$142", pnlN: -142, up: false, status: "PAUSED", exp: "EXPIRED", apy: "8.74%", ops: 4102, winRate: 88.7, uptime: 99.6, accent: A, hash: "0x2a8c...71d2" },
-  { id: 5, name: "SentinelWatch-v1", tag: "Risk Monitor", pnl: "$0", pnlN: 0, up: true, status: "IDLE", exp: "12:00:00", apy: "—", ops: 41002, winRate: 97.1, uptime: 100, accent: C, hash: "0x5f7e...c3b8" },
+  { id: 1, name: "QuantPilot", tag: "DeFi Trading", pnl: "+$4,821", pnlN: 4821, up: true, status: "ACTIVE", exp: "01:42:18", apy: "12.4%", ops: 12847, winRate: 94.2, uptime: 99.8, accent: M, hash: "7Aqv…fK3p" },
+  { id: 2, name: "RouteScout", tag: "Cross-DEX", pnl: "+$1,203", pnlN: 1203, up: true, status: "ACTIVE", exp: "04:11:03", apy: "8.7%", ops: 8203, winRate: 91.8, uptime: 98.9, accent: C, hash: "9Nm2…Qx7d" },
+  { id: 3, name: "SignalOracle", tag: "Oracle", pnl: "+$390", pnlN: 390, up: true, status: "ACTIVE", exp: "00:28:44", apy: "—", ops: 5829, winRate: 85.3, uptime: 99.1, accent: "#8b5cf6", hash: "4Ytp…mR8a" },
+  { id: 4, name: "YieldGuard", tag: "Yield", pnl: "-$142", pnlN: -142, up: false, status: "PAUSED", exp: "EXPIRED", apy: "8.74%", ops: 4102, winRate: 88.7, uptime: 99.6, accent: A, hash: "2Kzw…vH6n" },
+  { id: 5, name: "RiskSentinel", tag: "Risk Monitor", pnl: "$0", pnlN: 0, up: true, status: "IDLE", exp: "12:00:00", apy: "—", ops: 41002, winRate: 97.1, uptime: 100, accent: C, hash: "6Fsa…pT4c" },
 ];
 
 const MARKETPLACE_AGENTS = [
-  { id: 1, name: "QuantTrader Pro", version: "v4.2.1", tag: "DeFi Trading", desc: "Adaptive multi-factor momentum strategy with on-chain sentiment fusion and flash-loan arbitrage execution.", hash: "0x4f3a9c2b...82BcE1", deployer: "0x71C7...3fA2", winRate: 94.2, apy: 187.4, latency: 84, executions: "12,847", uptime: 99.8, verified: true, featured: true, price: "0.24 ETH", rent: "0.008 ETH/day", accent: M, accentB: C, tags: ["Flash Loan", "MEV", "Mainnet"], stars: 4.9, reviews: 312 },
-  { id: 2, name: "YieldMaxx Omega", version: "v2.8.0", tag: "Yield Optimizer", desc: "Auto-compounding vault harvester with multi-protocol yield aggregation across Aave, Compound, and Yearn.", hash: "0x9e2ba41f...c3D809", deployer: "0x2a8c...71d2", winRate: 88.7, apy: 124.9, latency: 142, executions: "8,203", uptime: 99.6, verified: true, featured: false, price: "0.15 ETH", rent: "0.005 ETH/day", accent: A, accentB: "#f59e0b", tags: ["Auto-Compound", "Multi-Protocol", "L2"], stars: 4.7, reviews: 198 },
-  { id: 3, name: "SentinelGuard AI", version: "v1.5.3", tag: "Risk Monitor", desc: "Real-time on-chain risk oracle with ML-powered rug detection, anomaly scoring, and auto-exit triggers.", hash: "0x5f7ec3b8...a19F44", deployer: "0x7c1d...3f09", winRate: 97.1, apy: 0, latency: 31, executions: "41,002", uptime: 100, verified: true, featured: false, price: "0.09 ETH", rent: "0.003 ETH/day", accent: C, accentB: "#3b82f6", tags: ["Risk AI", "Anti-Rug", "Alerts"], stars: 4.95, reviews: 541 },
-  { id: 4, name: "ArbitrageBot X3", version: "v3.1.0", tag: "DeFi Trading", desc: "Cross-DEX triangular arbitrage engine scanning 14 liquidity pools simultaneously with sub-100ms execution.", hash: "0x7c1d3f09...bb4A12", deployer: "0x9e2b...a4f1", winRate: 91.8, apy: 203.2, latency: 67, executions: "19,441", uptime: 98.9, verified: true, featured: false, price: "0.31 ETH", rent: "0.010 ETH/day", accent: M, accentB: C, tags: ["Cross-DEX", "Triangle", "Mempool"], stars: 4.8, reviews: 267 },
-  { id: 5, name: "NLPOracle GPT-4", version: "v2.2.7", tag: "Oracle & Data", desc: "LLM-powered on-chain data publisher aggregating news sentiment, social signals, and macro indicators.", hash: "0x2a8c71d2...f80C31", deployer: "0x5f7e...c3b8", winRate: 85.3, apy: 62.1, latency: 210, executions: "5,829", uptime: 99.1, verified: false, featured: false, price: "0.12 ETH", rent: "0.004 ETH/day", accent: "#8b5cf6", accentB: C, tags: ["GPT-4", "Sentiment", "Oracle"], stars: 4.6, reviews: 94 },
-  { id: 6, name: "CrossBridge Ultra", version: "v1.9.2", tag: "Cross-Chain", desc: "Unified cross-chain liquidity router with native bridging across 8 EVM chains and Cosmos IBC.", hash: "0x1b4e8a7c...220Bd9", deployer: "0x4f3a...82Bc", winRate: 96.4, apy: 94.7, latency: 390, executions: "7,112", uptime: 99.4, verified: true, featured: false, price: "0.19 ETH", rent: "0.006 ETH/day", accent: C, accentB: "#06b6d4", tags: ["IBC", "8 Chains", "Bridging"], stars: 4.75, reviews: 163 },
+  { id: 1, name: "QuantPilot", version: "v1.2.0", tag: "DeFi Trading", desc: "Guardrailed momentum agent with pre-trade simulation, Jupiter route checks, and explicit spend limits.", hash: "7Aqv…fK3p", deployer: "3Gds…nE9u", winRate: 94.2, apy: 18.4, latency: 84, executions: "12,847", uptime: 99.8, verified: true, featured: true, price: "1.20 SOL", rent: "0.04 SOL/day", accent: M, accentB: C, tags: ["Jupiter", "Simulation", "Devnet"], stars: 4.9, reviews: 312 },
+  { id: 2, name: "YieldGuard", version: "v1.1.0", tag: "Yield Optimizer", desc: "Policy-bounded yield monitor that proposes rebalances and pauses when liquidity or oracle risk rises.", hash: "2Kzw…vH6n", deployer: "8Tqm…sL2j", winRate: 88.7, apy: 14.9, latency: 142, executions: "8,203", uptime: 99.6, verified: true, featured: false, price: "0.85 SOL", rent: "0.03 SOL/day", accent: A, accentB: "#f59e0b", tags: ["Yield", "Human Review", "SPL"], stars: 4.7, reviews: 198 },
+  { id: 3, name: "RiskSentinel", version: "v1.5.0", tag: "Risk Monitor", desc: "AI-assisted policy analyzer with deterministic fallback, anomaly scoring, and automatic block verdicts.", hash: "6Fsa…pT4c", deployer: "9Nm2…Qx7d", winRate: 97.1, apy: 0, latency: 31, executions: "41,002", uptime: 100, verified: true, featured: false, price: "0.60 SOL", rent: "0.02 SOL/day", accent: C, accentB: "#3b82f6", tags: ["Risk AI", "Guardrails", "Alerts"], stars: 4.95, reviews: 541 },
+  { id: 4, name: "RouteScout", version: "v1.3.0", tag: "DeFi Trading", desc: "Cross-DEX route observer that surfaces price differences but requires policy approval before execution.", hash: "9Nm2…Qx7d", deployer: "4Ytp…mR8a", winRate: 91.8, apy: 20.3, latency: 67, executions: "19,441", uptime: 98.9, verified: true, featured: false, price: "1.45 SOL", rent: "0.05 SOL/day", accent: M, accentB: C, tags: ["Cross-DEX", "Allowlist", "Cooldown"], stars: 4.8, reviews: 267 },
+  { id: 5, name: "SignalOracle", version: "v1.2.0", tag: "Oracle & Data", desc: "LLM-assisted signal summarizer that cites inputs and publishes only policy digests, never private prompts.", hash: "4Ytp…mR8a", deployer: "6Fsa…pT4c", winRate: 85.3, apy: 6.2, latency: 210, executions: "5,829", uptime: 99.1, verified: false, featured: false, price: "0.70 SOL", rent: "0.025 SOL/day", accent: "#8b5cf6", accentB: C, tags: ["AI", "Signals", "Oracle"], stars: 4.6, reviews: 94 },
+  { id: 6, name: "TreasuryPilot", version: "v1.0.0", tag: "Cross-Chain", desc: "Treasury workflow agent that proposes Solana actions with approval gates and tamper-evident policy proofs.", hash: "5Jrc…wB1z", deployer: "7Aqv…fK3p", winRate: 96.4, apy: 9.4, latency: 190, executions: "7,112", uptime: 99.4, verified: true, featured: false, price: "1.10 SOL", rent: "0.04 SOL/day", accent: C, accentB: "#06b6d4", tags: ["Treasury", "Approvals", "Proofs"], stars: 4.75, reviews: 163 },
 ];
 
 const CATS = ["All Agents", "DeFi Trading", "Yield Optimizer", "Oracle & Data", "Risk Monitor", "NFT Strategy", "Cross-Chain", "AI Inference"];
@@ -89,9 +96,9 @@ const NAV = [
   { icon: Bot, label: "Agents", badge: "5" },
   { icon: BarChart3, label: "Analytics" },
   { icon: Globe, label: "Marketplace" },
-  { icon: Wallet, label: "Vault" },
+  { icon: Wallet, label: "Treasury" },
   { icon: Shield, label: "Security" },
-  { icon: Layers, label: "Sessions" },
+  { icon: Layers, label: "Guardrails" },
   { icon: Settings, label: "Settings" },
 ];
 
@@ -109,7 +116,7 @@ function Badge({ status }: { status: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold"
       style={{ ...mono, background: `${col}12`, color: col, border: `1px solid ${col}25` }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: col, boxShadow: status === "ACTIVE" ? `0 0 6px ${col}` : "none", animation: status === "ACTIVE" ? "agx-pulse 2s infinite" : "none" }} />
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: col, boxShadow: status === "ACTIVE" ? `0 0 6px ${col}` : "none", animation: status === "ACTIVE" ? "redline-pulse 2s infinite" : "none" }} />
       {status}
     </span>
   );
@@ -170,7 +177,7 @@ function ShimmerBtn({ label, accent, full, size = "sm" }: { label: string; accen
     <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className={`relative flex items-center justify-center gap-1.5 rounded-xl font-semibold overflow-hidden transition-all duration-300 active:scale-[0.97] ${full ? "flex-1" : ""} ${size === "xs" ? "px-3 py-1.5 text-[11px]" : "px-4 py-2.5 text-xs"}`}
       style={{ ...sans, background: hov ? `${accent}20` : `${accent}12`, border: `1px solid ${accent}${hov ? "50" : "28"}`, color: hov ? "#e2e8f0" : accent, boxShadow: hov ? `0 0 24px ${accent}28` : "none" }}>
-      {hov && <span className="absolute inset-y-0 w-12 -skew-x-12 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${accent}30, transparent)`, animation: "agx-shimmer 0.55s ease forwards" }} />}
+      {hov && <span className="absolute inset-y-0 w-12 -skew-x-12 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${accent}30, transparent)`, animation: "redline-shimmer 0.55s ease forwards" }} />}
       {label}
     </button>
   );
@@ -209,13 +216,13 @@ function ParticleGrid() {
 /* ── 1. DASHBOARD ── */
 function DashboardPage() {
   const logs = [
-    { type: "success", text: "QuantTrader-Pro › swap settled · +$23.41", ts: "20:41:14" },
-    { type: "exec",    text: "ArbitrageBot-v3 › pool.swap(1.4 ETH → 2,847 USDC)", ts: "20:41:12" },
-    { type: "warn",    text: "SessionKey expiry in 01:42 — renewal queued", ts: "20:41:10" },
-    { type: "success", text: "NLPOracle-gpt4 › oracle.publish(keccak256)", ts: "20:41:08" },
-    { type: "info",    text: "YieldOptimizer-X › compound.supply(847.2 USDC)", ts: "20:41:06" },
-    { type: "exec",    text: "SentinelWatch-v1 › risk.scan(block=19847412)", ts: "20:41:03" },
-    { type: "success", text: "UserOp confirmed · Block 19847302 · Gas 147,821", ts: "20:41:01" },
+    { type: "success", text: "QuantPilot › simulation passed · route within policy", ts: "20:41:14" },
+    { type: "exec",    text: "RouteScout › Jupiter quote · 12.4 SOL → 1,847 USDC", ts: "20:41:12" },
+    { type: "warn",    text: "Policy account expires in 01:42 · review queued", ts: "20:41:10" },
+    { type: "success", text: "SignalOracle › policy digest published to Memo", ts: "20:41:08" },
+    { type: "info",    text: "YieldGuard › proposal created · 847.2 USDC", ts: "20:41:06" },
+    { type: "exec",    text: "RiskSentinel › scan(slot=401847412)", ts: "20:41:03" },
+    { type: "success", text: "Policy proof confirmed · Devnet · 5,000 lamports", ts: "20:41:01" },
   ];
   const logCol: Record<string, string> = { info: "#64748b", success: M, exec: C, warn: A };
 
@@ -224,10 +231,11 @@ function DashboardPage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>AgentX Overview</span>
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>REDLINE Overview</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Good evening, <span style={{ color: M }}>0x4f3a</span></h1>
-        <p className="text-sm mt-1" style={{ ...sans, color: "#475569" }}>Your 5 agents generated <span style={{ color: A }}>+$6,272</span> in P&L today across <span style={{ color: C }}>71,983</span> on-chain operations.</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Autonomous finance. <span style={{ color: M }}>Hard limits.</span></h1>
+        <p className="text-sm mt-1" style={{ ...sans, color: "#475569" }}>Design agent permissions, assess operational risk, and anchor policy proofs on Solana.</p>
+        <span className="inline-flex mt-3 text-[9px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>PROTOTYPE · ANALYTICS BELOW USE SIMULATED DATA</span>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
@@ -296,10 +304,10 @@ function DashboardPage() {
           <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(1,3,3,0.5)" }}>
             <div className="flex gap-1.5">{["#ef4444", A, M].map((c, i) => <div key={`dot-${i}`} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: 0.7 }} />)}</div>
             <Terminal size={11} style={{ color: M }} />
-            <span className="text-[11px]" style={{ ...mono, color: "#94a3b8" }}>runtime · live feed</span>
+            <span className="text-[11px]" style={{ ...mono, color: "#94a3b8" }}>runtime · simulated feed</span>
             <div className="ml-auto flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "agx-pulse 2s infinite" }} />
-              <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>LIVE</span>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
+              <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>SIM</span>
             </div>
           </div>
           <div className="p-4 space-y-2" style={{ background: "#010303" }}>
@@ -341,8 +349,8 @@ function DashboardPage() {
       <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${A}09`, border: `1px solid ${A}20` }}>
         <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><AlertTriangle size={14} style={{ color: A }} /></div>
         <div className="flex-1">
-          <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Session Key Renewal Recommended</div>
-          <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#64748b" }}>NLPOracle-gpt4 key expires in 28 minutes. Renew to avoid execution interruption.</div>
+          <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Policy Review Recommended</div>
+          <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#64748b" }}>SignalOracle policy expires in 28 minutes. Review before extending agent permissions.</div>
         </div>
         <ShimmerBtn label="Renew Now" accent={A} />
       </div>
@@ -446,13 +454,13 @@ function AgentsPage() {
             </div>
           </div>
 
-          {/* Session key info */}
+          {/* Agent policy info */}
           <div className="rounded-2xl p-5 flex items-center gap-4" style={{ ...glass(), border: `1px solid ${a.exp === "EXPIRED" ? "#ef444430" : M + "18"}` }}>
             <div className="p-2.5 rounded-xl" style={{ background: a.exp === "EXPIRED" ? "rgba(239,68,68,0.1)" : `${M}12`, border: `1px solid ${a.exp === "EXPIRED" ? "#ef444428" : M + "22"}` }}>
               <Key size={16} style={{ color: a.exp === "EXPIRED" ? "#ef4444" : M }} />
             </div>
             <div className="flex-1">
-              <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>ERC-4337 Session Key</div>
+              <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Solana Agent Policy</div>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>Expires in:</span>
                 <span className="text-[11px] font-bold" style={{ ...mono, color: a.exp === "EXPIRED" ? "#ef4444" : M }}>{a.exp}</span>
@@ -494,7 +502,7 @@ function AnalyticsPage() {
           { label: "Total Revenue", value: "$48,291", delta: "+22.4%", color: A },
           { label: "Total Ops", value: "71,983", delta: "+8.1%", color: M },
           { label: "Avg Win Rate", value: "91.4%", delta: "+3.2%", color: M },
-          { label: "Gas Spent", value: "1.84 ETH", delta: "-11%", color: C },
+          { label: "Network Fees", value: "0.18 SOL", delta: "-11%", color: C },
         ].map((s, i) => (
           <div key={`an-kpi-${i}`} className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
             <div className="text-[11px] mb-2" style={{ ...sans, color: "#475569" }}>{s.label}</div>
@@ -615,7 +623,7 @@ function MarketplacePage() {
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Decentralized AI Agent Marketplace</span>
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Deploy <span style={{ color: M }}>Autonomous Agents</span></h1>
-        <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Browse, rent, or acquire production-grade AI agents audited for ERC-4337 Account Abstraction.</p>
+        <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Browse policy-aware AI agents designed for bounded execution and verifiable Solana guardrails.</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -653,20 +661,18 @@ function MarketplacePage() {
       <div className="flex items-center justify-between">
         <span className="text-xs" style={{ ...sans, color: "#334155" }}>Showing <span style={{ color: "#e2e8f0" }}>{filtered.length}</span> agents</span>
         <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "agx-pulse 2s infinite" }} />
-          <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>LIVE MARKET</span>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
+          <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>CURATED PROTOTYPE</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {filtered.map((a, idx) => {
-          const [hov, setHov] = useState(false);
-          return (
-            <div key={`mkt-card-${a.id}`} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-              className="relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300"
-              style={{ ...glass(), boxShadow: hov ? `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${a.accent}20` : "0 8px 40px rgba(0,0,0,0.45)", transform: hov ? "translateY(-3px)" : "none" }}>
+        {filtered.map((a, idx) => (
+            <div key={`mkt-card-${a.id}`}
+              className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+              style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
               <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${a.accent}70, transparent)` }} />
-              <div className="absolute inset-0 pointer-events-none rounded-2xl transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at 30% 0%, ${a.accent}08, transparent 55%)`, opacity: hov ? 1 : 0 }} />
+              <div className="absolute inset-0 pointer-events-none rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at 30% 0%, ${a.accent}08, transparent 55%)` }} />
               {idx === 0 && activeCat === 0 && !search && (
                 <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: `${A}18`, border: `1px solid ${A}28` }}>
                   <Sparkles size={9} style={{ color: A }} />
@@ -688,7 +694,7 @@ function MarketplacePage() {
                 </div>
                 <p className="text-xs leading-relaxed" style={{ ...sans, color: "#64748b", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{a.desc}</p>
                 <div className="rounded-xl px-3.5 py-3 space-y-1.5" style={{ background: "#010303", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Contract</span><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Deployer</span></div>
+                  <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Policy</span><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Creator</span></div>
                   <div className="flex items-center justify-between"><span className="text-[10px]" style={{ ...mono, color: C }}>{a.hash}</span><span className="text-[10px]" style={{ ...mono, color: "#475569" }}>{a.deployer}</span></div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -708,8 +714,7 @@ function MarketplacePage() {
                 <div className="flex gap-2"><ShimmerBtn label="Rent" accent={C} full /><ShimmerBtn label="Buy" accent={a.accent} full /></div>
               </div>
             </div>
-          );
-        })}
+        ))}
       </div>
     </div>
   );
@@ -718,18 +723,18 @@ function MarketplacePage() {
 /* ── 5. VAULT ── */
 function VaultPage() {
   const assets = [
-    { symbol: "ETH", name: "Ethereum", bal: "4.821", usd: "$18,540", change: "+2.4%", up: true, color: "#627eea" },
+    { symbol: "SOL", name: "Solana", bal: "84.21", usd: "$18,540", change: "+2.4%", up: true, color: "#9945ff" },
     { symbol: "USDC", name: "USD Coin", bal: "12,847.20", usd: "$12,847", change: "+0.01%", up: true, color: "#2775ca" },
-    { symbol: "WBTC", name: "Wrapped BTC", bal: "0.1842", usd: "$11,230", change: "+3.1%", up: true, color: "#f7931a" },
-    { symbol: "ARB", name: "Arbitrum", bal: "4,200", usd: "$3,192", change: "-1.2%", up: false, color: "#12aaff" },
-    { symbol: "DAI", name: "DAI Stablecoin", bal: "2,100", usd: "$2,100", change: "+0.00%", up: true, color: A },
+    { symbol: "JUP", name: "Jupiter", bal: "4,184", usd: "$11,230", change: "+3.1%", up: true, color: "#14f195" },
+    { symbol: "JTO", name: "Jito", bal: "2,200", usd: "$3,192", change: "-1.2%", up: false, color: "#8b5cf6" },
+    { symbol: "PYTH", name: "Pyth Network", bal: "6,100", usd: "$2,100", change: "+0.00%", up: true, color: A },
   ];
   const txns = [
-    { type: "Swap", desc: "ETH → USDC via QuantTrader", amount: "+$2,847", hash: "0xf3b2...9a41", ts: "2 min ago", col: M },
-    { type: "Deposit", desc: "Compound supply from YieldOptimizer", amount: "+$847.20", hash: "0x4a21...c810", ts: "18 min ago", col: C },
-    { type: "Fee", desc: "Bundler gas reimbursement", amount: "-$12.40", hash: "0x9c4f...e200", ts: "34 min ago", col: "#475569" },
-    { type: "Swap", desc: "WBTC → ETH via ArbitrageBot", amount: "+$320", hash: "0x7e1b...3dc9", ts: "1h ago", col: M },
-    { type: "Withdraw", desc: "USDC withdrawal to EOA", amount: "-$5,000", hash: "0x2b8a...f140", ts: "3h ago", col: "#ef4444" },
+    { type: "Swap", desc: "SOL → USDC proposal via QuantPilot", amount: "+$2,847", hash: "5mQe…9a41", ts: "2 min ago", col: M },
+    { type: "Deposit", desc: "Treasury funding for YieldGuard", amount: "+$847.20", hash: "3Kcp…c810", ts: "18 min ago", col: C },
+    { type: "Fee", desc: "Devnet policy proof fee", amount: "-0.000005 SOL", hash: "8Trf…e200", ts: "34 min ago", col: "#475569" },
+    { type: "Proof", desc: "Policy digest anchored on Devnet", amount: "verified", hash: "7eNb…3dc9", ts: "1h ago", col: M },
+    { type: "Withdraw", desc: "USDC withdrawal after human approval", amount: "-$5,000", hash: "2bRa…f140", ts: "3h ago", col: "#ef4444" },
   ];
 
   return (
@@ -737,7 +742,7 @@ function VaultPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Vault</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Smart contract wallet · ERC-4337 Account Abstraction</p>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Solana treasury · policy-bounded agent permissions</p>
         </div>
         <div className="flex gap-2">
           <ShimmerBtn label="Deposit" accent={M} />
@@ -761,11 +766,11 @@ function VaultPage() {
           <div className="text-right">
             <div className="text-xs mb-1" style={{ ...sans, color: "#475569" }}>Smart Account</div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold" style={{ ...mono, color: C }}>0x4f3a...82Bc</span>
+              <span className="text-sm font-semibold" style={{ ...mono, color: C }}>7Aqv…fK3p</span>
               <button className="p-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><Copy size={11} /></button>
               <button className="p-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><ExternalLink size={11} /></button>
             </div>
-            <div className="text-[10px] mt-1" style={{ ...sans, color: "#334155" }}>ERC-4337 · Mainnet</div>
+            <div className="text-[10px] mt-1" style={{ ...sans, color: "#334155" }}>Policy PDA · Solana Devnet</div>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
@@ -842,9 +847,9 @@ function SecurityPage() {
 
   const events = [
     { icon: ShieldCheck, text: "Anti-Rug scan passed · QuantTrader-Pro", ts: "2m ago", col: M },
-    { icon: AlertTriangle, text: "SessionKey near expiry · NLPOracle-gpt4", ts: "28m ago", col: A },
+    { icon: AlertTriangle, text: "Policy near expiry · SignalOracle", ts: "28m ago", col: A },
     { icon: Lock, text: "2FA verified · login from 192.168.1.42", ts: "1h ago", col: C },
-    { icon: ShieldCheck, text: "Paymaster ACL updated · 3 tokens added", ts: "3h ago", col: M },
+    { icon: ShieldCheck, text: "Token allowlist updated · 3 mints added", ts: "3h ago", col: M },
     { icon: AlertTriangle, text: "Unusual tx volume detected · flagged", ts: "5h ago", col: "#ef4444" },
   ];
 
@@ -882,7 +887,7 @@ function SecurityPage() {
         </div>
         <div>
           <div className="text-lg font-bold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Security Score: <span style={{ color: M }}>Excellent</span></div>
-          <p className="text-xs" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>All active agents passed Anti-Rug verification. One session key is nearing expiry. Enable auto-renew to maintain uptime.</p>
+          <p className="text-xs" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>All active agents passed policy checks. One authorization is nearing expiry; require a fresh review before extension.</p>
           <div className="flex gap-2 mt-3">
             <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>
               <CheckCircle2 size={10} />5 agents verified
@@ -922,7 +927,7 @@ function SecurityPage() {
             <div className="text-sm font-semibold mb-3" style={{ ...sans, color: "#e2e8f0" }}>Security Settings</div>
             <Toggle on={twoFA} toggle={() => setTwoFA(v => !v)} label="Two-Factor Authentication" />
             <Toggle on={alertsOn} toggle={() => setAlertsOn(v => !v)} label="On-Chain Anomaly Alerts" />
-            <Toggle on={autoRenew} toggle={() => setAutoRenew(v => !v)} label="Auto-Renew Session Keys" />
+            <Toggle on={autoRenew} toggle={() => setAutoRenew(v => !v)} label="Auto-Renew Low-Risk Policies" />
           </div>
           <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
             <div className="px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}><span className="text-xs font-semibold" style={{ ...sans, color: "#94a3b8" }}>Security Events</span></div>
@@ -946,19 +951,49 @@ function SecurityPage() {
 /* ── 7. SESSIONS ── */
 function SessionsPage() {
   const [step, setStep] = useState(0);
-  const [tokens, setTokens] = useState(["ETH", "USDC"]);
+  const [tokens, setTokens] = useState(["SOL", "USDC"]);
   const [cap, setCap] = useState(500);
   const [txn, setTxn] = useState(50);
   const [dur, setDur] = useState(24);
   const [cool, setCool] = useState(6);
-  const tList = ["ETH", "USDC", "WBTC", "ARB", "DAI", "LINK"];
+  const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
+  const [assessing, setAssessing] = useState(false);
+  const [assessmentError, setAssessmentError] = useState("");
+  const tList = ["SOL", "USDC", "JUP", "JTO", "BONK", "PYTH"];
   const STEPS = ["Token Scope", "Spend Limits", "Time Bounds", "Review & Sign"];
 
+  const policy: AgentPolicyInput = {
+    agentName: "YieldGuard Alpha",
+    strategy: "Risk-bounded DeFi yield optimization with human review for high-impact actions",
+    tokens,
+    spendCapUsdc: cap,
+    maxTransactions: txn,
+    durationHours: dur,
+    cooldownMinutes: cool,
+  };
+
+  useEffect(() => {
+    setAssessment(null);
+    setAssessmentError("");
+  }, [tokens, cap, txn, dur, cool]);
+
+  async function assessPolicy() {
+    setAssessing(true);
+    setAssessmentError("");
+    try {
+      setAssessment(await requestRiskAssessment(policy));
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : "Unable to assess this policy.");
+    } finally {
+      setAssessing(false);
+    }
+  }
+
   const sessions = [
-    { agent: "QuantTrader-Pro", key: "0x4f3a...82Bc", cap: "$500", exp: "01:42:18", status: "ACTIVE", ops: 847, accent: M },
-    { agent: "ArbitrageBot-v3", key: "0x7c1d...3f09", cap: "$1,000", exp: "04:11:03", status: "ACTIVE", ops: 312, accent: C },
-    { agent: "NLPOracle-gpt4", key: "0x9e2b...a4f1", cap: "$200", exp: "00:28:44", status: "EXPIRING", ops: 91, accent: A },
-    { agent: "YieldOptimizer-X", key: "0x2a8c...71d2", cap: "$2,000", exp: "EXPIRED", status: "EXPIRED", ops: 0, accent: "#ef4444" },
+    { agent: "QuantPilot", key: "7Aqv…fK3p", cap: "$500", exp: "01:42:18", status: "ACTIVE", ops: 847, accent: M },
+    { agent: "RouteScout", key: "9Nm2…Qx7d", cap: "$1,000", exp: "04:11:03", status: "ACTIVE", ops: 312, accent: C },
+    { agent: "SignalOracle", key: "4Ytp…mR8a", cap: "$200", exp: "00:28:44", status: "EXPIRING", ops: 91, accent: A },
+    { agent: "YieldGuard", key: "2Kzw…vH6n", cap: "$2,000", exp: "EXPIRED", status: "EXPIRED", ops: 0, accent: "#ef4444" },
   ];
 
   function SliderCtl({ label, value, onChange, min, max, unit, accent }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; unit: string; accent: string }) {
@@ -982,14 +1017,14 @@ function SessionsPage() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Session Keys</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Manage ERC-4337 session key authorization for your agents</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Agent Guardrails</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Design bounded Solana policies, run AI risk checks, and publish verifiable proofs</p>
       </div>
 
       {/* Active sessions table */}
       <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
         <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-          <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Active Session Keys</span>
+          <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Active Policy Accounts</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>3 active</span>
         </div>
         {sessions.map((s, i) => (
@@ -1013,8 +1048,8 @@ function SessionsPage() {
         <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)", background: `${M}04` }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Key size={12} style={{ color: M }} /></div>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Create New Session Key</span>
-            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>AA-4337</span>
+            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Create Agent Policy</span>
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>SOLANA DEVNET</span>
           </div>
           <div className="flex gap-2">
             {STEPS.map((s, i) => (
@@ -1030,7 +1065,7 @@ function SessionsPage() {
         <div className="px-6 py-6" style={{ minHeight: 240 }}>
           {step === 0 && (
             <div className="space-y-4">
-              <p className="text-xs" style={{ ...sans, color: "#94a3b8", lineHeight: 1.7 }}>Whitelist ERC-20 tokens this session key may interact with. All unlisted contracts are blocked at paymaster level.</p>
+              <p className="text-xs" style={{ ...sans, color: "#94a3b8", lineHeight: 1.7 }}>Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.</p>
               <div className="flex flex-wrap gap-2">
                 {tList.map((t, ti) => { const on = tokens.includes(t); return (
                   <button key={`wiz-tok-${ti}`} onClick={() => setTokens(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])}
@@ -1042,7 +1077,7 @@ function SessionsPage() {
               </div>
               <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
                 <Lock size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-                <p className="text-[11px]" style={{ ...sans, color: "#94a3b8", lineHeight: 1.6 }}>Session keys enforce token-level ACL on-chain. The paymaster rejects any calldata referencing non-whitelisted addresses.</p>
+                <p className="text-[11px]" style={{ ...sans, color: "#94a3b8", lineHeight: 1.6 }}>The policy digest binds token scope, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
               </div>
             </div>
           )}
@@ -1076,14 +1111,31 @@ function SessionsPage() {
             </div>
           )}
           {step === 3 && (
-            <div className="space-y-1">
-              <p className="text-xs mb-4" style={{ ...sans, color: "#94a3b8" }}>Confirm parameters before EIP-712 signature.</p>
-              {[["Token Scope", tokens.join(", "), C], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["ERC Standard", "ERC-4337 AA", C]].map(([k, v, col], ri) => (
+            <div className="space-y-4">
+              <p className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Review the bounded policy, run the risk copilot, then publish its SHA-256 digest to Solana Devnet.</p>
+              <div>
+              {[["Token Scope", tokens.join(", "), C], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                   <span className="text-[11px]" style={{ ...sans, color: "#64748b" }}>{k}</span>
                   <span className="text-[11px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
                 </div>
               ))}
+              </div>
+              {assessment && (
+                <div className="rounded-xl p-4 space-y-3" style={{ background: `${assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : "#ef4444"}0b`, border: `1px solid ${assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : "#ef4444"}25` }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold" style={{ color: "#e2e8f0" }}>Risk copilot verdict</div>
+                      <div className="text-[10px] mt-0.5" style={{ color: "#64748b" }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : "Deterministic safety fallback"}</div>
+                    </div>
+                    <div className="text-right"><div className="text-xl font-bold" style={{ ...mono, color: assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : "#ef4444" }}>{assessment.score}/100</div><div className="text-[10px]" style={{ ...mono, color: "#94a3b8" }}>{assessment.decision}</div></div>
+                  </div>
+                  <p className="text-[11px]" style={{ color: "#94a3b8" }}>{assessment.summary}</p>
+                  <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[10px] flex gap-2" style={{ color: "#64748b" }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
+                  <PolicyProofButton policy={policy} assessment={assessment} />
+                </div>
+              )}
+              {assessmentError && <p role="alert" className="text-[10px]" style={{ color: "#f87171" }}>{assessmentError}</p>}
             </div>
           )}
         </div>
@@ -1091,10 +1143,10 @@ function SessionsPage() {
           <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
             className="px-4 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-25"
             style={{ ...sans, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#94a3b8" }}>Back</button>
-          <button onClick={() => step < STEPS.length - 1 && setStep(s => s + 1)}
+          <button onClick={() => step < STEPS.length - 1 ? setStep(s => s + 1) : void assessPolicy()} disabled={assessing}
             className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
             style={{ ...sans, background: step === STEPS.length - 1 ? `linear-gradient(135deg, ${M}dd, ${C}cc)` : `${M}18`, border: `1px solid ${M}35`, color: step === STEPS.length - 1 ? BG : M, boxShadow: step === STEPS.length - 1 ? `0 0 32px ${M}30` : "none" }}>
-            {step === STEPS.length - 1 ? <><Shield size={12} />Sign &amp; Deploy Session Key</> : <>Continue <ChevronRight size={12} /></>}
+            {step === STEPS.length - 1 ? <><Shield size={12} />{assessing ? "Assessing policy…" : assessment ? "Re-run risk assessment" : "Run AI risk assessment"}</> : <>Continue <ChevronRight size={12} /></>}
           </button>
         </div>
       </div>
@@ -1110,6 +1162,7 @@ function SettingsPage() {
   const [autoSlippage, setAutoSlippage] = useState(false);
   const [slippage, setSlippage] = useState(0.5);
   const [activeTab, setActiveTab] = useState(0);
+  const [notificationStates, setNotificationStates] = useState([true, true, false, true, true]);
   const tabs = ["General", "Network", "Notifications", "API Keys"];
 
   function Row({ label, value, accent = M }: { label: string; value: string; accent?: string }) {
@@ -1140,7 +1193,7 @@ function SettingsPage() {
     <div className="space-y-7">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Settings</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Configure your AgentX workspace preferences</p>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Configure your REDLINE workspace</p>
       </div>
 
       {/* Profile card */}
@@ -1148,14 +1201,14 @@ function SettingsPage() {
         <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}40, transparent)` }} />
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
           style={{ background: `linear-gradient(135deg, ${M}22, ${C}18)`, border: `1px solid ${M}28`, boxShadow: `0 0 24px ${M}18`, color: M }}>
-          0x
+          KP
         </div>
         <div className="flex-1">
-          <div className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>0x4f3a...82Bc</div>
-          <div className="text-[11px] mt-0.5" style={{ ...mono, color: C }}>0x4f3a9c2b8e1d7f6a3b4c5e8f9a2b3c4d5e6f7a82Bc</div>
+          <div className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>Devnet Operator</div>
+          <div className="text-[11px] mt-0.5" style={{ ...mono, color: C }}>Connect a Wallet Standard account to load the live address</div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Mainnet</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>ERC-4337</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
           </div>
         </div>
         <ShimmerBtn label="Edit Profile" accent={M} />
@@ -1201,19 +1254,19 @@ function SettingsPage() {
         {activeTab === 1 && (<>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
             <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>RPC Configuration</div>
-            <Row label="Network" value="Ethereum Mainnet" />
-            <Row label="RPC Endpoint" value="wss://eth-mainnet.g..." accent={C} />
-            <Row label="Chain ID" value="1" accent={C} />
-            <Row label="Block Time" value="~12s" accent={M} />
-            <Row label="Current Gas" value="24.3 gwei" accent={A} />
+            <Row label="Network" value="Solana Devnet" />
+            <Row label="RPC Endpoint" value="api.devnet.solana.com" accent={C} />
+            <Row label="Wallet API" value="Wallet Standard" accent={C} />
+            <Row label="Commitment" value="confirmed" accent={M} />
+            <Row label="Policy Proof" value="SPL Memo" accent={A} />
             <div className="mt-4"><ShimmerBtn label="Change RPC" accent={C} /></div>
           </div>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Bundler Settings</div>
-            <Row label="Bundler URL" value="https://bundler.erc..." accent={C} />
-            <Row label="Paymaster" value="0x71C7...3fA2" accent={M} />
-            <Row label="Entry Point" value="v0.6 · 0x5FF1..." accent={C} />
-            <ToggleRow on={gasAlerts} toggle={() => setGasAlerts(v => !v)} label="Gas Spike Alerts" sub="Alert when gas > 50 gwei" />
+            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Transaction Safety</div>
+            <Row label="Preflight" value="enabled" accent={C} />
+            <Row label="Policy Digest" value="SHA-256" accent={M} />
+            <Row label="Proof Program" value="SPL Memo" accent={C} />
+            <ToggleRow on={gasAlerts} toggle={() => setGasAlerts(v => !v)} label="Priority Fee Alerts" sub="Warn before unusually high priority fees" />
           </div>
         </>)}
         {activeTab === 2 && (
@@ -1221,23 +1274,22 @@ function SettingsPage() {
             <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Notification Channels</div>
             {[
               { label: "Agent status changes", sub: "Active, paused, expired events", on: true },
-              { label: "Session key expiry warnings", sub: "Alert 1h and 10min before expiry", on: true },
+              { label: "Policy expiry warnings", sub: "Alert 1h and 10min before expiry", on: true },
               { label: "P&L threshold alerts", sub: "Trigger on ±10% daily swing", on: false },
-              { label: "Gas price spikes", sub: "Notify when mainnet gas > 50 gwei", on: true },
+              { label: "Priority fee spikes", sub: "Notify before unusually expensive transactions", on: true },
               { label: "Security anomalies", sub: "Unusual on-chain behavior detected", on: true },
-            ].map((n, ni) => {
-              const [on, setOn] = useState(n.on);
-              return <ToggleRow key={`notif-${ni}`} on={on} toggle={() => setOn(v => !v)} label={n.label} sub={n.sub} />;
-            })}
+            ].map((n, ni) => (
+              <ToggleRow key={`notif-${ni}`} on={notificationStates[ni] ?? n.on} toggle={() => setNotificationStates(values => values.map((value, index) => index === ni ? !value : value))} label={n.label} sub={n.sub} />
+            ))}
           </div>
         )}
         {activeTab === 3 && (
           <div className="rounded-2xl p-5 col-span-2" style={{ ...glass() }}>
             <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>API Keys</div>
             {[
-              { label: "AgentX API Key", value: "axk_live_4f3a...82bc", active: true },
-              { label: "Alchemy RPC Key", value: "alch_prod_9e2b...a4f1", active: true },
-              { label: "Tenderly API Key", value: "Not configured", active: false },
+              { label: "REDLINE API", value: "Server-side only", active: true },
+              { label: "Solana RPC", value: "Configured via environment", active: true },
+              { label: "OpenAI Risk Copilot", value: "Optional server-side key", active: false },
             ].map((k, ki) => (
               <div key={`api-key-${ki}`} className="flex items-center gap-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: k.active ? `${M}12` : "rgba(255,255,255,0.04)", border: `1px solid ${k.active ? M + "22" : "rgba(255,255,255,0.07)"}` }}>
@@ -1259,7 +1311,7 @@ function SettingsPage() {
         <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#ef4444" }}>Danger Zone</div>
         <p className="text-xs mb-4" style={{ ...sans, color: "#64748b" }}>These actions are irreversible. Proceed with caution.</p>
         <div className="flex flex-wrap gap-2">
-          <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Revoke All Session Keys</button>
+          <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Revoke All Agent Policies</button>
           <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Disconnect Wallet</button>
           <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Delete All Agents</button>
         </div>
@@ -1275,8 +1327,6 @@ const PAGES = [DashboardPage, AgentsPage, AnalyticsPage, MarketplacePage, VaultP
 
 export default function App() {
   const [nav, setNav] = useState(0);
-  const [connected, setConnected] = useState(false);
-  const [walletHov, setWalletHov] = useState(false);
   const [time, setTime] = useState(new Date());
   const Page = PAGES[nav];
 
@@ -1285,9 +1335,9 @@ export default function App() {
   return (
     <div className="min-h-screen w-full flex overflow-hidden" style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
       <style>{`
-        @keyframes agx-shimmer { 0% { left: -60px; } 100% { left: calc(100% + 60px); } }
-        @keyframes agx-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        @keyframes agx-scan { 0% { top:-2%; } 100% { top:102%; } }
+        @keyframes redline-shimmer { 0% { left: -60px; } 100% { left: calc(100% + 60px); } }
+        @keyframes redline-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        @keyframes redline-scan { 0% { top:-2%; } 100% { top:102%; } }
         ::-webkit-scrollbar { display: none; }
         * { scrollbar-width: none; }
         input[type=range] { -webkit-appearance: none; appearance: none; }
@@ -1304,8 +1354,8 @@ export default function App() {
             <Zap size={15} style={{ color: M }} />
           </div>
           <div className="hidden lg:block">
-            <div className="text-sm font-bold tracking-widest" style={{ color: "#e2e8f0", letterSpacing: "0.1em" }}>AgentX</div>
-            <div className="text-[9px] font-semibold tracking-widest uppercase mt-0.5" style={{ ...mono, color: M, opacity: 0.65 }}>Mainnet · v2.4.1</div>
+            <div className="text-sm font-bold tracking-widest" style={{ color: "#e2e8f0", letterSpacing: "0.1em" }}>REDLINE</div>
+            <div className="text-[9px] font-semibold tracking-widest uppercase mt-0.5" style={{ ...mono, color: M, opacity: 0.65 }}>Protocol · Devnet</div>
           </div>
         </div>
 
@@ -1328,10 +1378,10 @@ export default function App() {
 
         <div className="mx-2 mb-3 rounded-xl p-3 hidden lg:block" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "agx-pulse 2s infinite" }} />
-            <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>ETH MAINNET</span>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
+            <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>SOLANA DEVNET</span>
           </div>
-          {[["Block", "19,847,412", "#e2e8f0"], ["Gas", "24.3 gwei", A], ["TPS", "14.2", C]].map(([k, v, col], ni) => (
+          {[["Cluster", "Devnet", "#e2e8f0"], ["Policy", "Memo v1", A], ["Mode", "Guarded", C]].map(([k, v, col], ni) => (
             <div key={`sidebar-net-${ni}`} className="flex justify-between items-center mb-0.5">
               <span className="text-[9px]" style={{ ...sans, color: "#334155" }}>{k}</span>
               <span className="text-[9px] font-semibold" style={{ ...mono, color: col }}>{v}</span>
@@ -1346,15 +1396,16 @@ export default function App() {
         <header className="sticky top-0 z-10 flex items-center gap-3 px-6 py-3.5"
           style={{ background: "rgba(4,7,7,0.82)", backdropFilter: "blur(32px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div className="flex items-center gap-2 text-xs flex-1">
-            <span style={{ ...sans, color: "#334155" }}>AgentX</span>
+            <span style={{ ...sans, color: "#334155" }}>REDLINE</span>
             <ChevronRight size={11} style={{ color: "#1e293b" }} />
             <span style={{ ...sans, color: "#e2e8f0" }}>{NAV[nav].label}</span>
           </div>
           <div className="hidden md:flex items-center gap-3 px-3.5 py-2 rounded-xl text-[11px]"
             style={{ ...mono, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <span style={{ color: "#334155" }}>ETH</span>
-            <span style={{ color: M }}>$3,842.14</span>
-            <span style={{ color: M }}>+2.4%</span>
+            <span style={{ color: "#334155" }}>SOLANA</span>
+            <span style={{ color: M }}>DEVNET</span>
+            <span style={{ color: C }}>RPC CONFIGURED</span>
+            <span style={{ color: A }}>PROTOTYPE DATA</span>
             <div className="w-px h-3" style={{ background: "rgba(255,255,255,0.07)" }} />
             <Clock size={10} style={{ color: "#334155" }} />
             <span style={{ color: "#94a3b8" }}>{time.toLocaleTimeString("en-US", { hour12: false })}</span>
@@ -1362,17 +1413,7 @@ export default function App() {
           <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
             <RefreshCw size={13} />
           </button>
-          <button
-            onClick={() => setConnected(w => !w)}
-            onMouseEnter={() => setWalletHov(true)}
-            onMouseLeave={() => setWalletHov(false)}
-            className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold overflow-hidden transition-all duration-300"
-            style={{ ...sans, background: connected ? `${M}0e` : "rgba(255,255,255,0.03)", border: `1px solid ${connected ? M + "30" : "rgba(255,255,255,0.07)"}`, color: connected ? M : "#94a3b8", boxShadow: (connected || walletHov) ? `0 0 28px ${M}20` : "none" }}>
-            {walletHov && <span className="absolute inset-y-0 w-10 -skew-x-12 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${M}28, transparent)`, animation: "agx-shimmer 0.7s ease forwards" }} />}
-            <Wallet size={13} />
-            <span style={connected ? mono : sans}>{connected ? "0x4f3a...82Bc" : "Connect Wallet"}</span>
-            {connected && <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, boxShadow: `0 0 8px ${M}` }} />}
-          </button>
+          <SolanaWalletControl />
         </header>
 
         {/* Page content */}

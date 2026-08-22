@@ -2,7 +2,12 @@ node_modules
 dist
 .vite
 .env
+.env.*
+!.env.example
 .DS_Store
+coverage
+target
+.anchor
 
 # Local Netlify folder
 .netlify

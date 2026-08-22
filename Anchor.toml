@@ -1,0 +1,16 @@
+[toolchain]
+anchor_version = "0.32.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+redline_guardrails = "GSWCWBuCj1ihniuZukJt85oCYo5jnaUUv558Eaa8dzbF"
+
+[programs.devnet]
+redline_guardrails = "GSWCWBuCj1ihniuZukJt85oCYo5jnaUUv558Eaa8dzbF"
+
+[provider]
+cluster = "Devnet"
+wallet = "~/.config/solana/id.json"
