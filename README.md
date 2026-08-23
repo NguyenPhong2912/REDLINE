@@ -91,6 +91,7 @@ Replace the provisional program ID in `Anchor.toml` through `anchor keys sync`, 
 - [Business model](docs/BUSINESS_MODEL.md)
 - [Technical architecture](docs/TECHNICAL_ARCHITECTURE.md)
 - [Security and threat model](docs/SECURITY.md)
+- [User-feedback protocol](docs/USER_FEEDBACK.md)
 - [Submission answers](docs/HACKATHON_SUBMISSION.md)
 - [Demo script](docs/DEMO_SCRIPT.md)
 
