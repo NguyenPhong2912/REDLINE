@@ -4,6 +4,11 @@
 
 REDLINE
 
+## Demo and repository
+
+- Demo: https://csaclab.netlify.app
+- Repository: https://github.com/anky06-ky/CSaCLAB
+
 ## One sentence
 
 REDLINE is the programmable safety layer that lets AI agents move capital on Solana without crossing owner-defined limits.
@@ -45,4 +50,4 @@ Turning policy proof into production enforcement across multiple DeFi protocols 
 
 ## Suggested pitch opening
 
-“AI agents need freedom to operate, but they should never have unlimited access to your money. REDLINE gives every agent a hard boundary: what it can touch, how much it can spend, how often it can act, and when its authority expires—reviewed by AI, enforced on Solana, and provable before the first transaction.”
+“AI agents need freedom to operate, but they should never have unlimited access to your money. REDLINE gives every agent an explicit boundary: what it can touch, how much it can spend, how often it can act, and when its authority expires—reviewed by AI plus deterministic rules and anchored on Solana before delegated execution. Programmatic enforcement is our next milestone.”

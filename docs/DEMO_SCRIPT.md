@@ -24,4 +24,4 @@ Publish the policy proof, approve the wallet transaction, and open Solana Explor
 
 ## 2:35–3:00 — Business and technical close
 
-Target treasury teams first with subscriptions and approval/audit features. Close by showing that the repository includes the Anchor enforcement program and clearly state that its Devnet deployment is the next technical milestone.
+Target treasury teams first with subscriptions and approval/audit features. Close by showing the Anchor policy-account scaffold, then state clearly that build/test, Devnet deployment, and transfer mediation are the next technical milestones.

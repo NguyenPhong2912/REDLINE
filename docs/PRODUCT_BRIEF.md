@@ -2,7 +2,7 @@
 
 ## One sentence
 
-REDLINE lets users deploy autonomous DeFi agents with AI risk review and verifiable owner-defined limits on Solana.
+REDLINE lets users design bounded autonomous DeFi workflows with AI-assisted risk review and verifiable owner-approved policy proofs on Solana.
 
 ## Problem
 
@@ -33,7 +33,7 @@ Secondary users are active DeFi traders and agent developers.
 
 ## Why AI is needed
 
-The deterministic engine enforces hard safety rules. The AI layer explains combined operational risks in plain language and recommends safer bounds. It never receives wallet secrets, signs transactions, predicts profit, or overrides a block verdict.
+The deterministic engine provides a non-reducible safety floor. The AI layer explains combined operational risks in plain language and recommends safer bounds, but cannot lower the deterministic score or verdict. It never receives wallet secrets, signs transactions, or predicts profit.
 
 ## Success metrics
 

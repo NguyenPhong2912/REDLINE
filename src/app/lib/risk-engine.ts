@@ -18,7 +18,7 @@ export interface RiskAssessment {
   summary: string;
   findings: string[];
   recommendations: string[];
-  source: "openai" | "deterministic-fallback";
+  source: "openai" | "openai+deterministic-floor" | "deterministic-fallback";
   model: string;
 }
 

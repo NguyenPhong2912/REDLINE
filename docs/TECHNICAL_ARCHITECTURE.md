@@ -22,7 +22,7 @@
 
 The Anchor source models one policy PDA per authority and agent ID. It stores authority, executor, policy digest, spend counters, transaction counters, expiry, cooldown, and revocation state.
 
-Execution receipts are accepted only while the policy is active, unexpired, within cooldown, under spend cap, and under transaction count.
+The current `record_execution` instruction validates policy state and updates submitted spend/transaction accounting. It does not yet mediate token transfers or inspect downstream DeFi instructions, so it is a source scaffold rather than authoritative fund protection.
 
 ## Trust boundaries
 
@@ -30,15 +30,15 @@ Execution receipts are accepted only while the policy is active, unexpired, with
 User wallet: owns signing authority and never exposes a private key
 Browser: drafts policy; cannot silently sign
 Risk service: advisory only; cannot sign or move funds
-Solana program: authoritative hard limits after deployment
-Agent runtime: untrusted executor constrained by the policy account
+Solana program scaffold: policy state and receipt accounting; not transfer mediation yet
+Agent runtime: untrusted executor; production must route actions through enforcement
 ```
 
 ## Data status
 
 Wallet connection, balance reads, risk requests, digest generation, and Memo publication are implemented. Marketplace, performance, P&L, APY, review, and historical activity datasets are simulated prototype fixtures.
 
-The Anchor program is source-complete but not built or deployed in this workspace because the Solana/Anchor toolchain is unavailable. This distinction must remain explicit in the demo and submission.
+The Anchor policy-account scaffold is not built or deployed in this workspace because the Solana/Anchor toolchain is unavailable. Transfer mediation and protocol-specific instruction inspection are also not implemented. These distinctions must remain explicit in the demo and submission.
 
 ## Production next steps
 

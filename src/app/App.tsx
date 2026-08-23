@@ -23,6 +23,11 @@ import {
   type AgentPolicyInput,
   type RiskAssessment,
 } from "./lib/risk-engine";
+import {
+  ANALYTICS_RANGES,
+  getAnalyticsSnapshot,
+  type AnalyticsRange,
+} from "./lib/analytics";
 
 /* ── palette ── */
 const M = "#00ffc4";
@@ -172,13 +177,12 @@ function SectionTitle({ icon: Icon, text, accent = M }: { icon: React.ElementTyp
 }
 
 function ShimmerBtn({ label, accent, full, size = "sm" }: { label: string; accent: string; full?: boolean; size?: "xs" | "sm" }) {
-  const [hov, setHov] = useState(false);
   return (
-    <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      className={`relative flex items-center justify-center gap-1.5 rounded-xl font-semibold overflow-hidden transition-all duration-300 active:scale-[0.97] ${full ? "flex-1" : ""} ${size === "xs" ? "px-3 py-1.5 text-[11px]" : "px-4 py-2.5 text-xs"}`}
-      style={{ ...sans, background: hov ? `${accent}20` : `${accent}12`, border: `1px solid ${accent}${hov ? "50" : "28"}`, color: hov ? "#e2e8f0" : accent, boxShadow: hov ? `0 0 24px ${accent}28` : "none" }}>
-      {hov && <span className="absolute inset-y-0 w-12 -skew-x-12 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${accent}30, transparent)`, animation: "redline-shimmer 0.55s ease forwards" }} />}
+    <button type="button" disabled aria-disabled="true" title="Coming soon — not available in this prototype"
+      className={`relative flex items-center justify-center gap-1.5 rounded-xl font-semibold overflow-hidden cursor-not-allowed opacity-70 ${full ? "flex-1" : ""} ${size === "xs" ? "px-3 py-1.5 text-[11px]" : "px-4 py-2.5 text-xs"}`}
+      style={{ ...sans, background: `${accent}0d`, border: `1px solid ${accent}20`, color: accent }}>
       {label}
+      <span className="text-[8px] tracking-wider opacity-60">SOON</span>
     </button>
   );
 }
@@ -367,11 +371,12 @@ function AgentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>My Agents</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Manage and monitor your deployed AI agents</p>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Explore and monitor simulated prototype agents</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
-          style={{ ...sans, background: `${M}14`, border: `1px solid ${M}30`, color: M, boxShadow: `0 0 20px ${M}18` }}>
-          <Plus size={13} />Deploy New Agent
+        <button type="button" disabled aria-disabled="true" title="Coming soon — agent deployment is outside this prototype"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-not-allowed opacity-70"
+          style={{ ...sans, background: `${M}0d`, border: `1px solid ${M}20`, color: M }}>
+          <Plus size={13} />Deploy New Agent <span className="text-[8px] tracking-wider opacity-60">SOON</span>
         </button>
       </div>
 
@@ -379,7 +384,7 @@ function AgentsPage() {
         {/* Agent list */}
         <div className="rounded-2xl overflow-hidden flex flex-col" style={{ ...glass() }}>
           {AGENTS_DATA.map((ag, i) => (
-            <button key={`ag-list-${ag.id}`} onClick={() => setSel(i)}
+            <button type="button" key={`ag-list-${ag.id}`} onClick={() => setSel(i)} aria-pressed={sel === i}
               className="flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b"
               style={{ borderColor: "rgba(255,255,255,0.04)", background: sel === i ? `${ag.accent}0c` : "transparent", borderLeft: sel === i ? `2px solid ${ag.accent}` : "2px solid transparent" }}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${ag.accent}14`, border: `1px solid ${ag.accent}22` }}>
@@ -413,7 +418,7 @@ function AgentsPage() {
               </div>
               <div className="flex gap-2">
                 <ShimmerBtn label={a.status === "ACTIVE" ? "Pause" : "Activate"} accent={a.status === "ACTIVE" ? A : M} />
-                <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#475569" }}>
+                <button type="button" disabled aria-label="More agent actions — coming soon" title="Coming soon" className="p-2 rounded-xl cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#475569" }}>
                   <MoreHorizontal size={15} />
                 </button>
               </div>
@@ -476,19 +481,19 @@ function AgentsPage() {
 
 /* ── 3. ANALYTICS ── */
 function AnalyticsPage() {
-  const [range, setRange] = useState("7D");
-  const ranges = ["24H", "7D", "30D", "90D", "ALL"];
+  const [range, setRange] = useState<AnalyticsRange>("7D");
+  const analytics = getAnalyticsSnapshot(range);
 
   return (
     <div className="space-y-7">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Analytics</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Deep performance insights across all agents</p>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Interactive prototype analytics across all agents · simulated data</p>
         </div>
         <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          {ranges.map(r => (
-            <button key={`range-${r}`} onClick={() => setRange(r)}
+          {ANALYTICS_RANGES.map(r => (
+            <button type="button" key={`range-${r}`} onClick={() => setRange(r)} aria-pressed={range === r}
               className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
               style={{ ...mono, background: range === r ? `${M}18` : "transparent", color: range === r ? M : "#475569", border: range === r ? `1px solid ${M}28` : "1px solid transparent" }}>
               {r}
@@ -498,12 +503,7 @@ function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Total Revenue", value: "$48,291", delta: "+22.4%", color: A },
-          { label: "Total Ops", value: "71,983", delta: "+8.1%", color: M },
-          { label: "Avg Win Rate", value: "91.4%", delta: "+3.2%", color: M },
-          { label: "Network Fees", value: "0.18 SOL", delta: "-11%", color: C },
-        ].map((s, i) => (
+        {analytics.kpis.map((s, i) => (
           <div key={`an-kpi-${i}`} className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
             <div className="text-[11px] mb-2" style={{ ...sans, color: "#475569" }}>{s.label}</div>
             <div className="text-xl font-bold mb-1" style={{ ...mono, color: "#e2e8f0" }}>{s.value}</div>
@@ -519,7 +519,7 @@ function AnalyticsPage() {
         <SectionTitle icon={TrendingUp} text="Revenue Over Time" />
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={perfWeek}>
+            <LineChart data={analytics.series}>
               <defs>
                 <linearGradient id="rev-line" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor={C} />
@@ -558,10 +558,10 @@ function AnalyticsPage() {
         {/* Latency chart */}
         <div className="rounded-2xl p-5" style={{ ...glass() }}>
           <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Execution Latency</div>
-          <div className="text-[11px] mb-4" style={{ ...sans, color: "#475569" }}>Average ms · all agents · last 24h</div>
+          <div className="text-[11px] mb-4" style={{ ...sans, color: "#475569" }}>{analytics.latencyLabel}</div>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={latencyData}>
+              <AreaChart data={analytics.latency}>
                 <defs>
                   <linearGradient id="an-lat" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={C} stopOpacity={0.3} />
@@ -583,7 +583,7 @@ function AnalyticsPage() {
         <SectionTitle icon={BarChart2} text="Gas & Fees Distribution" accent={A} />
         <div className="h-36">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={perfWeek} barSize={28}>
+            <BarChart data={analytics.series} barSize={28}>
               <defs>
                 <linearGradient id="fee-bar" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={A} stopOpacity={0.8} />
@@ -591,8 +591,8 @@ function AnalyticsPage() {
                 </linearGradient>
               </defs>
               <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
-              <Tooltip content={<ChartTip color={A} prefix="$" />} />
+              <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} tickFormatter={v => `${Number(v).toFixed(2)}`} />
+              <Tooltip content={<ChartTip color={A} suffix=" SOL" />} />
               <Bar dataKey="fee" fill="url(#fee-bar)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -622,7 +622,7 @@ function MarketplacePage() {
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Decentralized AI Agent Marketplace</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Deploy <span style={{ color: M }}>Autonomous Agents</span></h1>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Explore <span style={{ color: M }}>Autonomous Agents</span></h1>
         <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Browse policy-aware AI agents designed for bounded execution and verifiable Solana guardrails.</p>
       </div>
 
@@ -635,7 +635,7 @@ function MarketplacePage() {
             onFocus={e => { e.target.style.borderColor = `${M}35`; e.target.style.boxShadow = `0 0 0 3px ${M}10`; }}
             onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.06)"; e.target.style.boxShadow = "none"; }} />
         </div>
-        <button onClick={() => setAntiRug(r => !r)}
+        <button type="button" onClick={() => setAntiRug(r => !r)} aria-pressed={antiRug}
           className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold transition-all shrink-0"
           style={{ ...sans, background: antiRug ? `${M}12` : "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: `1px solid ${antiRug ? M + "35" : "rgba(255,255,255,0.06)"}`, color: antiRug ? M : "#475569", boxShadow: antiRug ? `0 0 20px ${M}18` : "none" }}>
           <ShieldCheck size={13} />Anti-Rug Verified
@@ -643,14 +643,14 @@ function MarketplacePage() {
             <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: antiRug ? "calc(100% - 14px)" : 2, background: antiRug ? M : "#334155", boxShadow: antiRug ? `0 0 8px ${M}` : "none" }} />
           </div>
         </button>
-        <button className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs shrink-0" style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
-          <ArrowDownUp size={13} />Sort
+        <button type="button" disabled aria-disabled="true" title="Coming soon" className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs shrink-0 cursor-not-allowed opacity-60" style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
+          <ArrowDownUp size={13} />Sort <span className="text-[8px]">SOON</span>
         </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {CATS.map((cat, i) => (
-          <button key={`mkt-cat-${i}`} onClick={() => setActiveCat(i)}
+          <button type="button" key={`mkt-cat-${i}`} onClick={() => setActiveCat(i)} aria-pressed={activeCat === i}
             className="px-4 py-2 rounded-full text-xs font-semibold transition-all"
             style={{ ...sans, background: activeCat === i ? `${M}14` : "rgba(11,17,16,0.6)", backdropFilter: "blur(16px)", border: `1px solid ${activeCat === i ? M + "40" : "rgba(255,255,255,0.06)"}`, color: activeCat === i ? M : "#475569", boxShadow: activeCat === i ? `0 0 18px ${M}18` : "none" }}>
             {cat}
@@ -767,8 +767,8 @@ function VaultPage() {
             <div className="text-xs mb-1" style={{ ...sans, color: "#475569" }}>Smart Account</div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold" style={{ ...mono, color: C }}>7Aqv…fK3p</span>
-              <button className="p-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><Copy size={11} /></button>
-              <button className="p-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><ExternalLink size={11} /></button>
+              <button type="button" disabled aria-label="Copy prototype account — unavailable" title="Prototype account only" className="p-1 rounded-md cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><Copy size={11} /></button>
+              <button type="button" disabled aria-label="Open prototype account — unavailable" title="Prototype account only" className="p-1 rounded-md cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><ExternalLink size={11} /></button>
             </div>
             <div className="text-[10px] mt-1" style={{ ...sans, color: "#334155" }}>Policy PDA · Solana Devnet</div>
           </div>
@@ -838,26 +838,26 @@ function SecurityPage() {
   const [autoRenew, setAutoRenew] = useState(false);
 
   const audits = [
-    { name: "QuantTrader-Pro", status: "PASSED", score: 98, date: "2024-11-20", accent: M },
-    { name: "ArbitrageBot-v3", status: "PASSED", score: 95, date: "2024-11-18", accent: M },
-    { name: "NLPOracle-gpt4", status: "PENDING", score: null, date: "—", accent: A },
-    { name: "YieldOptimizer-X", status: "PASSED", score: 91, date: "2024-11-10", accent: M },
-    { name: "SentinelWatch-v1", status: "PASSED", score: 99, date: "2024-11-22", accent: M },
+    { name: "QuantPilot", status: "PASSED", score: 94, date: "2026-08-23", accent: M },
+    { name: "RouteScout", status: "PASSED", score: 91, date: "2026-08-23", accent: M },
+    { name: "SignalOracle", status: "REVIEW", score: 78, date: "2026-08-22", accent: A },
+    { name: "YieldGuard", status: "EXPIRED", score: null, date: "2026-08-22", accent: "#ef4444" },
+    { name: "RiskSentinel", status: "PASSED", score: 97, date: "2026-08-23", accent: M },
   ];
 
   const events = [
-    { icon: ShieldCheck, text: "Anti-Rug scan passed · QuantTrader-Pro", ts: "2m ago", col: M },
+    { icon: ShieldCheck, text: "Policy simulation passed · QuantPilot", ts: "2m ago", col: M },
     { icon: AlertTriangle, text: "Policy near expiry · SignalOracle", ts: "28m ago", col: A },
-    { icon: Lock, text: "2FA verified · login from 192.168.1.42", ts: "1h ago", col: C },
-    { icon: ShieldCheck, text: "Token allowlist updated · 3 mints added", ts: "3h ago", col: M },
-    { icon: AlertTriangle, text: "Unusual tx volume detected · flagged", ts: "5h ago", col: "#ef4444" },
+    { icon: Lock, text: "Deterministic risk fallback activated · RiskSentinel", ts: "1h ago", col: C },
+    { icon: ShieldCheck, text: "Token allowlist updated · RouteScout", ts: "3h ago", col: M },
+    { icon: AlertTriangle, text: "Policy expired · YieldGuard paused", ts: "5h ago", col: "#ef4444" },
   ];
 
   function Toggle({ on, toggle, label }: { on: boolean; toggle: () => void; label: string }) {
     return (
       <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
         <span className="text-xs font-medium" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
-        <button onClick={toggle} className="relative w-10 h-5 rounded-full transition-all duration-200"
+        <button type="button" onClick={toggle} aria-label={label} aria-pressed={on} className="relative w-10 h-5 rounded-full transition-all duration-200"
           style={{ background: on ? `${M}35` : "rgba(255,255,255,0.07)", border: `1px solid ${on ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
           <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200"
             style={{ left: on ? "calc(100% - 18px)" : 2, background: on ? M : "#475569", boxShadow: on ? `0 0 10px ${M}` : "none" }} />
@@ -869,8 +869,11 @@ function SecurityPage() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Security Center</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Anti-Rug protocol, audit results, and access controls</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Security Center</h1>
+          <span className="text-[9px] font-bold tracking-widest px-2 py-1 rounded-lg" style={{ ...mono, color: A, background: `${A}12`, border: `1px solid ${A}25` }}>SIMULATED PROTOTYPE DATA</span>
+        </div>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Prototype policy checks, review results, and local access-control settings</p>
       </div>
 
       {/* Security score */}
@@ -886,14 +889,14 @@ function SecurityPage() {
           </div>
         </div>
         <div>
-          <div className="text-lg font-bold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Security Score: <span style={{ color: M }}>Excellent</span></div>
-          <p className="text-xs" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>All active agents passed policy checks. One authorization is nearing expiry; require a fresh review before extension.</p>
+          <div className="text-lg font-bold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Prototype posture score: <span style={{ color: M }}>94 / 100</span></div>
+          <p className="text-xs" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Illustrative score derived from the demo policies below. It is not a production security audit or a guarantee of fund safety.</p>
           <div className="flex gap-2 mt-3">
             <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>
-              <CheckCircle2 size={10} />5 agents verified
+              <CheckCircle2 size={10} />5 policies reviewed
             </span>
             <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg" style={{ ...sans, background: `${A}12`, color: A, border: `1px solid ${A}22` }}>
-              <AlertTriangle size={10} />1 key expiring
+              <AlertTriangle size={10} />2 need attention
             </span>
           </div>
         </div>
@@ -903,7 +906,7 @@ function SecurityPage() {
         {/* Audit results */}
         <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
           <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Audit Results</span>
+            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Policy Review Results</span>
           </div>
           {audits.map((a, i) => (
             <div key={`audit-${i}`} className="flex items-center gap-3 px-5 py-3.5 border-b hover:bg-white/[0.018] transition-colors" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
@@ -911,11 +914,11 @@ function SecurityPage() {
               <div className="flex-1"><div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</div><div className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.date}</div></div>
               {a.score !== null ? (
                 <div className="text-right">
-                  <div className="text-xs font-bold" style={{ ...mono, color: M }}>{a.score}/100</div>
-                  <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>PASSED</span>
+                  <div className="text-xs font-bold" style={{ ...mono, color: a.accent }}>{a.score}/100</div>
+                  <span className="text-[10px] font-bold" style={{ ...mono, color: a.accent }}>{a.status}</span>
                 </div>
               ) : (
-                <span className="text-[10px] font-bold" style={{ ...mono, color: A }}>PENDING</span>
+                <span className="text-[10px] font-bold" style={{ ...mono, color: a.accent }}>{a.status}</span>
               )}
             </div>
           ))}
@@ -1006,7 +1009,7 @@ function SessionsPage() {
         </div>
         <div className="relative h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
           <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}60, ${accent})` }} />
-          <input type="range" min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          <input type="range" aria-label={label} min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
           <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all"
             style={{ left: `calc(${pct}% - 7px)`, background: BG, borderColor: accent, boxShadow: `0 0 12px ${accent}70` }} />
         </div>
@@ -1053,7 +1056,7 @@ function SessionsPage() {
           </div>
           <div className="flex gap-2">
             {STEPS.map((s, i) => (
-              <button key={`wiz-step-${i}`} onClick={() => setStep(i)} className="flex-1 flex flex-col items-center gap-1.5">
+              <button type="button" key={`wiz-step-${i}`} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined} aria-label={`Step ${i + 1}: ${s}`} className="flex-1 flex flex-col items-center gap-1.5">
                 <div className="w-full h-0.5 rounded-full transition-all" style={{ background: i <= step ? (i === step ? M : `${M}50`) : "rgba(255,255,255,0.07)" }} />
                 <span className="text-[9px] font-semibold hidden sm:block" style={{ ...mono, color: i === step ? M : i < step ? `${M}60` : "rgba(148,163,184,0.35)" }}>
                   {String(i + 1).padStart(2, "0")} {s}
@@ -1068,7 +1071,7 @@ function SessionsPage() {
               <p className="text-xs" style={{ ...sans, color: "#94a3b8", lineHeight: 1.7 }}>Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.</p>
               <div className="flex flex-wrap gap-2">
                 {tList.map((t, ti) => { const on = tokens.includes(t); return (
-                  <button key={`wiz-tok-${ti}`} onClick={() => setTokens(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])}
+                  <button type="button" key={`wiz-tok-${ti}`} onClick={() => setTokens(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])} aria-pressed={on}
                     className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
                     style={{ ...mono, background: on ? `${M}15` : "rgba(255,255,255,0.03)", border: `1px solid ${on ? M + "40" : "rgba(255,255,255,0.07)"}`, color: on ? M : "#64748b", boxShadow: on ? `0 0 14px ${M}20` : "none" }}>
                     {t}
@@ -1126,7 +1129,7 @@ function SessionsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-semibold" style={{ color: "#e2e8f0" }}>Risk copilot verdict</div>
-                      <div className="text-[10px] mt-0.5" style={{ color: "#64748b" }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : "Deterministic safety fallback"}</div>
+                      <div className="text-[10px] mt-0.5" style={{ color: "#64748b" }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : assessment.source === "openai+deterministic-floor" ? `OpenAI + deterministic safety floor · ${assessment.model}` : "Deterministic safety fallback"}</div>
                     </div>
                     <div className="text-right"><div className="text-xl font-bold" style={{ ...mono, color: assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : "#ef4444" }}>{assessment.score}/100</div><div className="text-[10px]" style={{ ...mono, color: "#94a3b8" }}>{assessment.decision}</div></div>
                   </div>
@@ -1140,10 +1143,10 @@ function SessionsPage() {
           )}
         </div>
         <div className="px-6 py-4 border-t flex gap-2" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-          <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
+          <button type="button" onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
             className="px-4 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-25"
             style={{ ...sans, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#94a3b8" }}>Back</button>
-          <button onClick={() => step < STEPS.length - 1 ? setStep(s => s + 1) : void assessPolicy()} disabled={assessing}
+          <button type="button" onClick={() => step < STEPS.length - 1 ? setStep(s => s + 1) : void assessPolicy()} disabled={assessing}
             className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
             style={{ ...sans, background: step === STEPS.length - 1 ? `linear-gradient(135deg, ${M}dd, ${C}cc)` : `${M}18`, border: `1px solid ${M}35`, color: step === STEPS.length - 1 ? BG : M, boxShadow: step === STEPS.length - 1 ? `0 0 32px ${M}30` : "none" }}>
             {step === STEPS.length - 1 ? <><Shield size={12} />{assessing ? "Assessing policy…" : assessment ? "Re-run risk assessment" : "Run AI risk assessment"}</> : <>Continue <ChevronRight size={12} /></>}
@@ -1181,7 +1184,7 @@ function SettingsPage() {
           <div className="text-xs font-medium" style={{ ...sans, color: "#e2e8f0" }}>{label}</div>
           {sub && <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>{sub}</div>}
         </div>
-        <button onClick={toggle} className="relative w-10 h-5 rounded-full transition-all duration-200 shrink-0 ml-4"
+        <button type="button" onClick={toggle} aria-label={label} aria-pressed={on} className="relative w-10 h-5 rounded-full transition-all duration-200 shrink-0 ml-4"
           style={{ background: on ? `${M}35` : "rgba(255,255,255,0.07)", border: `1px solid ${on ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
           <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: on ? "calc(100% - 18px)" : 2, background: on ? M : "#475569", boxShadow: on ? `0 0 10px ${M}` : "none" }} />
         </button>
@@ -1217,7 +1220,7 @@ function SettingsPage() {
       {/* Tab bar */}
       <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
         {tabs.map((t, i) => (
-          <button key={`set-tab-${i}`} onClick={() => setActiveTab(i)}
+          <button type="button" role="tab" key={`set-tab-${i}`} onClick={() => setActiveTab(i)} aria-selected={activeTab === i}
             className="px-4 py-2 rounded-lg text-xs font-semibold transition-all"
             style={{ ...sans, background: activeTab === i ? `${M}18` : "transparent", color: activeTab === i ? M : "#475569", border: activeTab === i ? `1px solid ${M}28` : "1px solid transparent" }}>
             {t}
@@ -1233,7 +1236,7 @@ function SettingsPage() {
             <ToggleRow on={notifications} toggle={() => setNotifications(v => !v)} label="In-app notifications" sub="Real-time agent status updates" />
             <div className="py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               <div className="text-xs font-medium mb-2" style={{ ...sans, color: "#e2e8f0" }}>Accent Color</div>
-              <div className="flex gap-2">{[M, C, A, "#8b5cf6", "#ef4444"].map((col, ci) => (<button key={`acc-col-${ci}`} className="w-7 h-7 rounded-full border-2 transition-all" style={{ background: col, borderColor: col === M ? "#e2e8f0" : "transparent" }} />))}</div>
+              <div className="flex gap-2">{[M, C, A, "#8b5cf6", "#ef4444"].map((col, ci) => (<button type="button" disabled key={`acc-col-${ci}`} aria-label={`Accent color ${ci + 1} — coming soon`} title="Theme switching is coming soon" className="w-7 h-7 rounded-full border-2 cursor-not-allowed opacity-60" style={{ background: col, borderColor: col === M ? "#e2e8f0" : "transparent" }} />))}</div>
             </div>
           </div>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
@@ -1244,7 +1247,7 @@ function SettingsPage() {
                 <div className="flex justify-between mb-2"><span className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Slippage Tolerance</span><span className="text-xs font-bold" style={{ ...mono, color: M }}>{slippage}%</span></div>
                 <div className="relative h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${(slippage / 5) * 100}%`, background: `linear-gradient(90deg, ${M}60, ${M})` }} />
-                  <input type="range" min={0.1} max={5} step={0.1} value={slippage} onChange={e => setSlippage(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <input type="range" aria-label="Slippage tolerance" min={0.1} max={5} step={0.1} value={slippage} onChange={e => setSlippage(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2" style={{ left: `calc(${(slippage / 5) * 100}% - 7px)`, background: BG, borderColor: M, boxShadow: `0 0 10px ${M}70` }} />
                 </div>
               </div>
@@ -1309,11 +1312,11 @@ function SettingsPage() {
       {/* Danger zone */}
       <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
         <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#ef4444" }}>Danger Zone</div>
-        <p className="text-xs mb-4" style={{ ...sans, color: "#64748b" }}>These actions are irreversible. Proceed with caution.</p>
+        <p className="text-xs mb-4" style={{ ...sans, color: "#64748b" }}>Destructive actions are intentionally disabled in this prototype.</p>
         <div className="flex flex-wrap gap-2">
-          <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Revoke All Agent Policies</button>
-          <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Disconnect Wallet</button>
-          <button className="px-4 py-2 rounded-xl text-xs font-semibold transition-all" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>Delete All Agents</button>
+          {['Revoke All Agent Policies', 'Disconnect Wallet', 'Delete All Agents'].map(action => (
+            <button type="button" disabled key={action} title="Unavailable in this prototype" className="px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed opacity-50" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>{action}</button>
+          ))}
         </div>
       </div>
     </div>
@@ -1364,7 +1367,7 @@ export default function App() {
             const Icon = item.icon;
             const on = nav === i;
             return (
-              <button key={`nav-${i}`} onClick={() => setNav(i)}
+              <button type="button" key={`nav-${i}`} onClick={() => setNav(i)} aria-current={on ? "page" : undefined}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative"
                 style={{ background: on ? `${M}0d` : "transparent", border: `1px solid ${on ? M + "1e" : "transparent"}` }}>
                 {on && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ background: M, boxShadow: `0 0 10px ${M}` }} />}
@@ -1410,7 +1413,7 @@ export default function App() {
             <Clock size={10} style={{ color: "#334155" }} />
             <span style={{ color: "#94a3b8" }}>{time.toLocaleTimeString("en-US", { hour12: false })}</span>
           </div>
-          <button className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
+          <button type="button" onClick={() => window.location.reload()} aria-label="Refresh dashboard" title="Refresh dashboard" className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
             <RefreshCw size={13} />
           </button>
           <SolanaWalletControl />

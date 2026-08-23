@@ -2,7 +2,9 @@
 
 > Autonomous finance. Hard limits.
 
-REDLINE is the programmable safety layer for autonomous DeFi agents on Solana. Users define a narrow policy (asset allowlist, spend cap, transaction limit, cooldown, and expiry), run an AI-assisted risk review, and publish a tamper-evident policy digest before an agent can act.
+[Live demo](https://csaclab.netlify.app) · [Source repository](https://github.com/anky06-ky/CSaCLAB)
+
+REDLINE is the programmable safety layer for autonomous DeFi agents on Solana. Users define a narrow policy (asset allowlist, spend cap, transaction limit, cooldown, and expiry), run an AI-assisted risk review, and publish a tamper-evident policy digest before authorizing an agent workflow.
 
 ## The problem
 
@@ -25,7 +27,7 @@ REDLINE makes owner-defined limits explicit, time-bounded, reviewable, and indep
 - Deterministic safety fallback when the AI service is unavailable or unconfigured.
 - SHA-256 policy digest publication through the Solana Memo program.
 - Solana Explorer link after transaction confirmation.
-- A source-level Anchor guardrail program for policy accounts, revocation, expiry, cooldown, spend, and transaction limits.
+- An experimental Anchor policy-account scaffold for revocation, expiry, cooldown, spend, and transaction accounting.
 - TypeScript strict mode, unit tests, production build, and security documentation.
 
 Analytics, historical transactions, marketplace reviews, P&L, APY, and agent performance cards are clearly marked simulated prototype data. They must not be presented as traction or live financial results.

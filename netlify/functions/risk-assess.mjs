@@ -88,6 +88,32 @@ function deterministicAssessment(input) {
   };
 }
 
+const decisionRank = { ALLOW: 0, REVIEW: 1, BLOCK: 2 };
+const levelRank = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+
+export function mergeAssessments(baseline, aiAssessment, model) {
+  const decision = decisionRank[aiAssessment.decision] >= decisionRank[baseline.decision]
+    ? aiAssessment.decision
+    : baseline.decision;
+  const level = levelRank[aiAssessment.level] >= levelRank[baseline.level]
+    ? aiAssessment.level
+    : baseline.level;
+  const decisionScoreFloor = decision === "BLOCK" ? 80 : decision === "REVIEW" ? 60 : 0;
+  const score = Math.max(baseline.score, aiAssessment.score, decisionScoreFloor);
+  const baselineWasStricter = decision !== aiAssessment.decision || level !== aiAssessment.level || score !== aiAssessment.score;
+
+  return {
+    score,
+    level,
+    decision,
+    summary: baselineWasStricter ? baseline.summary : aiAssessment.summary,
+    findings: [...new Set([...baseline.findings, ...aiAssessment.findings])].slice(0, 5),
+    recommendations: [...new Set([...baseline.recommendations, ...aiAssessment.recommendations])].slice(0, 5),
+    source: "openai+deterministic-floor",
+    model,
+  };
+}
+
 const assessmentSchema = {
   type: "object",
   additionalProperties: false,
@@ -117,9 +143,10 @@ export async function handler(event) {
   const input = normalize(parsed);
   const errors = validationErrors(input);
   if (errors.length) return response(400, { error: "Invalid policy", details: errors });
+  const baseline = deterministicAssessment(input);
 
   if (!process.env.OPENAI_API_KEY) {
-    return response(200, deterministicAssessment(input));
+    return response(200, baseline);
   }
 
   try {
@@ -147,8 +174,8 @@ export async function handler(event) {
     });
 
     const assessment = JSON.parse(result.output_text);
-    return response(200, { ...assessment, source: "openai", model });
+    return response(200, mergeAssessments(baseline, assessment, model));
   } catch {
-    return response(200, deterministicAssessment(input));
+    return response(200, baseline);
   }
 }
