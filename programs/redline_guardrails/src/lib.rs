@@ -13,7 +13,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4");
+declare_id!("BYDBYcQcqSkNMmJTU47aYJxprL8k2RM9iTTogADBmpVW");
 
 pub const MAX_ALLOWLIST: usize = 4;
 pub const VAULT_SEED: &[u8] = b"vault";
