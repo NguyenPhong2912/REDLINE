@@ -2,104 +2,80 @@
 
 > Autonomous finance. Hard limits.
 
-[Live demo](https://csaclab.netlify.app) · [Source repository](https://github.com/anky06-ky/CSaCLAB)
+[Live demo](https://vermillion-dasik-a32ab0.netlify.app) · [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet) · [A rejected agent transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)
 
-REDLINE is the programmable safety layer for autonomous DeFi agents on Solana. Users define a narrow policy (asset allowlist, spend cap, transaction limit, cooldown, and expiry), run an AI-assisted risk review, and publish a tamper-evident policy digest before authorizing an agent workflow.
+REDLINE is the programmable safety layer for autonomous DeFi agents on Solana. An owner defines a narrow policy — asset and destination allowlists, spend cap, transaction cap, cooldown, expiry — signs it once, and a Solana program enforces it on every transfer the agent attempts. The agent proposes; the chain decides.
 
 ## The problem
 
-DeFi automation usually forces users to choose between manual approval for every action and giving a bot dangerously broad wallet access. Teams also struggle to explain what an AI agent was allowed to do after an incident.
+DeFi automation forces a choice between approving every action by hand and giving a bot dangerously broad wallet access. Teams also cannot prove afterwards what an agent was allowed to do, and a compromised server or a prompt-injected model can drain a treasury in one transaction.
 
-REDLINE makes owner-defined limits explicit, time-bounded, reviewable, and independently verifiable.
-
-## Primary users
-
-- Active DeFi users who want automation without handing over unrestricted custody.
-- Small crypto funds and DAO treasury operators that need approval gates and audit evidence.
-- Agent developers who need a reusable policy layer instead of bespoke wallet permissions.
-
-## What works today
-
-- Solana Wallet Standard discovery and connection on Devnet.
-- Live SOL balance reads from the configured RPC.
-- A four-step agent policy builder.
-- AI risk assessment through a server-side OpenAI Responses API function with strict JSON output.
-- Deterministic safety fallback when the AI service is unavailable or unconfigured.
-- SHA-256 policy digest publication through the Solana Memo program.
-- Solana Explorer link after transaction confirmation.
-- An experimental Anchor policy-account scaffold for revocation, expiry, cooldown, spend, and transaction accounting.
-- TypeScript strict mode, unit tests, production build, and security documentation.
-
-Analytics, historical transactions, marketplace reviews, P&L, APY, and agent performance cards are clearly marked simulated prototype data. They must not be presented as traction or live financial results.
-
-## Architecture
+## How it works
 
 ```text
-Browser / React
-  ├─ Solana Kit + Wallet Standard ──> Solana Devnet RPC
-  ├─ policy builder ────────────────> SHA-256 policy digest
-  ├─ risk client ───────────────────> Netlify function
-  │                                    ├─ OpenAI Responses API
-  │                                    └─ deterministic fallback
-  └─ signed memo transaction ───────> Solana Memo program
-
-Anchor program (source scaffold)
-  └─ policy PDA: limits, expiry, cooldown, counters, revocation
+owner wallet ──signs create_grant──► Vault PDA + Grant PDA (Solana program)
+                                            ▲
+agent runtime ──execute_transfer(nonce, amount)──┤  7 gates → CPI transfer, or a named error and nothing moves
+                                            │
+indexer ◄── PolicyDecision events ──────────┘  → append-only audit trail → live dashboard feed
 ```
 
-See [technical architecture](docs/TECHNICAL_ARCHITECTURE.md) and [security model](docs/SECURITY.md).
+1. **Policy builder + AI risk copilot** — the model explains risk; a deterministic rule floor it cannot lower decides ALLOW / REVIEW / BLOCK.
+2. **One signature** — the wallet signs `create_grant`. Funds sit in a program-owned vault; the backend never holds the owner's key.
+3. **Bounded execution** — the runtime (scripted or LLM-planned) sends `execute_transfer`. The program checks revoked → expiry → nonce → mint allowlist → destination allowlist → transaction cap → spend cap → cooldown, then transfers via CPI and updates counters in the same transaction.
+4. **Evidence** — every proposal, decision and signature is written to an append-only audit trail; an indexer reads the program's own events so dashboard numbers come from the chain, not the server.
+5. **Owner control** — revoke or withdraw at any time from the wallet.
 
-## Local development
+## What is real today
 
-Requirements: Node.js 20 or newer.
+| | Status |
+|---|---|
+| Program `redline_guardrails` (vault PDA, gated `execute_transfer`, revoke, withdraw, events, error codes) | Deployed on Devnet |
+| Wallet-signed vault / grant / revoke / withdraw from the browser | Live |
+| Agent runtime, policy engine, indexer, audit trail, SSE feed | Live on Railway + Postgres |
+| On-chain gate tests against the deployed binary (LiteSVM) | CI on every push |
+| Marketplace, analytics, P&L, APY panels | Simulated, labelled |
+
+See [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) for the design and [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md) for the submission.
+
+## Repository layout
+
+```text
+programs/redline_guardrails   Anchor program (Rust)
+backend/                      API, policy engine, agent runtime, indexer, tests — see backend/README.md
+src/                          React dashboard (Vite, @solana/kit, Wallet Standard)
+docs/                         product, business, architecture, security, submission
+```
+
+## Run the dashboard locally
+
+Requires Node.js 20+.
 
 ```bash
-npm install --legacy-peer-deps
-copy .env.example .env
-npm run dev
+npm install
+cp .env.example .env        # VITE_API_URL etc. — see backend/README.md for the values
+npm run dev                 # http://localhost:5173
 ```
 
-The public Solana Devnet endpoint works for a demo. Configure a dedicated RPC for a stable event deployment.
-
-To enable the AI risk copilot, set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in Netlify environment variables. Never expose `OPENAI_API_KEY` through a `VITE_` variable.
+Point `VITE_API_URL` at the hosted backend or at a local one (`cd backend && npm run dev`). With `CHAIN=mock` on the backend the whole flow runs without a wallet or RPC.
 
 ## Quality checks
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-npm run check
+npm run typecheck && npm test && npm run build     # dashboard
+cd backend && npm run typecheck && npm test        # backend (29 tests)
+cd backend && npm run program:fetch && npm run test:onchain   # LiteSVM gate tests (Linux/macOS)
 ```
 
-## Anchor program
+## Demo in four minutes
 
-The program source is under `programs/redline_guardrails`. The current machine does not include the Solana/Anchor toolchain, so the Rust program is not claimed as deployed. Before deployment:
+1. Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx).
+2. **Start agent (scripted)**. Dashboard feed: three transfers confirmed on-chain, counters rising on the PDA.
+3. The fourth transfer exceeds the cap. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved` with an explorer link; token balances before/after are identical.
+4. **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**.
 
-```bash
-anchor keys sync
-anchor build
-anchor test
-anchor deploy --provider.cluster devnet
-```
+## Team
 
-Replace the provisional program ID in `Anchor.toml` through `anchor keys sync`, then wire the generated IDL/client into the frontend.
+CSaCLAB — Trần An Kỳ, Nguyễn Thành Phong, Nguyễn Hà Thu, Trần Hoàng Thông, Trịnh Ngọc Minh Nhật. Tracks: Best Technical Build and Best Product & Business. Theme: AI × Web3 · DeFi & Digital Assets.
 
-## Hackathon material
-
-- [Product brief](docs/PRODUCT_BRIEF.md)
-- [Business model](docs/BUSINESS_MODEL.md)
-- [Technical architecture](docs/TECHNICAL_ARCHITECTURE.md)
-- [Security and threat model](docs/SECURITY.md)
-- [User-feedback protocol](docs/USER_FEEDBACK.md)
-- [Submission answers](docs/HACKATHON_SUBMISSION.md)
-- [Demo script](docs/DEMO_SCRIPT.md)
-
-## Positioning
-
-- Competition track now: **Best Product & Business**
-- Technical target: **Best Technical Build** after the custom program is built, tested, and deployed
-- Product theme: **AI × Web3**
-- Use case: **DeFi & Digital Assets**
-
-**REDLINE** is the boundary an autonomous agent cannot cross: the system can move quickly without receiving unlimited authority over user funds.
+Devnet only. No returns are promised; simulated panels are labelled; no professional audit has been performed.

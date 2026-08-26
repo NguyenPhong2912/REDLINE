@@ -22,10 +22,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
+      # npm install (not ci): the lock is generated on npm 11 and older npm
+      # rejects its optional-peer layout for rpc-websockets/utf-8-validate.
+      - run: npm install --no-audit --no-fund
       - run: npx prisma generate
       - run: npm run typecheck
       - name: Unit tests (policy engine, Anchor wire format, transient errors)
