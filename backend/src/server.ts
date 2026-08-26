@@ -22,15 +22,20 @@ if (chain instanceof SolanaChain) void startIndexer(chain, msg => app.log.info(m
 
 await app.register(cors, { origin: true });
 
+// Solana errors carry BigInts in `context`; logging the raw object makes pino
+// throw and the client would see "Do not know how to serialize a BigInt"
+// instead of the real failure. Log and return a safe projection.
+const safe = (v: unknown) => { try { return JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x))); } catch { return String(v); } };
 app.setErrorHandler((err, _req, reply) => {
   if (err instanceof ZodError) return reply.code(400).send({ error: "Invalid input", details: err.issues });
-  app.log.error(err);
-  return reply.code(err.statusCode ?? 500).send({ error: err.message });
+  const context = safe((err as { context?: unknown }).context ?? null);
+  app.log.error({ err: { message: err.message, stack: err.stack, context } }, "request failed");
+  return reply.code(err.statusCode ?? 500).send({ error: err.message, context });
 });
 
 app.get("/health", async () => {
   const chain = getChain();
-  return { ok: true, chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey, clockSpeed };
+  return { ok: true, chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey, clockSpeed, version: (process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? "local").slice(0, 7) };
 });
 
 await app.register(agentRoutes);
