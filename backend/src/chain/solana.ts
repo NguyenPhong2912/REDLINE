@@ -40,8 +40,12 @@ type Ix = Instruction<string, readonly (AccountMeta | AccountSignerMeta)[]>;
 // call does not kill an agent run. A dedicated RPC (Helius/QuickNode) makes
 // this path rare; it is not a substitute for one.
 function isTransient(e: unknown): boolean {
-  const text = e instanceof Error ? `${e.message} ${JSON.stringify((e as { context?: unknown }).context ?? {})}` : String(e);
-  return /429|Too Many Requests|8100002|ECONNRESET|ETIMEDOUT|fetch failed|503|502/i.test(text);
+  // SolanaError.context can hold BigInts; a plain JSON.stringify would throw
+  // inside the error handler and mask the real failure.
+  const safe = (v: unknown) => { try { return JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)); } catch { return ""; } };
+  let text = "";
+  try { text = e instanceof Error ? `${e.message} ${safe((e as { context?: unknown }).context ?? {})}` : String(e); } catch { return false; }
+  return /429|Too Many Requests|8100002|ECONNRESET|ETIMEDOUT|fetch failed|HTTP error \(50[23]\)/i.test(text);
 }
 export const isTransientChainError = isTransient;
 
