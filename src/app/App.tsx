@@ -19,6 +19,7 @@ import {
 import { GrantSignButton } from "./components/GrantSignButton";
 import { GrantsPanel } from "./components/GrantsPanel";
 import { LiveFeed } from "./components/LiveFeed";
+import { VaultPanel } from "./components/VaultPanel";
 import { SolanaWalletControl } from "./components/SolanaWalletControl";
 import {
   requestRiskAssessment,
@@ -718,11 +719,10 @@ function VaultPage() {
           <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Vault</h1>
           <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Solana treasury · policy-bounded agent permissions</p>
         </div>
-        <div className="flex gap-2">
-          <ShimmerBtn label="Deposit" accent={M} />
-          <ShimmerBtn label="Withdraw" accent={A} />
-        </div>
       </div>
+
+      {/* Real program vault for the connected wallet */}
+      <VaultPanel />
 
       {/* Total balance card */}
       <div className="rounded-2xl p-7 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>

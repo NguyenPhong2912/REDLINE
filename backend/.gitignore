@@ -7,3 +7,4 @@ executor.json
 owner.json
 ops-destination.json
 wallet-*.json
+target/

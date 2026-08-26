@@ -2,6 +2,8 @@
 // these helpers so switching hosts (localhost → Railway) is one env change.
 
 export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8787").replace(/\/$/, "");
+// Shared write key (see backend/src/auth.ts for what it does and does not protect).
+const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 export interface Health { ok: boolean; chain: "mock" | "solana"; programId: string; executor: string; clockSpeed: number }
 export interface AgentVersion { id: string; name: string; version: string; strategy: string; agentHash: string }
@@ -20,10 +22,11 @@ export interface IntentRow {
   decision: null | { allow: boolean; reasonCode: string; stage: string; chainTx: null | { signature: string; result: string; error: string | null; slot: string | null } };
 }
 export interface AuditRow { id: string; createdAt: string; actorType: string; eventType: string; subjectType: string; subjectId: string; chainSignature: string | null; payload: Record<string, unknown> }
+export interface VaultView { owner: string; vaultPda: string; vaultAta: string; mint: string; balanceUnits: string | null; exists: boolean }
 export interface FeedEvent { id: string; at: string; eventType: string; actorType: string; payload: Record<string, unknown>; chainSignature?: string | null }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-redline-key": API_KEY } : {}), ...(init?.headers ?? {}) } });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try { const body = await res.json() as { error?: string; details?: unknown }; if (body.error) msg = body.error; } catch { /* keep status text */ }
@@ -50,6 +53,7 @@ export const api = {
   startRun: (grantId: string, mode: "scripted" | "llm" = "scripted") => req<{ id: string }>("/runs", { method: "POST", body: JSON.stringify({ grantId, mode }) }),
   stopRun: (runId: string) => req<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST" }),
   audit: (grantId?: string) => req<AuditRow[]>(`/audit${grantId ? `?grant=${grantId}` : ""}`),
+  vault: (owner: string) => req<VaultView>(`/vaults/${owner}`),
   fundVault: (ownerWallet: string) => req<{ vaultPda: string; vaultAta: string; signature: string; balance: string }>("/devnet/fund", { method: "POST", body: JSON.stringify({ ownerWallet }) }),
 };
 

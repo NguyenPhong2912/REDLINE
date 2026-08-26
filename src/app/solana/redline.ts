@@ -7,6 +7,8 @@ import { AccountRole, getAddressEncoder, getProgramDerivedAddress, type Address,
 
 export const PROGRAM_ID = (import.meta.env.VITE_REDLINE_PROGRAM_ID ?? "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4") as Address;
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
+const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+const ATA_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address;
 const enc = new TextEncoder();
 const addressEncoder = getAddressEncoder();
 
@@ -90,6 +92,31 @@ export async function createGrantInstruction(p: CreateGrantParams): Promise<{ in
       ],
       data,
     },
+  };
+}
+
+async function findAta(owner: string, mint: string): Promise<Address> {
+  const [ata] = await getProgramDerivedAddress({ programAddress: ATA_PROGRAM, seeds: [addr(owner), addr(TOKEN_PROGRAM), addr(mint)] });
+  return ata;
+}
+
+// Owner pulls tokens out of the vault. No gates — the owner's key is the
+// authority. Account order mirrors `Withdraw` in lib.rs.
+export async function withdrawInstruction(owner: string, mint: string, amountUnits: bigint): Promise<Instruction> {
+  const vault = await findVaultPda(owner);
+  return {
+    programAddress: PROGRAM_ID,
+    accounts: [
+      { address: vault, role: AccountRole.READONLY },
+      { address: owner as Address, role: AccountRole.WRITABLE_SIGNER },
+      { address: mint as Address, role: AccountRole.READONLY },
+      { address: await findAta(vault, mint), role: AccountRole.WRITABLE },
+      { address: await findAta(owner, mint), role: AccountRole.WRITABLE },
+      { address: TOKEN_PROGRAM, role: AccountRole.READONLY },
+      { address: ATA_PROGRAM, role: AccountRole.READONLY },
+      { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ],
+    data: concat([await discriminator("withdraw"), u64(amountUnits)]),
   };
 }
 

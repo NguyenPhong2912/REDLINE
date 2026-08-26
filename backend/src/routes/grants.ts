@@ -90,7 +90,13 @@ export async function grantRoutes(app: FastifyInstance) {
     // Browser flow posts the signature of a revoke_grant it already sent;
     // mock / headless demo lets the adapter sign.
     const body = (req.body ?? {}) as { signature?: string };
-    const signature = body.signature ?? (await getChain().revokeGrant(grant.grantPda)).signature;
+    const chain = getChain();
+    // On Solana the owner must have signed revoke_grant in their wallet; the
+    // server never signs on an owner's behalf outside the mock adapter.
+    if (chain.kind === "solana" && !body.signature) {
+      return reply.code(400).send({ error: "signature required: sign revoke_grant in the owner wallet, then post its signature" });
+    }
+    const signature = body.signature ?? (await chain.revokeGrant(grant.grantPda)).signature;
     await prisma.agentGrant.update({ where: { id }, data: { revoked: true } });
     await audit({ actorType: "owner", actorId: grant.ownerId, eventType: "grant.revoked", subjectType: "grant", subjectId: id, chainSignature: signature, payload: { grantId: id, grantPda: grant.grantPda } });
     return json({ ok: true, signature });

@@ -13,10 +13,14 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "devnet:setup": "tsx scripts/devnet-setup.ts"
+    "devnet:setup": "tsx scripts/devnet-setup.ts",
+    "db:cleanup": "tsx scripts/cleanup.ts",
+    "program:fetch": "tsx scripts/fetch-program.ts",
+    "test:onchain": "vitest run --config vitest.onchain.config.ts"
   },
   "dependencies": {
     "@fastify/cors": "10.0.2",
+    "@fastify/rate-limit": "^10.2.2",
     "@prisma/client": "6.5.0",
     "@solana-program/system": "^0.14.0",
     "@solana-program/token": "^0.16.0",
@@ -26,7 +30,9 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@solana/web3.js": "^1.98.0",
     "@types/node": "24.3.0",
+    "litesvm": "^1.4.1",
     "prisma": "6.5.0",
     "tsx": "4.19.3",
     "typescript": "5.9.2",

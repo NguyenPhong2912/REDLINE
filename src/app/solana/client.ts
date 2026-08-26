@@ -13,6 +13,10 @@ export const solanaClient = createClient()
 
 export type AppClient = Awaited<typeof solanaClient>;
 
+export function explorerAddressUrl(address: string): string {
+  return `https://explorer.solana.com/address/${encodeURIComponent(address)}?cluster=${SOLANA_CLUSTER}`;
+}
+
 export function explorerTransactionUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=${SOLANA_CLUSTER}`;
 }
