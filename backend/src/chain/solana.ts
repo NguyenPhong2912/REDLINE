@@ -35,6 +35,30 @@ import { decodeGrant, encodeCreateGrant, encodeExecuteTransfer, encodeInitVault,
 
 type Ix = Instruction<string, readonly (AccountMeta | AccountSignerMeta)[]>;
 
+// Public Devnet RPC rate-limits by IP (HTTP 429) and shared cloud egress gets
+// hit hard. Retry transient transport errors with backoff so one throttled
+// call does not kill an agent run. A dedicated RPC (Helius/QuickNode) makes
+// this path rare; it is not a substitute for one.
+function isTransient(e: unknown): boolean {
+  const text = e instanceof Error ? `${e.message} ${JSON.stringify((e as { context?: unknown }).context ?? {})}` : String(e);
+  return /429|Too Many Requests|8100002|ECONNRESET|ETIMEDOUT|fetch failed|503|502/i.test(text);
+}
+export const isTransientChainError = isTransient;
+
+export async function withRetry<T>(fn: () => Promise<T>, label: string, attempts = 6): Promise<T> {
+  let delay = 1_000;
+  for (let i = 1; ; i += 1) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i >= attempts || !isTransient(e)) throw e;
+      await new Promise(r => setTimeout(r, delay + Math.floor(Math.random() * 300)));
+      delay = Math.min(delay * 2, 15_000);
+      void label;
+    }
+  }
+}
+
 export interface SolanaConfig {
   rpcUrl: string;
   wsUrl: string;
@@ -88,7 +112,7 @@ export class SolanaChain implements ChainAdapter {
   // must land on-chain as a failed transaction so the explorer shows the
   // program saying no. Everything else keeps preflight.
   private async send(ixs: Ix[], feePayer: KeyPairSigner, skipPreflight = false): Promise<{ signature: string; err: unknown; slot?: bigint; logs: string[] }> {
-    const { value: blockhash } = await this.rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+    const { value: blockhash } = await withRetry(() => this.rpc.getLatestBlockhash({ commitment: "confirmed" }).send(), "getLatestBlockhash");
     const msg = pipe(
       createTransactionMessage({ version: 0 }),
       m => setTransactionMessageFeePayerSigner(feePayer, m),
@@ -99,12 +123,14 @@ export class SolanaChain implements ChainAdapter {
     assertIsTransactionWithBlockhashLifetime(signed);
     const signature = getSignatureFromTransaction(signed);
     try {
-      await this.sendAndConfirm(signed, { commitment: "confirmed", skipPreflight });
+      await withRetry(() => this.sendAndConfirm(signed, { commitment: "confirmed", skipPreflight }), "sendAndConfirm");
     } catch (e) {
-      // Confirmed-but-failed transactions throw here; read the on-chain result.
-      if (!skipPreflight) throw e;
+      // A program rejection surfaces here as a confirmed-but-failed tx; read
+      // the on-chain result below. Anything else (throttled after retries,
+      // blockhash expired) is a real failure.
+      if (!skipPreflight || isTransient(e)) throw e;
     }
-    const tx = await this.rpc.getTransaction(signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 }).send();
+    const tx = await withRetry(() => this.rpc.getTransaction(signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 }).send(), "getTransaction");
     return { signature: signature as string, err: tx?.meta?.err ?? null, slot: tx?.slot, logs: [...(tx?.meta?.logMessages ?? [])] };
   }
 
@@ -157,7 +183,7 @@ export class SolanaChain implements ChainAdapter {
   }
 
   async readGrant(grantPda: string): Promise<GrantState | null> {
-    const { value } = await this.rpc.getAccountInfo(grantPda as Address, { encoding: "base64", commitment: "confirmed" }).send();
+    const { value } = await withRetry(() => this.rpc.getAccountInfo(grantPda as Address, { encoding: "base64", commitment: "confirmed" }).send(), "getAccountInfo");
     if (!value) return null;
     const data = new Uint8Array(Buffer.from(value.data[0], "base64"));
     return decodeGrant(data, grantPda);

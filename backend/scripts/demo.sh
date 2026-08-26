@@ -36,8 +36,8 @@ sleep $WAIT
 curl -s "$API/grants/$GRANT_ID/intents" | python -c "
 import sys,json
 for i in reversed(json.load(sys.stdin)):
-    d=i['decision']; tx=d.get('chainTx') if d else None
-    print(f\"  nonce={i['nonce']} amount={int(i['amountUnits'])/1e6:>6.0f} USDC  {d['stage']:8} {'ALLOW' if d['allow'] else 'DENY ':5} {d['reasonCode']:18} tx={tx['result'] if tx else '-'} sig={tx['signature'][:14]+'…' if tx else '-'}\")"
+    d=i['decision'] or {}; tx=d.get('chainTx')
+    print(f\"  nonce={i['nonce']} amount={int(i['amountUnits'])/1e6:>6.0f} USDC  {d.get('stage','pending'):8} {'ALLOW' if d.get('allow') else 'DENY ':5} {d.get('reasonCode','-'):18} tx={tx['result'] if tx else '-'} sig={tx['signature'][:14]+'…' if tx else '-'}\")"
 curl -s "$API/grants/$GRANT_ID" | j "'  on-chain counters: spent=' + str(int(d['onchain']['spentUnits'])/1e6) + ' USDC, txCount=' + str(d['onchain']['transactionCount']) + ', nextNonce=' + str(d['onchain']['nextNonce'])"
 
 echo "== 4. owner revokes"

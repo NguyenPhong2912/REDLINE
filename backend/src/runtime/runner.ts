@@ -1,4 +1,5 @@
 import { getChain } from "../chain/index.js";
+import { isTransientChainError } from "../chain/solana.js";
 import { realMs } from "../clock.js";
 import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
@@ -50,7 +51,13 @@ export async function startRun(grantId: string, mode: "scripted" | "llm", tickMs
       if (res.precheck.reasonCode === "REVOKED" || res.onchainReason === "REVOKED") return finish("stopped", "grant revoked");
       if (res.precheck.reasonCode === "EXPIRED") return finish("stopped", "grant expired");
     } catch (err) {
-      return finish("failed", err instanceof Error ? err.message : String(err));
+      if (isTransientChainError(err)) {
+        // RPC throttled: keep the run alive, retry this step on the next tick.
+        step = Math.max(0, step - 1);
+        await audit({ actorType: "system", actorId: "runtime", eventType: "run.retry", subjectType: "run", subjectId: run.id, payload: { grantId, step, error: err instanceof Error ? err.message.slice(0, 200) : String(err) } });
+      } else {
+        return finish("failed", err instanceof Error ? err.message : String(err));
+      }
     }
     if (!stopped) timer = setTimeout(tick, interval);
   };
