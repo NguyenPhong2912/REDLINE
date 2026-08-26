@@ -43,8 +43,12 @@ export interface SolanaConfig {
   ownerKeypairPath?: string;
 }
 
-export function loadKeypair(path: string): Promise<KeyPairSigner> {
-  const raw = JSON.parse(readFileSync(path, "utf8")) as number[];
+// Accepts a file path (local dev) or the JSON array itself (cloud env var:
+// EXECUTOR_KEYPAIR_PATH='[12,34,...]'). Same 64-byte Solana CLI format.
+export function loadKeypair(pathOrJson: string): Promise<KeyPairSigner> {
+  const text = pathOrJson.trim().startsWith("[") ? pathOrJson : readFileSync(pathOrJson, "utf8");
+  const raw = JSON.parse(text) as number[];
+  if (raw.length !== 64) throw new Error("keypair must be a 64-byte JSON array");
   return createKeyPairSignerFromBytes(new Uint8Array(raw));
 }
 
