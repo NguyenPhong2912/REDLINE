@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-redline_guardrails = "GSWCWBuCj1ihniuZukJt85oCYo5jnaUUv558Eaa8dzbF"
+redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
 
 [programs.devnet]
-redline_guardrails = "GSWCWBuCj1ihniuZukJt85oCYo5jnaUUv558Eaa8dzbF"
+redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
 
 [provider]
 cluster = "Devnet"

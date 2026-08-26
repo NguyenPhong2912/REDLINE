@@ -1,0 +1,184 @@
+// REDLINE data model — subset of ERD v2 needed for the demo slice.
+// Immutable versions (agent_version, policy_version) are separated from
+// mutable state (grant, run) and from chain evidence (chain_transaction).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Owner {
+  id        String   @id @default(cuid())
+  wallet    String   @unique
+  ownerType String   @default("individual") // individual | dao | fund
+  createdAt DateTime @default(now())
+  vaults    Vault[]
+  grants    AgentGrant[]
+}
+
+model Vault {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     Owner    @relation(fields: [ownerId], references: [id])
+  vaultPda  String   @unique
+  network   String   @default("devnet")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  grants    AgentGrant[]
+}
+
+// One immutable published agent build. Editing code/model/config => new row.
+model AgentVersion {
+  id         String   @id @default(cuid())
+  name       String
+  version    String
+  strategy   String
+  modelHash  String
+  codeHash   String
+  configHash String
+  agentHash  String   @unique // sha256(modelHash|codeHash|configHash)
+  createdAt  DateTime @default(now())
+  listings   AgentListing[]
+  grants     AgentGrant[]
+}
+
+model AgentListing {
+  id             String       @id @default(cuid())
+  agentVersionId String
+  agentVersion   AgentVersion @relation(fields: [agentVersionId], references: [id])
+  priceLamports  BigInt       @default(0)
+  termsHash      String
+  status         String       @default("active") // draft | review | active | suspended
+  createdAt      DateTime     @default(now())
+  hires          HireAgreement[]
+}
+
+model HireAgreement {
+  id        String       @id @default(cuid())
+  listingId String
+  listing   AgentListing @relation(fields: [listingId], references: [id])
+  ownerWallet String
+  startsAt  DateTime     @default(now())
+  endsAt    DateTime
+  status    String       @default("active")
+  grants    AgentGrant[]
+}
+
+// Canonical policy the owner signed. policyHash is what goes on-chain.
+model PolicyVersion {
+  id              String   @id @default(cuid())
+  policyHash      String   @unique
+  canonicalJson   String
+  spendCapUnits   BigInt
+  maxTransactions Int
+  cooldownSeconds Int
+  expiresAt       DateTime
+  allowedMints    String   // JSON string[]
+  allowedDests    String   // JSON string[]
+  createdAt       DateTime @default(now())
+  grants          AgentGrant[]
+}
+
+// Binds exactly one owner, vault, agent version, policy version, hire.
+model AgentGrant {
+  id              String        @id @default(cuid())
+  ownerId         String
+  owner           Owner         @relation(fields: [ownerId], references: [id])
+  vaultId         String
+  vault           Vault         @relation(fields: [vaultId], references: [id])
+  agentVersionId  String
+  agentVersion    AgentVersion  @relation(fields: [agentVersionId], references: [id])
+  policyVersionId String
+  policyVersion   PolicyVersion @relation(fields: [policyVersionId], references: [id])
+  hireId          String?
+  hire            HireAgreement? @relation(fields: [hireId], references: [id])
+  grantPda        String        @unique
+  agentId         String        // 16-byte PDA seed, hex
+  executorPubkey  String
+  createSignature String?
+  // Mirror of on-chain counters, refreshed by the indexer. Chain is the truth.
+  spentUnits       BigInt   @default(0)
+  transactionCount Int      @default(0)
+  nextNonce        Int      @default(0)
+  lastExecutionAt  DateTime?
+  revoked          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  runs             AgentRun[]
+  intents          TransactionIntent[]
+}
+
+model AgentRun {
+  id        String     @id @default(cuid())
+  grantId   String
+  grant     AgentGrant @relation(fields: [grantId], references: [id])
+  mode      String     // scripted | llm
+  status    String     @default("running") // running | stopped | failed
+  startedAt DateTime   @default(now())
+  endedAt   DateTime?
+  intents   TransactionIntent[]
+}
+
+model TransactionIntent {
+  id          String     @id @default(cuid())
+  runId       String?
+  run         AgentRun?  @relation(fields: [runId], references: [id])
+  grantId     String
+  grant       AgentGrant @relation(fields: [grantId], references: [id])
+  protocol    String     @default("spl-transfer")
+  mint        String
+  amountUnits BigInt
+  destination String
+  nonce       Int
+  reason      String     @default("")
+  intentHash  String
+  createdAt   DateTime   @default(now())
+  decision    PolicyDecision?
+
+  @@index([intentHash])
+}
+
+model PolicyDecision {
+  id               String            @id @default(cuid())
+  intentId         String            @unique
+  intent           TransactionIntent @relation(fields: [intentId], references: [id])
+  allow            Boolean
+  reasonCode       String            // OK | REVOKED | EXPIRED | NONCE_REPLAY | ...
+  ruleSnapshotHash String
+  stage            String            // precheck | onchain
+  createdAt        DateTime          @default(now())
+  chainTx          ChainTransaction?
+}
+
+// Only ALLOW decisions produce a successful chain tx. A DENY that was still
+// submitted (demo path) is stored with result=failed and the program error.
+model ChainTransaction {
+  id         String         @id @default(cuid())
+  decisionId String         @unique
+  decision   PolicyDecision @relation(fields: [decisionId], references: [id])
+  signature  String         @unique
+  slot       BigInt?
+  programId  String
+  result     String         // success | failed
+  error      String?
+  executedAt DateTime       @default(now())
+}
+
+// Append-only. Never updated or deleted.
+model AuditEvent {
+  id             String   @id @default(cuid())
+  actorType      String   // owner | agent | admin | chain | system
+  actorId        String
+  eventType      String   // grant.created | intent.created | decision.precheck | tx.confirmed | ...
+  subjectType    String
+  subjectId      String
+  payloadHash    String
+  payload        String
+  chainSignature String?
+  createdAt      DateTime @default(now())
+
+  @@index([subjectType, subjectId])
+}

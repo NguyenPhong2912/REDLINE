@@ -16,7 +16,9 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPie,
   Pie, Cell, RadialBarChart, RadialBar,
 } from "recharts";
-import { PolicyProofButton } from "./components/PolicyProofButton";
+import { GrantSignButton } from "./components/GrantSignButton";
+import { GrantsPanel } from "./components/GrantsPanel";
+import { LiveFeed } from "./components/LiveFeed";
 import { SolanaWalletControl } from "./components/SolanaWalletControl";
 import {
   requestRiskAssessment,
@@ -219,16 +221,6 @@ function ParticleGrid() {
 
 /* ── 1. DASHBOARD ── */
 function DashboardPage() {
-  const logs = [
-    { type: "success", text: "QuantPilot › simulation passed · route within policy", ts: "20:41:14" },
-    { type: "exec",    text: "RouteScout › Jupiter quote · 12.4 SOL → 1,847 USDC", ts: "20:41:12" },
-    { type: "warn",    text: "Policy account expires in 01:42 · review queued", ts: "20:41:10" },
-    { type: "success", text: "SignalOracle › policy digest published to Memo", ts: "20:41:08" },
-    { type: "info",    text: "YieldGuard › proposal created · 847.2 USDC", ts: "20:41:06" },
-    { type: "exec",    text: "RiskSentinel › scan(slot=401847412)", ts: "20:41:03" },
-    { type: "success", text: "Policy proof confirmed · Devnet · 5,000 lamports", ts: "20:41:01" },
-  ];
-  const logCol: Record<string, string> = { info: "#64748b", success: M, exec: C, warn: A };
 
   return (
     <div className="space-y-7">
@@ -303,26 +295,8 @@ function DashboardPage() {
 
       {/* Activity log + quick agent list */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Log */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
-          <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(1,3,3,0.5)" }}>
-            <div className="flex gap-1.5">{["#ef4444", A, M].map((c, i) => <div key={`dot-${i}`} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: 0.7 }} />)}</div>
-            <Terminal size={11} style={{ color: M }} />
-            <span className="text-[11px]" style={{ ...mono, color: "#94a3b8" }}>runtime · simulated feed</span>
-            <div className="ml-auto flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
-              <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>SIM</span>
-            </div>
-          </div>
-          <div className="p-4 space-y-2" style={{ background: "#010303" }}>
-            {logs.map((l, i) => (
-              <div key={`log-${i}`} className="flex gap-3 text-[11px]" style={mono}>
-                <span style={{ color: "rgba(148,163,184,0.3)", minWidth: 52 }}>{l.ts}</span>
-                <span style={{ color: logCol[l.type] ?? "#64748b" }}>{l.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Live runtime feed from the API (SSE) */}
+        <LiveFeed />
 
         {/* Quick agents */}
         <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
@@ -962,6 +936,7 @@ function SessionsPage() {
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [assessing, setAssessing] = useState(false);
   const [assessmentError, setAssessmentError] = useState("");
+  const [grantsKey, setGrantsKey] = useState(0);
   const tList = ["SOL", "USDC", "JUP", "JTO", "BONK", "PYTH"];
   const STEPS = ["Token Scope", "Spend Limits", "Time Bounds", "Review & Sign"];
 
@@ -992,12 +967,6 @@ function SessionsPage() {
     }
   }
 
-  const sessions = [
-    { agent: "QuantPilot", key: "7Aqv…fK3p", cap: "$500", exp: "01:42:18", status: "ACTIVE", ops: 847, accent: M },
-    { agent: "RouteScout", key: "9Nm2…Qx7d", cap: "$1,000", exp: "04:11:03", status: "ACTIVE", ops: 312, accent: C },
-    { agent: "SignalOracle", key: "4Ytp…mR8a", cap: "$200", exp: "00:28:44", status: "EXPIRING", ops: 91, accent: A },
-    { agent: "YieldGuard", key: "2Kzw…vH6n", cap: "$2,000", exp: "EXPIRED", status: "EXPIRED", ops: 0, accent: "#ef4444" },
-  ];
 
   function SliderCtl({ label, value, onChange, min, max, unit, accent }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; unit: string; accent: string }) {
     const pct = ((value - min) / (max - min)) * 100;
@@ -1024,27 +993,8 @@ function SessionsPage() {
         <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Design bounded Solana policies, run AI risk checks, and publish verifiable proofs</p>
       </div>
 
-      {/* Active sessions table */}
-      <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-          <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Active Policy Accounts</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>3 active</span>
-        </div>
-        {sessions.map((s, i) => (
-          <div key={`sess-${i}`} className="flex items-center gap-4 px-5 py-3.5 border-b hover:bg-white/[0.018] transition-colors"
-            style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${s.accent}12`, border: `1px solid ${s.accent}20` }}><Key size={13} style={{ color: s.accent }} /></div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>{s.agent}</div>
-              <div className="text-[10px]" style={{ ...mono, color: C }}>{s.key}</div>
-            </div>
-            <div className="hidden sm:block text-[11px] font-semibold" style={{ ...mono, color: A }}>{s.cap}</div>
-            <div className="text-[11px] font-semibold" style={{ ...mono, color: s.status === "EXPIRED" ? "#ef4444" : s.status === "EXPIRING" ? A : M }}>{s.exp}</div>
-            <Badge status={s.status === "EXPIRING" ? "PAUSED" : s.status === "EXPIRED" ? "IDLE" : "ACTIVE"} />
-            <ShimmerBtn label={s.status === "EXPIRED" ? "Renew" : "Manage"} accent={s.accent} size="xs" />
-          </div>
-        ))}
-      </div>
+      {/* Real grants from the REDLINE API (on-chain state via /grants/:id) */}
+      <GrantsPanel refreshKey={grantsKey} />
 
       {/* New session wizard */}
       <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
@@ -1115,7 +1065,7 @@ function SessionsPage() {
           )}
           {step === 3 && (
             <div className="space-y-4">
-              <p className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Review the bounded policy, run the risk copilot, then publish its SHA-256 digest to Solana Devnet.</p>
+              <p className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.</p>
               <div>
               {[["Token Scope", tokens.join(", "), C], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
@@ -1135,7 +1085,7 @@ function SessionsPage() {
                   </div>
                   <p className="text-[11px]" style={{ color: "#94a3b8" }}>{assessment.summary}</p>
                   <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[10px] flex gap-2" style={{ color: "#64748b" }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
-                  <PolicyProofButton policy={policy} assessment={assessment} />
+                  <GrantSignButton policy={policy} assessment={assessment} onCreated={() => setGrantsKey(k => k + 1)} />
                 </div>
               )}
               {assessmentError && <p role="alert" className="text-[10px]" style={{ color: "#f87171" }}>{assessmentError}</p>}
@@ -1384,7 +1334,7 @@ export default function App() {
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
             <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>SOLANA DEVNET</span>
           </div>
-          {[["Cluster", "Devnet", "#e2e8f0"], ["Policy", "Memo v1", A], ["Mode", "Guarded", C]].map(([k, v, col], ni) => (
+          {[["Cluster", "Devnet", "#e2e8f0"], ["Policy", "Grant PDA", A], ["Mode", "Guarded", C]].map(([k, v, col], ni) => (
             <div key={`sidebar-net-${ni}`} className="flex justify-between items-center mb-0.5">
               <span className="text-[9px]" style={{ ...sans, color: "#334155" }}>{k}</span>
               <span className="text-[9px] font-semibold" style={{ ...mono, color: col }}>{v}</span>
