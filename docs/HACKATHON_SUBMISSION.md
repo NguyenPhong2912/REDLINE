@@ -10,7 +10,7 @@ CSaCLAB — Trần An Kỳ (representative), Nguyễn Thành Phong, Nguyễn Hà
 
 ## Links
 
-- Live demo (Devnet, hosted backend): https://vermillion-dasik-a32ab0.netlify.app
+- Live demo (Devnet, hosted backend): https://redline-devnet.netlify.app
 - Repository: https://github.com/anky06-ky/CSaCLAB
 - Program: `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4` — https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet
 - A rejected agent transfer, on-chain: https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet

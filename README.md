@@ -2,7 +2,7 @@
 
 > Autonomous finance. Hard limits.
 
-[Live demo](https://vermillion-dasik-a32ab0.netlify.app) · [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet) · [A rejected agent transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)
+[Live demo](https://redline-devnet.netlify.app) · [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet) · [A rejected agent transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)
 
 REDLINE is the programmable safety layer for autonomous DeFi agents on Solana. An owner defines a narrow policy — asset and destination allowlists, spend cap, transaction cap, cooldown, expiry — signs it once, and a Solana program enforces it on every transfer the agent attempts. The agent proposes; the chain decides.
 
