@@ -16,6 +16,11 @@ The agent proposes; **the chain decides**.
 **⛓️ [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)** &nbsp;•&nbsp;
 **🚫 [A Rejected Agent Transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)**
 
+<br>
+
+| [📘 README](README.md) | [🔐 Security](docs/SECURITY.md) | [🛠️ Hướng dẫn cài đặt & sử dụng](docs/USER_GUIDE.md) |
+|:---:|:---:|:---:|
+
 </div>
 
 <br>
