@@ -878,10 +878,11 @@ function SessionsPage() {
           <span className="text-xs" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
           <span className="text-xs font-semibold px-2 py-0.5 rounded-md" style={{ ...mono, color: accent, background: `${accent}12`, border: `1px solid ${accent}20` }}>{value.toLocaleString()}{unit}</span>
         </div>
-        <div className="relative h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}60, ${accent})` }} />
-          <input type="range" aria-label={label} min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-          <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all"
+        <div className="relative h-6 flex items-center">
+          <div className="absolute left-0 right-0 h-1.5 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="absolute left-0 h-1.5 rounded-full pointer-events-none" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}60, ${accent})` }} />
+          <input type="range" aria-label={label} min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+          <div className="absolute w-3.5 h-3.5 rounded-full border-2 transition-all pointer-events-none"
             style={{ left: `calc(${pct}% - 7px)`, background: BG, borderColor: accent, boxShadow: `0 0 12px ${accent}70` }} />
         </div>
       </div>
