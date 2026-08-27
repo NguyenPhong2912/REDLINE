@@ -74,7 +74,8 @@ indexer ◄── PolicyDecision events ──────────┘  → �
 | 👛 Wallet-signed vault / grant / revoke / withdraw from the browser | 🟢 **Live** |
 | 🤖 Agent runtime, policy engine, indexer, audit trail, SSE feed | 🟢 **Live on Railway + Postgres** |
 | 🧪 On-chain gate tests against the deployed binary (LiteSVM) | 🟢 **CI on every push** |
-| 🛍️ Marketplace, analytics, P&L, APY panels | 🟡 **Simulated, labelled** |
+| 🛍️ Marketplace (publish, claim, rent for real SOL), analytics from the audit trail | 🟢 **Live** |
+| 💹 P&L, APY, win-rate panels | ⚪ **Removed — no price feed to compute them honestly** |
 
 📖 See [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) for the design and [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md) for the submission.
 

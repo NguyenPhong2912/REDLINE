@@ -10,7 +10,7 @@ Bạn cần:
 - Một ít SOL Devnet trong ví để trả phí giao dịch (xin từ [Solana faucet](https://faucet.solana.com)).
 - Backend REDLINE đang chạy — dùng bản hosted (`https://csaclab-production.up.railway.app`) qua [demo trực tuyến](https://redline-devnet.netlify.app), hoặc chạy local (xem mục 1).
 
-> ⚠️ Dashboard hiển thị nhãn `PROTOTYPE DATA` ở thanh trạng thái trên cùng. Một số trang (**Agents**, **Analytics**, **Marketplace**, phần lớn **Treasury** ngoại trừ khối vault) chỉ là dữ liệu mô phỏng — các nút trên đó (Deploy, Pause, Rent, Buy, Renew…) đều bị vô hiệu hoá với ghi chú *"Coming soon — not available in this prototype"*. Luồng **thật, có tương tác on-chain** chỉ nằm ở: **Treasury** (khối vault), **Guardrails** (tạo/quản lý grant), **Dashboard** (Live Grants + Live Feed) và **Audit**.
+> ℹ️ Mọi số liệu trên dashboard đều lấy từ chuỗi hoặc từ audit trail — không còn dữ liệu mô phỏng. Những chỉ số không thể đo được một cách trung thực (P&L, APY, win rate, uptime) đã bị bỏ hẳn thay vì bịa số: hệ thống chỉ ghi nhận *đã chi bao nhiêu, bao nhiêu giao dịch được duyệt/bị chặn, quyết định mất bao lâu*, và không có nguồn giá nào để tính lời lỗ.
 
 ## 1. (Tuỳ chọn) Chạy backend ở local
 
@@ -155,6 +155,15 @@ Chỉ cần một điều kiện không thoả, chương trình từ chối và 
 | Không tạo được grant / thiếu allowlist | Backend/`.env` chưa có `VITE_DEMO_USDC_MINT`/`VITE_DEMO_OPS_DESTINATION` — chạy `npm run devnet:setup` trong `backend/` |
 | Live Feed / Audit báo mất kết nối | Backend đang tắt hoặc SSE bị chặn — kiểm tra `cd backend && npm run dev` |
 | Giao dịch bị `Revoked` dù mới tạo grant | Grant đã được revoke trước đó (kiểm tra trạng thái ở "Active Policy Accounts") |
+
+## 10. Marketplace, Agents và Analytics
+
+Ba trang này dùng dữ liệu thật, không phải mô phỏng:
+
+- **Agents** — bấm **Publish Agent Version** để đăng ký một phiên bản agent thật (`agentHash` là SHA-256 thật của model/code/config). Mỗi agent hiển thị số grant, tổng đã chi, số giao dịch và lần hoạt động gần nhất.
+- **Marketplace** — mỗi agent đã publish tự sinh một listing. Publisher bấm **Claim** để đặt ví nhận tiền và **đơn giá cho mỗi 24 giờ**; người khác chọn thời hạn (1d/3d/7d) rồi bấm **Rent** — ví sẽ gửi SOL thật, và backend đọc lại giao dịch đó trên Devnet để kiểm tra người ký, người nhận và số tiền (`đơn giá × số kỳ 24h`) trước khi ghi nhận hợp đồng.
+  - Ví nhận tiền là **write-once**: listing đã có chủ thì ví khác không đổi được (403). Bạn cũng không thể tự thuê agent do chính mình publish.
+- **Analytics** — tính từ audit trail của các grant thuộc ví đang kết nối: tổng volume, tỉ lệ được duyệt, độ trễ quyết định trung bình, volume 7 ngày.
 
 ## Tài liệu liên quan
 

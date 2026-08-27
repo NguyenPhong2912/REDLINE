@@ -10,7 +10,7 @@ export interface AgentVersion { id: string; name: string; version: string; strat
 export interface OnchainGrant { active: boolean; spentUnits: string; transactionCount: number; nextNonce: number; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: number; allowedMints: string[]; allowedDestinations: string[] }
 export interface Grant {
   id: string; grantPda: string; agentId: string; executorPubkey: string; createSignature: string | null;
-  spentUnits: string; transactionCount: number; nextNonce: number; revoked: boolean; createdAt: string;
+  spentUnits: string; transactionCount: number; nextNonce: number; revoked: boolean; createdAt: string; lastExecutionAt: string | null;
   agentVersion: AgentVersion;
   policyVersion: { policyHash: string; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: string; allowedMints: string; allowedDests: string };
   owner: { wallet: string };
@@ -24,6 +24,20 @@ export interface IntentRow {
 export interface AuditRow { id: string; createdAt: string; actorType: string; eventType: string; subjectType: string; subjectId: string; chainSignature: string | null; payload: Record<string, unknown> }
 export interface VaultView { owner: string; vaultPda: string; vaultAta: string; mint: string; balanceUnits: string | null; exists: boolean }
 export interface FeedEvent { id: string; at: string; eventType: string; actorType: string; payload: Record<string, unknown>; chainSignature?: string | null }
+export interface Listing {
+  id: string; agentVersionId: string; priceLamports: string; developerWallet: string | null; status: string; createdAt: string;
+  agentVersion: AgentVersion; activeHires: number;
+}
+export interface Hire {
+  id: string; listingId: string; ownerWallet: string; paymentSignature: string | null; startsAt: string; endsAt: string; status: string;
+  listing: Listing;
+}
+export interface Analytics {
+  activeGrants: number; totalGrants: number; totalVolumeUsdc: number; totalTransactions: number; totalRejections: number;
+  successRatePct: number | null; avgDecisionLatencyMs: number | null;
+  weeklyVolume: { t: string; date: string; volumeUsdc: number }[];
+  topAgentsByVolume: { name: string; volumeUsdc: number; grants: number }[];
+}
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-redline-key": API_KEY } : {}), ...(init?.headers ?? {}) } });
@@ -55,6 +69,13 @@ export const api = {
   audit: (grantId?: string) => req<AuditRow[]>(`/audit${grantId ? `?grant=${grantId}` : ""}`),
   vault: (owner: string) => req<VaultView>(`/vaults/${owner}`),
   fundVault: (ownerWallet: string) => req<{ vaultPda: string; vaultAta: string; signature: string; balance: string }>("/devnet/fund", { method: "POST", body: JSON.stringify({ ownerWallet }) }),
+  listings: () => req<Listing[]>("/listings"),
+  setListingPrice: (id: string, b: { developerWallet: string; priceLamports: string }) =>
+    req<Listing>(`/listings/${id}`, { method: "PATCH", body: JSON.stringify(b) }),
+  hires: (wallet?: string) => req<Hire[]>(`/hires${wallet ? `?wallet=${wallet}` : ""}`),
+  hire: (b: { listingId: string; ownerWallet: string; durationHours: number; paymentSignature: string }) =>
+    req<Hire>("/hires", { method: "POST", body: JSON.stringify(b) }),
+  analytics: (owner?: string) => req<Analytics>(`/analytics${owner ? `?owner=${owner}` : ""}`),
 };
 
 // Server-sent events. grantId "*" streams every grant.

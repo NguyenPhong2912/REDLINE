@@ -63,6 +63,9 @@ Reads are public. Writes (`POST`, except `/risk-assess`) require the `x-redline-
 | GET | `/grants/:id/feed` | server-sent events (`*` = all grants) |
 | GET | `/audit?grant=` | append-only audit trail with signatures |
 | GET | `/vaults/:owner` | vault PDA, ATA and live balance |
+| GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
+| GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written |
+| GET | `/analytics?owner=` | volume, allowed/blocked counts and decision latency computed from the audit trail |
 | POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |
 

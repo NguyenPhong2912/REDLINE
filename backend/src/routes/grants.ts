@@ -79,7 +79,15 @@ export async function grantRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { agentVersion: true, policyVersion: true, owner: true, vault: true, runs: { orderBy: { startedAt: "desc" } } } });
     if (!grant) return reply.code(404).send({ error: "grant not found" });
-    const onchain = await getChain().readGrant(grant.grantPda);
+    // The mirrored row is still worth returning when the chain read fails —
+    // an RPC hiccup, or a grantPda written by a different CHAIN adapter, must
+    // not take the whole page down. `onchain: null` is the honest answer.
+    let onchain = null;
+    try {
+      onchain = await getChain().readGrant(grant.grantPda);
+    } catch (err) {
+      app.log.warn({ grantId: id, grantPda: grant.grantPda, err: String(err) }, "on-chain grant read failed");
+    }
     return json({ ...grant, onchain });
   });
 

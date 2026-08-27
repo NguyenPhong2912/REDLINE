@@ -17,6 +17,8 @@ import { grantRoutes } from "./routes/grants.js";
 import { intentRoutes } from "./routes/intents.js";
 import { riskRoutes } from "./routes/risk.js";
 import { runRoutes } from "./routes/runs.js";
+import { listingRoutes } from "./routes/listings.js";
+import { analyticsRoutes } from "./routes/analytics.js";
 
 const app = Fastify({
   logger: {
@@ -50,6 +52,13 @@ app.setErrorHandler((err, _req, reply) => {
   if (err instanceof ZodError) return reply.code(400).send({ error: "Invalid input", details: err.issues });
   const context = safe((err as { context?: unknown }).context ?? null);
   app.log.error({ err: { message: err.message, stack: err.stack, context } }, "request failed");
+  // Prisma puts the failing query, the source file and a code excerpt in
+  // `message`; that belongs in the log, not in a public API response.
+  const isPrisma = typeof (err as { code?: unknown }).code === "string" && /^P\d{4}$/.test(String((err as { code?: unknown }).code));
+  if (isPrisma) {
+    const conflict = (err as { code?: string }).code === "P2002";
+    return reply.code(conflict ? 409 : 500).send({ error: conflict ? "That record already exists" : "Database request failed" });
+  }
   return reply.code(err.statusCode ?? 500).send({ error: err.message, context });
 });
 
@@ -66,6 +75,8 @@ await app.register(auditRoutes);
 await app.register(riskRoutes);
 await app.register(devnetRoutes);
 await app.register(vaultRoutes);
+await app.register(listingRoutes);
+await app.register(analyticsRoutes);
 
 const port = Number(process.env.PORT ?? 8787);
 await app.listen({ port, host: "0.0.0.0" });

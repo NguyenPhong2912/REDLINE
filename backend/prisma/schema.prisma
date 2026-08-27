@@ -47,25 +47,31 @@ model AgentVersion {
 }
 
 model AgentListing {
-  id             String       @id @default(cuid())
-  agentVersionId String
-  agentVersion   AgentVersion @relation(fields: [agentVersionId], references: [id])
-  priceLamports  BigInt       @default(0)
-  termsHash      String
-  status         String       @default("active") // draft | review | active | suspended
-  createdAt      DateTime     @default(now())
-  hires          HireAgreement[]
+  id              String       @id @default(cuid())
+  agentVersionId  String
+  agentVersion    AgentVersion @relation(fields: [agentVersionId], references: [id])
+  priceLamports   BigInt       @default(0)
+  // Wallet that receives the rental payment. Null on the auto-created default
+  // listing until the publisher claims it by setting a price.
+  developerWallet String?
+  termsHash       String
+  status          String       @default("active") // draft | review | active | suspended
+  createdAt       DateTime     @default(now())
+  hires           HireAgreement[]
 }
 
 model HireAgreement {
-  id        String       @id @default(cuid())
-  listingId String
-  listing   AgentListing @relation(fields: [listingId], references: [id])
-  ownerWallet String
-  startsAt  DateTime     @default(now())
-  endsAt    DateTime
-  status    String       @default("active")
-  grants    AgentGrant[]
+  id                String       @id @default(cuid())
+  listingId         String
+  listing           AgentListing @relation(fields: [listingId], references: [id])
+  ownerWallet       String
+  // Signature of the on-chain payment that funded this hire. Verified against
+  // the listing price before the row is created when CHAIN=solana.
+  paymentSignature  String?      @unique
+  startsAt          DateTime     @default(now())
+  endsAt            DateTime
+  status            String       @default("active")
+  grants            AgentGrant[]
 }
 
 // Canonical policy the owner signed. policyHash is what goes on-chain.

@@ -1,21 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   LayoutDashboard, Bot, BarChart3, Globe, Wallet, ScrollText,
   Layers, Settings, Zap, ChevronRight, Search, ShieldCheck,
-  Star, Activity, ArrowUpRight, ArrowDownRight, Sparkles,
-  Filter, ArrowDownUp, Eye, Key, Timer, Lock, Bell,
+  Activity, Sparkles,
+  Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
-  RefreshCw, Clock, Network, Copy, ExternalLink, Terminal,
-  ToggleLeft, ToggleRight, User, Palette, Globe2, ChevronDown,
-  Plus, Trash2, Edit3, MoreHorizontal, Download, Upload,
-  PieChart, LineChart as LineChartIcon, BarChart2, Circle,
-  Wifi, WifiOff, Info, X, Check, Shield,
+  RefreshCw, Clock, Network, ExternalLink,
+  Plus, PieChart, Shield,
 } from "lucide-react";
-import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPie,
-  Pie, Cell, RadialBarChart, RadialBar,
-} from "recharts";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
 import { GrantsPanel } from "./components/GrantsPanel";
 import { LiveFeed } from "./components/LiveFeed";
@@ -28,11 +21,15 @@ import {
   type AgentPolicyInput,
   type RiskAssessment,
 } from "./lib/risk-engine";
-import {
-  ANALYTICS_RANGES,
-  getAnalyticsSnapshot,
-  type AnalyticsRange,
-} from "./lib/analytics";
+import { address } from "@solana/kit";
+import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { useClient } from "@solana/react";
+import { api, API_URL, fmtUsdc, short, type Analytics, type AuditRow, type Health, type Listing } from "./lib/api";
+import { PROGRAM_ID } from "./solana/redline";
+import { useRealAgents } from "./lib/agents";
+import type { AppClient } from "./solana/client";
+import { explorerAddressUrl, explorerTransactionUrl } from "./solana/client";
+import { transferSolInstruction } from "./solana/payments";
 
 /* ── palette ── */
 const M = "#00ffc4";
@@ -61,49 +58,10 @@ function ChartTip({ active, payload, color = M, prefix = "", suffix = "" }: { ac
   );
 }
 
-/* ── shared data ── */
-const perfWeek = [
-  { t: "Mon", v: 142, vol: 14200, fee: 320 },
-  { t: "Tue", v: 198, vol: 19800, fee: 480 },
-  { t: "Wed", v: 167, vol: 16400, fee: 390 },
-  { t: "Thu", v: 231, vol: 23100, fee: 610 },
-  { t: "Fri", v: 287, vol: 28700, fee: 740 },
-  { t: "Sat", v: 213, vol: 21300, fee: 520 },
-  { t: "Sun", v: 315, vol: 31500, fee: 820 },
-];
-const latencyData = [
-  { t: "00:00", v: 180 }, { t: "04:00", v: 155 }, { t: "08:00", v: 210 },
-  { t: "12:00", v: 130 }, { t: "16:00", v: 142 }, { t: "20:00", v: 118 }, { t: "Now", v: 125 },
-];
-const pieData = [
-  { name: "DeFi Trading", value: 42, color: M },
-  { name: "Yield", value: 28, color: A },
-  { name: "Oracle", value: 18, color: C },
-  { name: "Risk", value: 12, color: "#8b5cf6" },
-];
-
-const AGENTS_DATA = [
-  { id: 1, name: "QuantPilot", tag: "DeFi Trading", pnl: "+$4,821", pnlN: 4821, up: true, status: "ACTIVE", exp: "01:42:18", apy: "12.4%", ops: 12847, winRate: 94.2, uptime: 99.8, accent: M, hash: "7Aqv…fK3p" },
-  { id: 2, name: "RouteScout", tag: "Cross-DEX", pnl: "+$1,203", pnlN: 1203, up: true, status: "ACTIVE", exp: "04:11:03", apy: "8.7%", ops: 8203, winRate: 91.8, uptime: 98.9, accent: C, hash: "9Nm2…Qx7d" },
-  { id: 3, name: "SignalOracle", tag: "Oracle", pnl: "+$390", pnlN: 390, up: true, status: "ACTIVE", exp: "00:28:44", apy: "—", ops: 5829, winRate: 85.3, uptime: 99.1, accent: "#8b5cf6", hash: "4Ytp…mR8a" },
-  { id: 4, name: "YieldGuard", tag: "Yield", pnl: "-$142", pnlN: -142, up: false, status: "PAUSED", exp: "EXPIRED", apy: "8.74%", ops: 4102, winRate: 88.7, uptime: 99.6, accent: A, hash: "2Kzw…vH6n" },
-  { id: 5, name: "RiskSentinel", tag: "Risk Monitor", pnl: "$0", pnlN: 0, up: true, status: "IDLE", exp: "12:00:00", apy: "—", ops: 41002, winRate: 97.1, uptime: 100, accent: C, hash: "6Fsa…pT4c" },
-];
-
-const MARKETPLACE_AGENTS = [
-  { id: 1, name: "QuantPilot", version: "v1.2.0", tag: "DeFi Trading", desc: "Guardrailed momentum agent with pre-trade simulation, Jupiter route checks, and explicit spend limits.", hash: "7Aqv…fK3p", deployer: "3Gds…nE9u", winRate: 94.2, apy: 18.4, latency: 84, executions: "12,847", uptime: 99.8, verified: true, featured: true, price: "1.20 SOL", rent: "0.04 SOL/day", accent: M, accentB: C, tags: ["Jupiter", "Simulation", "Devnet"], stars: 4.9, reviews: 312 },
-  { id: 2, name: "YieldGuard", version: "v1.1.0", tag: "Yield Optimizer", desc: "Policy-bounded yield monitor that proposes rebalances and pauses when liquidity or oracle risk rises.", hash: "2Kzw…vH6n", deployer: "8Tqm…sL2j", winRate: 88.7, apy: 14.9, latency: 142, executions: "8,203", uptime: 99.6, verified: true, featured: false, price: "0.85 SOL", rent: "0.03 SOL/day", accent: A, accentB: "#f59e0b", tags: ["Yield", "Human Review", "SPL"], stars: 4.7, reviews: 198 },
-  { id: 3, name: "RiskSentinel", version: "v1.5.0", tag: "Risk Monitor", desc: "AI-assisted policy analyzer with deterministic fallback, anomaly scoring, and automatic block verdicts.", hash: "6Fsa…pT4c", deployer: "9Nm2…Qx7d", winRate: 97.1, apy: 0, latency: 31, executions: "41,002", uptime: 100, verified: true, featured: false, price: "0.60 SOL", rent: "0.02 SOL/day", accent: C, accentB: "#3b82f6", tags: ["Risk AI", "Guardrails", "Alerts"], stars: 4.95, reviews: 541 },
-  { id: 4, name: "RouteScout", version: "v1.3.0", tag: "DeFi Trading", desc: "Cross-DEX route observer that surfaces price differences but requires policy approval before execution.", hash: "9Nm2…Qx7d", deployer: "4Ytp…mR8a", winRate: 91.8, apy: 20.3, latency: 67, executions: "19,441", uptime: 98.9, verified: true, featured: false, price: "1.45 SOL", rent: "0.05 SOL/day", accent: M, accentB: C, tags: ["Cross-DEX", "Allowlist", "Cooldown"], stars: 4.8, reviews: 267 },
-  { id: 5, name: "SignalOracle", version: "v1.2.0", tag: "Oracle & Data", desc: "LLM-assisted signal summarizer that cites inputs and publishes only policy digests, never private prompts.", hash: "4Ytp…mR8a", deployer: "6Fsa…pT4c", winRate: 85.3, apy: 6.2, latency: 210, executions: "5,829", uptime: 99.1, verified: false, featured: false, price: "0.70 SOL", rent: "0.025 SOL/day", accent: "#8b5cf6", accentB: C, tags: ["AI", "Signals", "Oracle"], stars: 4.6, reviews: 94 },
-  { id: 6, name: "TreasuryPilot", version: "v1.0.0", tag: "Cross-Chain", desc: "Treasury workflow agent that proposes Solana actions with approval gates and tamper-evident policy proofs.", hash: "5Jrc…wB1z", deployer: "7Aqv…fK3p", winRate: 96.4, apy: 9.4, latency: 190, executions: "7,112", uptime: 99.4, verified: true, featured: false, price: "1.10 SOL", rent: "0.04 SOL/day", accent: C, accentB: "#06b6d4", tags: ["Treasury", "Approvals", "Proofs"], stars: 4.75, reviews: 163 },
-];
-
-const CATS = ["All Agents", "DeFi Trading", "Yield Optimizer", "Oracle & Data", "Risk Monitor", "NFT Strategy", "Cross-Chain", "AI Inference"];
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: Bot, label: "Agents", badge: "5" },
+  { icon: Bot, label: "Agents" },
   { icon: BarChart3, label: "Analytics" },
   { icon: Globe, label: "Marketplace" },
   { icon: Wallet, label: "Treasury" },
@@ -113,14 +71,6 @@ const NAV = [
 ];
 
 /* ── reusable components ── */
-function StatBar({ value, color, height = 1.5 }: { value: number; color: string; height?: number }) {
-  return (
-    <div className="relative rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height }}>
-      <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${value}%`, background: `linear-gradient(90deg, ${color}60, ${color})`, boxShadow: `0 0 8px ${color}40` }} />
-    </div>
-  );
-}
-
 function Badge({ status }: { status: string }) {
   const col = status === "ACTIVE" ? M : status === "PAUSED" ? A : "#64748b";
   return (
@@ -132,7 +82,7 @@ function Badge({ status }: { status: string }) {
   );
 }
 
-function KpiCard({ label, value, sub, up, accent, icon: Icon, data, gradId }: { label: string; value: string; sub: string; up: boolean; accent: string; icon: React.ElementType; data: { t: string; v: number }[]; gradId: string }) {
+function KpiCard({ label, value, sub, accent, icon: Icon, data, gradId }: { label: string; value: string; sub: string; accent: string; icon: React.ElementType; data: { t: string; v: number }[]; gradId: string }) {
   return (
     <div className="relative rounded-2xl p-5 flex flex-col gap-3 overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
       style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
@@ -146,9 +96,7 @@ function KpiCard({ label, value, sub, up, accent, icon: Icon, data, gradId }: { 
           </div>
           <span className="text-xs font-medium" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
         </div>
-        <span className="flex items-center gap-1 text-[11px] font-semibold" style={{ ...mono, color: up ? M : "#ef4444" }}>
-          {up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{sub}
-        </span>
+        <span className="text-[11px] text-right" style={{ ...mono, color: "#475569" }}>{sub}</span>
       </div>
       <div className="text-3xl font-bold tracking-tighter" style={{ ...mono, color: "#e2e8f0", textShadow: `0 0 24px ${accent}30` }}>{value}</div>
       <div className="h-14 -mx-2">
@@ -178,17 +126,6 @@ function SectionTitle({ icon: Icon, text, accent = M }: { icon: React.ElementTyp
       <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ ...sans, color: "#94a3b8" }}>{text}</span>
       <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.07), transparent)" }} />
     </div>
-  );
-}
-
-function ShimmerBtn({ label, accent, full, size = "sm" }: { label: string; accent: string; full?: boolean; size?: "xs" | "sm" }) {
-  return (
-    <button type="button" disabled aria-disabled="true" title="Coming soon — not available in this prototype"
-      className={`relative flex items-center justify-center gap-1.5 rounded-xl font-semibold overflow-hidden cursor-not-allowed opacity-70 ${full ? "flex-1" : ""} ${size === "xs" ? "px-3 py-1.5 text-[11px]" : "px-4 py-2.5 text-xs"}`}
-      style={{ ...sans, background: `${accent}0d`, border: `1px solid ${accent}20`, color: accent }}>
-      {label}
-      <span className="text-[8px] tracking-wider opacity-60">SOON</span>
-    </button>
   );
 }
 
@@ -224,6 +161,27 @@ function ParticleGrid() {
 
 /* ── 1. DASHBOARD ── */
 function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const owner = connected ? String(connected.account.address) : "";
+  const { agents } = useRealAgents();
+  const [stats, setStats] = useState<Analytics | null>(null);
+
+  useEffect(() => {
+    if (!owner) { setStats(null); return; }
+    let live = true;
+    const load = () => api.analytics(owner).then(d => { if (live) setStats(d); }).catch(() => { /* dashboard degrades to em-dashes */ });
+    load();
+    const t = setInterval(load, 15_000);
+    return () => { live = false; clearInterval(t); };
+  }, [owner]);
+
+  const flat = (v: number) => Array.from({ length: 7 }, (_, i) => ({ t: String(i), v }));
+  const volumeSeries = stats?.weeklyVolume.map(d => ({ t: d.t, v: d.volumeUsdc })) ?? flat(0);
+  const expiringSoon = agents
+    .filter(a => a.latestExpiresAt && a.activeGrants > 0)
+    .filter(a => new Date(a.latestExpiresAt!).getTime() - Date.now() < 3600_000)
+    .sort((x, y) => (x.latestExpiresAt! < y.latestExpiresAt! ? -1 : 1))[0];
 
   return (
     <div className="space-y-7">
@@ -234,65 +192,39 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Autonomous finance. <span style={{ color: M }}>Hard limits.</span></h1>
         <p className="text-sm mt-1" style={{ ...sans, color: "#475569" }}>Design agent permissions, assess operational risk, and anchor policy proofs on Solana.</p>
-        <span className="inline-flex mt-3 text-[9px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>PROTOTYPE · ANALYTICS BELOW USE SIMULATED DATA</span>
+        {!owner && <span className="inline-flex mt-3 text-[9px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>CONNECT A WALLET TO SEE YOUR NUMBERS</span>}
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <KpiCard label="Active Agents" value="5" sub="+2 this week" up icon={Bot} accent={M} data={[{ t: "a", v: 2 }, { t: "b", v: 3 }, { t: "c", v: 3 }, { t: "d", v: 4 }, { t: "e", v: 4 }, { t: "f", v: 5 }, { t: "g", v: 5 }]} gradId="kpi-agents" />
-        <KpiCard label="Total P&L" value="$6,272" sub="+18.4% today" up icon={DollarSign} accent={A} data={perfWeek.map(d => ({ t: d.t, v: d.vol / 5 }))} gradId="kpi-pnl" />
-        <KpiCard label="Avg. Latency" value="125ms" sub="−18ms vs avg" up={false} icon={Cpu} accent={C} data={latencyData} gradId="kpi-lat" />
-        <KpiCard label="Success Rate" value="98.6%" sub="71,983 ops" up icon={CheckCircle2} accent={M} data={perfWeek.map(d => ({ t: d.t, v: 95 + Math.random() * 4 }))} gradId="kpi-success" />
+        <KpiCard label="Active Grants" value={stats ? String(stats.activeGrants) : "—"} sub={stats ? `${stats.totalGrants} total` : "connect wallet"} icon={Bot} accent={M} data={flat(stats?.activeGrants ?? 0)} gradId="kpi-agents" />
+        <KpiCard label="Volume Moved" value={stats ? `${stats.totalVolumeUsdc.toLocaleString()}` : "—"} sub="USDC settled on-chain" icon={DollarSign} accent={A} data={volumeSeries} gradId="kpi-vol" />
+        <KpiCard label="Avg. Decision" value={stats?.avgDecisionLatencyMs != null ? `${stats.avgDecisionLatencyMs}ms` : "—"} sub="precheck → decision" icon={Cpu} accent={C} data={flat(stats?.avgDecisionLatencyMs ?? 0)} gradId="kpi-lat" />
+        <KpiCard label="Allowed by Policy" value={stats?.successRatePct != null ? `${stats.successRatePct}%` : "—"} sub={stats ? `${stats.totalRejections} blocked` : "no decisions yet"} icon={CheckCircle2} accent={M} data={flat(stats?.successRatePct ?? 0)} gradId="kpi-success" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
-        {/* Volume chart */}
-        <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Weekly Execution Volume</div>
-              <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#475569" }}>USD settled on-chain · all agents</div>
-            </div>
-            <span className="flex items-center gap-1 text-xs font-semibold" style={{ ...mono, color: A }}><ArrowUpRight size={13} />+48.3% WoW</span>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={perfWeek} barSize={24}>
-                <defs>
-                  <linearGradient id="bar-vol" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={M} stopOpacity={0.8} />
-                    <stop offset="100%" stopColor={M} stopOpacity={0.2} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={<ChartTip color={M} prefix="$" />} />
-                <Bar dataKey="vol" fill="url(#bar-vol)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Volume chart */}
+      <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Weekly Execution Volume</div>
+            <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#475569" }}>USDC confirmed on-chain · your grants</div>
           </div>
         </div>
-
-        {/* Pie distribution */}
-        <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-          <div className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Strategy Mix</div>
-          <div className="flex justify-center">
-            <RPie width={140} height={140}>
-              <Pie data={pieData} cx={65} cy={65} innerRadius={44} outerRadius={65} dataKey="value" strokeWidth={0}>
-                {pieData.map((d, i) => <Cell key={`pc-${i}`} fill={d.color} opacity={0.85} />)}
-              </Pie>
-            </RPie>
-          </div>
-          <div className="space-y-2">
-            {pieData.map((d, i) => (
-              <div key={`pie-leg-${i}`} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                  <span className="text-[11px]" style={{ ...sans, color: "#94a3b8" }}>{d.name}</span>
-                </div>
-                <span className="text-[11px] font-semibold" style={{ ...mono, color: d.color }}>{d.value}%</span>
-              </div>
-            ))}
-          </div>
+        <div className="h-44">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={stats?.weeklyVolume ?? []} barSize={24}>
+              <defs>
+                <linearGradient id="bar-vol" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={M} stopOpacity={0.8} />
+                  <stop offset="100%" stopColor={M} stopOpacity={0.2} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTip color={M} suffix=" USDC" />} />
+              <Bar dataKey="volumeUsdc" fill="url(#bar-vol)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -308,20 +240,21 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
           <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
             <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>My Agents</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>5 running</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} active</span>
           </div>
-          {AGENTS_DATA.map((a, i) => (
+          {agents.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: "#475569" }}>No agents published yet.</div>}
+          {agents.slice(0, 6).map((a, i) => (
             <div key={`dash-agent-${a.id}`} className="flex items-center gap-3 px-5 py-3 border-b hover:bg-white/[0.018] transition-colors"
-              style={{ borderColor: i < AGENTS_DATA.length - 1 ? "rgba(255,255,255,0.03)" : "transparent" }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${a.accent}12`, border: `1px solid ${a.accent}22` }}>
-                <Bot size={14} style={{ color: a.accent }} />
+              style={{ borderColor: i < Math.min(agents.length, 6) - 1 ? "rgba(255,255,255,0.03)" : "transparent" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${AGENT_ACCENTS[i % AGENT_ACCENTS.length]}12`, border: `1px solid ${AGENT_ACCENTS[i % AGENT_ACCENTS.length]}22` }}>
+                <Bot size={14} style={{ color: AGENT_ACCENTS[i % AGENT_ACCENTS.length] }} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold truncate" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</div>
-                <div className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.tag}</div>
+                <div className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.version}</div>
               </div>
               <div className="text-right">
-                <div className="text-xs font-bold" style={{ ...mono, color: a.up ? M : "#ef4444" }}>{a.pnl}</div>
+                <div className="text-xs font-bold" style={{ ...mono, color: M }}>{a.totalSpentUsdc.toLocaleString()} USDC</div>
                 <Badge status={a.status} />
               </div>
             </div>
@@ -329,269 +262,334 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         </div>
       </div>
 
-      {/* Alert */}
-      <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${A}09`, border: `1px solid ${A}20` }}>
-        <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><AlertTriangle size={14} style={{ color: A }} /></div>
-        <div className="flex-1">
-          <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Policy Review Recommended</div>
-          <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#64748b" }}>SignalOracle policy expires in 28 minutes. Review before extending agent permissions.</div>
+      {/* Real expiry warning, only when a grant genuinely expires within the hour */}
+      {expiringSoon && (
+        <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${A}09`, border: `1px solid ${A}20` }}>
+          <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><AlertTriangle size={14} style={{ color: A }} /></div>
+          <div className="flex-1">
+            <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Policy Review Recommended</div>
+            <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#64748b" }}>{expiringSoon.name} policy expires {new Date(expiringSoon.latestExpiresAt!).toLocaleTimeString()}. Review before extending agent permissions.</div>
+          </div>
+          {setNav && <button type="button" onClick={() => setNav(6)} className="px-4 py-2 rounded-xl text-[11px] font-semibold" style={{ ...sans, background: `${A}14`, border: `1px solid ${A}30`, color: A }}>Open Guardrails</button>}
         </div>
-        <ShimmerBtn label="Renew Now" accent={A} />
-      </div>
+      )}
     </div>
   );
 }
 
 /* ── 2. AGENTS ── */
+const AGENT_ACCENTS = [M, C, A, "#8b5cf6"];
+
 function AgentsPage() {
+  const { agents, loading, error, reload } = useRealAgents();
   const [sel, setSel] = useState(0);
-  const a = AGENTS_DATA[sel];
+  const [deploying, setDeploying] = useState(false);
+  const [name, setName] = useState("");
+  const [strategy, setStrategy] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [deployError, setDeployError] = useState("");
+
+  const a = agents[Math.min(sel, agents.length - 1)];
+  const accent = (i: number) => AGENT_ACCENTS[i % AGENT_ACCENTS.length];
+
+  async function deploy() {
+    if (!name.trim() || !strategy.trim()) return;
+    setBusy(true); setDeployError("");
+    try {
+      // agentHash is sha256(modelRef|codeRef|config) — name and version are not
+      // part of it. A dashboard-declared agent has no build artifact to point
+      // at, so its identity is what the operator typed; feeding that into the
+      // refs keeps two differently-named agents from collapsing into one row.
+      await api.publishAgent({
+        name: name.trim(), version: "v1.0.0", strategy: strategy.trim(),
+        modelRef: "manual:dashboard", codeRef: `manual:${name.trim()}`, config: { strategy: strategy.trim() },
+      });
+      setName(""); setStrategy(""); setDeploying(false);
+      await reload();
+    } catch (e) { setDeployError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>My Agents</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Explore and monitor simulated prototype agents</p>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Real agent versions and grants from the REDLINE API</p>
         </div>
-        <button type="button" disabled aria-disabled="true" title="Coming soon — agent deployment is outside this prototype"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-not-allowed opacity-70"
-          style={{ ...sans, background: `${M}0d`, border: `1px solid ${M}20`, color: M }}>
-          <Plus size={13} />Deploy New Agent <span className="text-[8px] tracking-wider opacity-60">SOON</span>
+        <button type="button" onClick={() => setDeploying(d => !d)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
+          style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>
+          <Plus size={13} />Publish Agent Version
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-        {/* Agent list */}
-        <div className="rounded-2xl overflow-hidden flex flex-col" style={{ ...glass() }}>
-          {AGENTS_DATA.map((ag, i) => (
-            <button type="button" key={`ag-list-${ag.id}`} onClick={() => setSel(i)} aria-pressed={sel === i}
-              className="flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b"
-              style={{ borderColor: "rgba(255,255,255,0.04)", background: sel === i ? `${ag.accent}0c` : "transparent", borderLeft: sel === i ? `2px solid ${ag.accent}` : "2px solid transparent" }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${ag.accent}14`, border: `1px solid ${ag.accent}22` }}>
-                <Bot size={16} style={{ color: ag.accent }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold truncate" style={{ ...sans, color: "#e2e8f0" }}>{ag.name}</div>
-                <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>{ag.tag}</div>
-              </div>
-              <Badge status={ag.status} />
+      {deploying && (
+        <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ ...glass() }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Agent name" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#e2e8f0" }} />
+            <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="Strategy description" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#e2e8f0" }} />
+          </div>
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
+              {busy ? "Publishing…" : "Publish"}
             </button>
-          ))}
+            {deployError && <span className="text-[11px]" style={{ ...mono, color: "#ef4444" }}>{deployError}</span>}
+          </div>
+          <p className="text-[10px]" style={{ ...sans, color: "#475569" }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
         </div>
+      )}
 
-        {/* Agent detail */}
-        <div className="space-y-4">
-          <div className="rounded-2xl p-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-            <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${a.accent}60, transparent)` }} />
-            <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 0% 0%, ${a.accent}08, transparent 60%)` }} />
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${a.accent}16`, border: `1px solid ${a.accent}28`, boxShadow: `0 0 24px ${a.accent}20` }}>
-                <Bot size={22} style={{ color: a.accent }} />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-lg font-bold" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</h2>
-                  <Badge status={a.status} />
-                  <ShieldCheck size={14} style={{ color: M }} />
+      {loading && <div className="text-xs" style={{ ...sans, color: "#475569" }}>Loading agents…</div>}
+      {error && <div className="text-xs" style={{ ...mono, color: "#ef4444" }}>{error}</div>}
+      {!loading && !error && agents.length === 0 && (
+        <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
+          <p className="text-sm" style={{ ...sans, color: "#64748b" }}>No agents published yet — publish one above, or create a grant from Guardrails (which publishes one automatically).</p>
+        </div>
+      )}
+
+      {!loading && agents.length > 0 && a && (
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+          {/* Agent list */}
+          <div className="rounded-2xl overflow-hidden flex flex-col" style={{ ...glass() }}>
+            {agents.map((ag, i) => (
+              <button type="button" key={`ag-list-${ag.id}`} onClick={() => setSel(i)} aria-pressed={sel === i}
+                className="flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b"
+                style={{ borderColor: "rgba(255,255,255,0.04)", background: sel === i ? `${accent(i)}0c` : "transparent", borderLeft: sel === i ? `2px solid ${accent(i)}` : "2px solid transparent" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent(i)}14`, border: `1px solid ${accent(i)}22` }}>
+                  <Bot size={16} style={{ color: accent(i) }} />
                 </div>
-                <div className="text-xs mt-1" style={{ ...mono, color: C }}>{a.hash}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate" style={{ ...sans, color: "#e2e8f0" }}>{ag.name}</div>
+                  <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>{ag.version}</div>
+                </div>
+                <Badge status={ag.status} />
+              </button>
+            ))}
+          </div>
+
+          {/* Agent detail */}
+          <div className="space-y-4">
+            <div className="rounded-2xl p-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+              <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent(sel)}60, transparent)` }} />
+              <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 0% 0%, ${accent(sel)}08, transparent 60%)` }} />
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${accent(sel)}16`, border: `1px solid ${accent(sel)}28`, boxShadow: `0 0 24px ${accent(sel)}20` }}>
+                  <Bot size={22} style={{ color: accent(sel) }} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h2 className="text-lg font-bold" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</h2>
+                    <Badge status={a.status} />
+                  </div>
+                  <div className="text-xs mt-1" style={{ ...mono, color: C }}>{short(a.agentHash, 8)}</div>
+                  <p className="text-[11px] mt-1 max-w-md" style={{ ...sans, color: "#64748b" }}>{a.strategy}</p>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <ShimmerBtn label={a.status === "ACTIVE" ? "Pause" : "Activate"} accent={a.status === "ACTIVE" ? A : M} />
-                <button type="button" disabled aria-label="More agent actions — coming soon" title="Coming soon" className="p-2 rounded-xl cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#475569" }}>
-                  <MoreHorizontal size={15} />
-                </button>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Active Grants", value: String(a.activeGrants), color: M },
+                  { label: "Total Grants", value: String(a.totalGrants), color: C },
+                  { label: "Total Spent", value: `${a.totalSpentUsdc.toLocaleString()} USDC`, color: A },
+                  { label: "Total Transfers", value: String(a.totalTx), color: M },
+                ].map((s, i) => (
+                  <div key={`det-stat-${i}`} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="text-[10px] mb-1" style={{ ...sans, color: "#475569" }}>{s.label}</div>
+                    <div className="text-base font-bold" style={{ ...mono, color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Total P&L", value: a.pnl, color: a.up ? M : "#ef4444" },
-                { label: "Win Rate", value: `${a.winRate}%`, color: A },
-                { label: "APY", value: a.apy, color: A },
-                { label: "Uptime", value: `${a.uptime}%`, color: M },
-              ].map((s, i) => (
-                <div key={`det-stat-${i}`} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className="text-[10px] mb-1" style={{ ...sans, color: "#475569" }}>{s.label}</div>
-                  <div className="text-base font-bold" style={{ ...mono, color: s.color }}>{s.value}</div>
+
+            {/* Grants for this agent */}
+            <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Grants</span>
+                <span className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.grants.length} total</span>
+              </div>
+              {a.grants.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: "#475569" }}>No grants yet for this agent.</div>}
+              {a.grants.map(g => (
+                <div key={g.id} className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                  <span className="text-[11px] flex-1" style={{ ...mono, color: C }}>{short(g.grantPda)}</span>
+                  <span className="text-[11px]" style={{ ...mono, color: "#94a3b8" }}>{fmtUsdc(g.spentUnits)}/{fmtUsdc(g.policyVersion.spendCapUnits)} USDC</span>
+                  <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>{g.transactionCount}/{g.policyVersion.maxTransactions} tx</span>
+                  <Badge status={g.revoked ? "REVOKED" : "ACTIVE"} />
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Perf chart */}
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-xs font-semibold mb-4" style={{ ...sans, color: "#94a3b8" }}>Performance — Last 7 Days</div>
-            <div className="h-36">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={perfWeek}>
-                  <defs>
-                    <linearGradient id="ag-perf" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={a.accent} stopOpacity={0.3} />
-                      <stop offset="100%" stopColor={a.accent} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTip color={a.accent} />} />
-                  <Area type="monotone" dataKey="v" stroke={a.accent} strokeWidth={2} fill="url(#ag-perf)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Agent policy info */}
-          <div className="rounded-2xl p-5 flex items-center gap-4" style={{ ...glass(), border: `1px solid ${a.exp === "EXPIRED" ? "#ef444430" : M + "18"}` }}>
-            <div className="p-2.5 rounded-xl" style={{ background: a.exp === "EXPIRED" ? "rgba(239,68,68,0.1)" : `${M}12`, border: `1px solid ${a.exp === "EXPIRED" ? "#ef444428" : M + "22"}` }}>
-              <Key size={16} style={{ color: a.exp === "EXPIRED" ? "#ef4444" : M }} />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Solana Agent Policy</div>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>Expires in:</span>
-                <span className="text-[11px] font-bold" style={{ ...mono, color: a.exp === "EXPIRED" ? "#ef4444" : M }}>{a.exp}</span>
+            {/* Latest policy expiry */}
+            {a.latestExpiresAt && (
+              <div className="rounded-2xl p-5 flex items-center gap-4" style={{ ...glass() }}>
+                <div className="p-2.5 rounded-xl" style={{ background: `${M}12`, border: `1px solid ${M}22` }}>
+                  <Key size={16} style={{ color: M }} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Latest grant policy</div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>Expires:</span>
+                    <span className="text-[11px] font-bold" style={{ ...mono, color: M }}>{new Date(a.latestExpiresAt).toLocaleString()}</span>
+                  </div>
+                </div>
+                {a.lastActiveAt && <span className="text-[10px]" style={{ ...mono, color: "#475569" }}>last active {new Date(a.lastActiveAt).toLocaleString()}</span>}
               </div>
-            </div>
-            <ShimmerBtn label={a.exp === "EXPIRED" ? "Renew Key" : "Manage"} accent={a.exp === "EXPIRED" ? "#ef4444" : M} />
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 /* ── 3. ANALYTICS ── */
 function AnalyticsPage() {
-  const [range, setRange] = useState<AnalyticsRange>("7D");
-  const analytics = getAnalyticsSnapshot(range);
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const owner = connected ? String(connected.account.address) : "";
+  const [data, setData] = useState<Analytics | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!owner) { setData(null); return; }
+    let live = true;
+    const load = () => api.analytics(owner).then(d => { if (live) { setData(d); setError(""); } }).catch(e => { if (live) setError(e instanceof Error ? e.message : String(e)); });
+    load();
+    const t = setInterval(load, 15_000);
+    return () => { live = false; clearInterval(t); };
+  }, [owner]);
 
   return (
     <div className="space-y-7">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Analytics</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Interactive prototype analytics across all agents · simulated data</p>
-        </div>
-        <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          {ANALYTICS_RANGES.map(r => (
-            <button type="button" key={`range-${r}`} onClick={() => setRange(r)} aria-pressed={range === r}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
-              style={{ ...mono, background: range === r ? `${M}18` : "transparent", color: range === r ? M : "#475569", border: range === r ? `1px solid ${M}28` : "1px solid transparent" }}>
-              {r}
-            </button>
-          ))}
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Analytics</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Computed from your grants' real audit trail — no price feed, so no P&L or APY</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {analytics.kpis.map((s, i) => (
-          <div key={`an-kpi-${i}`} className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
-            <div className="text-[11px] mb-2" style={{ ...sans, color: "#475569" }}>{s.label}</div>
-            <div className="text-xl font-bold mb-1" style={{ ...mono, color: "#e2e8f0" }}>{s.value}</div>
-            <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: s.delta.startsWith("+") ? M : "#ef4444" }}>
-              {s.delta.startsWith("+") ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}{s.delta}
-            </div>
-          </div>
-        ))}
-      </div>
+      {!owner && <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}><p className="text-sm" style={{ ...sans, color: "#64748b" }}>Connect a wallet to see analytics for your grants.</p></div>}
+      {owner && error && <div className="text-xs" style={{ ...mono, color: "#ef4444" }}>{error}</div>}
 
-      {/* Revenue line chart */}
-      <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-        <SectionTitle icon={TrendingUp} text="Revenue Over Time" />
-        <div className="h-52">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={analytics.series}>
-              <defs>
-                <linearGradient id="rev-line" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={C} />
-                  <stop offset="100%" stopColor={M} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={<ChartTip color={M} prefix="$" />} />
-              <Line type="monotone" dataKey="vol" stroke="url(#rev-line)" strokeWidth={2.5} dot={{ fill: M, r: 3, strokeWidth: 0 }} activeDot={{ fill: M, r: 5, strokeWidth: 0 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Per-agent table */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-          <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Agent Breakdown</span>
-          </div>
-          {AGENTS_DATA.map((a, i) => (
-            <div key={`an-ag-${a.id}`} className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors"
-              style={{ gridTemplateColumns: "1fr 80px 70px 70px", borderColor: "rgba(255,255,255,0.03)" }}>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${a.accent}12`, border: `1px solid ${a.accent}20` }}><Bot size={11} style={{ color: a.accent }} /></div>
-                <span className="text-xs font-medium" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</span>
+      {owner && data && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Active Grants", value: String(data.activeGrants) },
+              { label: "Total Volume", value: `${data.totalVolumeUsdc.toLocaleString()} USDC` },
+              { label: "Success Rate", value: data.successRatePct === null ? "—" : `${data.successRatePct}%` },
+              { label: "Avg Decision Latency", value: data.avgDecisionLatencyMs === null ? "—" : `${data.avgDecisionLatencyMs}ms` },
+            ].map((s, i) => (
+              <div key={`an-kpi-${i}`} className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
+                <div className="text-[11px] mb-2" style={{ ...sans, color: "#475569" }}>{s.label}</div>
+                <div className="text-xl font-bold" style={{ ...mono, color: "#e2e8f0" }}>{s.value}</div>
               </div>
-              <span className="text-[11px] font-bold" style={{ ...mono, color: a.up ? M : "#ef4444" }}>{a.pnl}</span>
-              <span className="text-[11px]" style={{ ...mono, color: A }}>{a.winRate}%</span>
-              <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>{a.ops.toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Latency chart */}
-        <div className="rounded-2xl p-5" style={{ ...glass() }}>
-          <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Execution Latency</div>
-          <div className="text-[11px] mb-4" style={{ ...sans, color: "#475569" }}>{analytics.latencyLabel}</div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={analytics.latency}>
-                <defs>
-                  <linearGradient id="an-lat" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={C} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={C} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} unit="ms" />
-                <Tooltip content={<ChartTip color={C} suffix="ms" />} />
-                <Area type="monotone" dataKey="v" stroke={C} strokeWidth={1.5} fill="url(#an-lat)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+            ))}
           </div>
-        </div>
-      </div>
 
-      {/* Fee heatmap style */}
-      <div className="rounded-2xl p-5" style={{ ...glass() }}>
-        <SectionTitle icon={BarChart2} text="Gas & Fees Distribution" accent={A} />
-        <div className="h-36">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={analytics.series} barSize={28}>
-              <defs>
-                <linearGradient id="fee-bar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={A} stopOpacity={0.8} />
-                  <stop offset="100%" stopColor={A} stopOpacity={0.15} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} tickFormatter={v => `${Number(v).toFixed(2)}`} />
-              <Tooltip content={<ChartTip color={A} suffix=" SOL" />} />
-              <Bar dataKey="fee" fill="url(#fee-bar)" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+          {/* Weekly volume */}
+          <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+            <SectionTitle icon={TrendingUp} text="Confirmed Volume — Last 7 Days" />
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.weeklyVolume} barSize={28}>
+                  <defs>
+                    <linearGradient id="vol-bar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={M} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={M} stopOpacity={0.15} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="t" tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#475569", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTip color={M} suffix=" USDC" />} />
+                  <Bar dataKey="volumeUsdc" fill="url(#vol-bar)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Top agents by volume */}
+          <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Top Agents by Volume</span>
+            </div>
+            {data.topAgentsByVolume.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: "#475569" }}>No confirmed transfers yet.</div>}
+            {data.topAgentsByVolume.map((a, i) => (
+              <div key={`an-ag-${i}`} className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors"
+                style={{ gridTemplateColumns: "1fr 120px 80px", borderColor: "rgba(255,255,255,0.03)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${M}12`, border: `1px solid ${M}20` }}><Bot size={11} style={{ color: M }} /></div>
+                  <span className="text-xs font-medium" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</span>
+                </div>
+                <span className="text-[11px] font-bold" style={{ ...mono, color: M }}>{a.volumeUsdc.toLocaleString()} USDC</span>
+                <span className="text-[11px]" style={{ ...mono, color: "#475569" }}>{a.grants} grant{a.grants === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-[11px]" style={{ ...sans, color: "#475569" }}>
+            {data.totalTransactions} confirmed · {data.totalRejections} rejected by the on-chain gates across {data.totalGrants} grant{data.totalGrants === 1 ? "" : "s"}.
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 /* ── 4. MARKETPLACE ── */
-function MarketplacePage() {
-  const [activeCat, setActiveCat] = useState(0);
-  const [antiRug, setAntiRug] = useState(false);
-  const [search, setSearch] = useState("");
+const LAMPORTS_PER_SOL = 1_000_000_000;
+const fmtSol = (lamports: string) => (Number(lamports) / LAMPORTS_PER_SOL).toLocaleString("en-US", { maximumFractionDigits: 4 });
 
-  const filtered = MARKETPLACE_AGENTS.filter(a => {
-    if (antiRug && !a.verified) return false;
-    if (activeCat > 0 && a.tag !== CATS[activeCat]) return false;
-    if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
+function MarketplacePage() {
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const wallet = connected ? String(connected.account.address) : "";
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [search, setSearch] = useState("");
+  const [pricedOnly, setPricedOnly] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [priceSol, setPriceSol] = useState("0.05");
+  // Per-listing rental length. The price is a 24h rate, so the total scales
+  // with the periods covered — the backend charges the same way.
+  const [hours, setHours] = useState<Record<string, number>>({});
+  const hoursFor = (id: string) => hours[id] ?? 24;
+  const periodsFor = (id: string) => Math.ceil(hoursFor(id) / 24);
+
+  const load = useCallback(async () => {
+    try { setListings(await api.listings()); setError(""); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  }, []);
+  useEffect(() => { void load(); const t = setInterval(() => void load(), 20_000); return () => clearInterval(t); }, [load]);
+
+  // The publisher claims a listing by naming the wallet that should be paid.
+  async function savePrice(listing: Listing) {
+    if (!wallet) return;
+    setBusy(listing.id); setError(""); setNotice("");
+    try {
+      await api.setListingPrice(listing.id, { developerWallet: wallet, priceLamports: String(Math.round(Number(priceSol) * LAMPORTS_PER_SOL)) });
+      setEditing(null);
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(""); }
+  }
+
+  // Renting is a real SOL transfer to the publisher, then the backend verifies
+  // that transaction on Devnet before recording the hire.
+  async function rent(listing: Listing) {
+    if (!connected?.signer || !listing.developerWallet) return;
+    const durationHours = hoursFor(listing.id);
+    const total = BigInt(listing.priceLamports) * BigInt(Math.ceil(durationHours / 24));
+    setBusy(listing.id); setError(""); setNotice("");
+    try {
+      const result = await client.sendTransaction([transferSolInstruction(wallet, listing.developerWallet, total)]);
+      const signature = String(result.context.signature);
+      await api.hire({ listingId: listing.id, ownerWallet: wallet, durationHours, paymentSignature: signature });
+      setNotice(`Rented ${listing.agentVersion.name} for ${durationHours}h · ${short(signature, 6)}`);
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Rental payment was rejected or could not be verified."); } finally { setBusy(""); }
+  }
+
+  const filtered = listings.filter(l => {
+    if (pricedOnly && Number(l.priceLamports) === 0) return false;
+    if (search && !l.agentVersion.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -600,101 +598,141 @@ function MarketplacePage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Decentralized AI Agent Marketplace</span>
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Agent Marketplace · Devnet</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Explore <span style={{ color: M }}>Autonomous Agents</span></h1>
-        <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Browse policy-aware AI agents designed for bounded execution and verifiable Solana guardrails.</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Published <span style={{ color: M }}>Agent Versions</span></h1>
+        <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>
+          Every listing is a real, immutable agent version. Renting sends SOL to the publisher's wallet and is verified on Devnet before the agreement is recorded.
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#334155" }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents by name, strategy, or tag..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents by name..."
             className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
-            style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0", caretColor: M }}
-            onFocus={e => { e.target.style.borderColor = `${M}35`; e.target.style.boxShadow = `0 0 0 3px ${M}10`; }}
-            onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.06)"; e.target.style.boxShadow = "none"; }} />
+            style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0", caretColor: M }} />
         </div>
-        <button type="button" onClick={() => setAntiRug(r => !r)} aria-pressed={antiRug}
+        <button type="button" onClick={() => setPricedOnly(p => !p)} aria-pressed={pricedOnly}
           className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold transition-all shrink-0"
-          style={{ ...sans, background: antiRug ? `${M}12` : "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: `1px solid ${antiRug ? M + "35" : "rgba(255,255,255,0.06)"}`, color: antiRug ? M : "#475569", boxShadow: antiRug ? `0 0 20px ${M}18` : "none" }}>
-          <ShieldCheck size={13} />Anti-Rug Verified
-          <div className="relative w-8 h-4 rounded-full ml-1" style={{ background: antiRug ? `${M}35` : "rgba(255,255,255,0.08)", border: `1px solid ${antiRug ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
-            <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: antiRug ? "calc(100% - 14px)" : 2, background: antiRug ? M : "#334155", boxShadow: antiRug ? `0 0 8px ${M}` : "none" }} />
+          style={{ ...sans, background: pricedOnly ? `${M}12` : "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: `1px solid ${pricedOnly ? M + "35" : "rgba(255,255,255,0.06)"}`, color: pricedOnly ? M : "#475569" }}>
+          <ShieldCheck size={13} />Rentable only
+          <div className="relative w-8 h-4 rounded-full ml-1" style={{ background: pricedOnly ? `${M}35` : "rgba(255,255,255,0.08)", border: `1px solid ${pricedOnly ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
+            <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: pricedOnly ? "calc(100% - 14px)" : 2, background: pricedOnly ? M : "#334155" }} />
           </div>
         </button>
-        <button type="button" disabled aria-disabled="true" title="Coming soon" className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs shrink-0 cursor-not-allowed opacity-60" style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
-          <ArrowDownUp size={13} />Sort <span className="text-[8px]">SOON</span>
-        </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {CATS.map((cat, i) => (
-          <button type="button" key={`mkt-cat-${i}`} onClick={() => setActiveCat(i)} aria-pressed={activeCat === i}
-            className="px-4 py-2 rounded-full text-xs font-semibold transition-all"
-            style={{ ...sans, background: activeCat === i ? `${M}14` : "rgba(11,17,16,0.6)", backdropFilter: "blur(16px)", border: `1px solid ${activeCat === i ? M + "40" : "rgba(255,255,255,0.06)"}`, color: activeCat === i ? M : "#475569", boxShadow: activeCat === i ? `0 0 18px ${M}18` : "none" }}>
-            {cat}
-          </button>
-        ))}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-xs" style={{ ...sans, color: "#334155" }}>Showing <span style={{ color: "#e2e8f0" }}>{filtered.length}</span> listing{filtered.length === 1 ? "" : "s"}</span>
+        {error && <span className="text-[11px]" style={{ ...mono, color: "#ef4444" }}>{error}</span>}
+        {notice && <span className="text-[11px]" style={{ ...mono, color: M }}>{notice}</span>}
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ ...sans, color: "#334155" }}>Showing <span style={{ color: "#e2e8f0" }}>{filtered.length}</span> agents</span>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
-          <span className="text-[10px] font-bold" style={{ ...mono, color: M }}>CURATED PROTOTYPE</span>
+      {filtered.length === 0 && (
+        <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
+          <p className="text-sm" style={{ ...sans, color: "#64748b" }}>No listings yet — publish an agent from the Agents page and it appears here.</p>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {filtered.map((a, idx) => (
-            <div key={`mkt-card-${a.id}`}
-              className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+        {filtered.map((l, idx) => {
+          const accent = AGENT_ACCENTS[idx % AGENT_ACCENTS.length];
+          const priced = Number(l.priceLamports) > 0 && !!l.developerWallet;
+          const mine = !!wallet && l.developerWallet === wallet;
+          return (
+            <div key={`mkt-card-${l.id}`}
+              className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1"
               style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-              <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${a.accent}70, transparent)` }} />
-              <div className="absolute inset-0 pointer-events-none rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at 30% 0%, ${a.accent}08, transparent 55%)` }} />
-              {idx === 0 && activeCat === 0 && !search && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: `${A}18`, border: `1px solid ${A}28` }}>
-                  <Sparkles size={9} style={{ color: A }} />
-                  <span className="text-[9px] font-bold tracking-widest uppercase" style={{ ...mono, color: A }}>Featured</span>
-                </div>
-              )}
+              <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}70, transparent)` }} />
               <div className="p-6 flex flex-col gap-4 flex-1">
                 <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${a.accent}18`, border: `1px solid ${a.accent}25`, boxShadow: `0 0 20px ${a.accent}14` }}>
-                    <Bot size={18} style={{ color: a.accent }} />
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}18`, border: `1px solid ${accent}25` }}>
+                    <Bot size={18} style={{ color: accent }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2"><span className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</span>{a.verified && <ShieldCheck size={12} style={{ color: M }} />}</div>
+                    <span className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>{l.agentVersion.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px]" style={{ ...mono, color: a.accent, opacity: 0.7 }}>{a.version}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${a.accent}10`, color: a.accent, border: `1px solid ${a.accent}18` }}>{a.tag}</span>
+                      <span className="text-[10px]" style={{ ...mono, color: accent, opacity: 0.7 }}>{l.agentVersion.version}</span>
+                      {l.activeHires > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} active hire{l.activeHires === 1 ? "" : "s"}</span>}
                     </div>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed" style={{ ...sans, color: "#64748b", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{a.desc}</p>
+                <p className="text-xs leading-relaxed" style={{ ...sans, color: "#64748b", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.agentVersion.strategy}</p>
                 <div className="rounded-xl px-3.5 py-3 space-y-1.5" style={{ background: "#010303", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Policy</span><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Creator</span></div>
-                  <div className="flex items-center justify-between"><span className="text-[10px]" style={{ ...mono, color: C }}>{a.hash}</span><span className="text-[10px]" style={{ ...mono, color: "#475569" }}>{a.deployer}</span></div>
+                  <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Agent hash</span><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#1e293b" }}>Publisher</span></div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px]" style={{ ...mono, color: C }}>{short(l.agentVersion.agentHash, 6)}</span>
+                    <span className="text-[10px]" style={{ ...mono, color: "#475569" }}>{l.developerWallet ? short(l.developerWallet) : "unclaimed"}</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <div className="space-y-1.5"><div className="flex justify-between"><span className="text-[10px]" style={{ ...sans, color: "#475569" }}>Win Rate</span><span className="text-[11px] font-bold" style={{ ...mono, color: A }}>{a.winRate}%</span></div><StatBar value={a.winRate} color={A} /></div>
-                  <div className="space-y-1.5"><div className="flex justify-between"><span className="text-[10px]" style={{ ...sans, color: "#475569" }}>Uptime</span><span className="text-[11px] font-bold" style={{ ...mono, color: M }}>{a.uptime}%</span></div><StatBar value={a.uptime} color={M} /></div>
-                  <div><div className="text-[10px] mb-0.5" style={{ ...sans, color: "#475569" }}>APY</div><div className="text-sm font-bold" style={{ ...mono, color: a.apy > 0 ? A : "#475569" }}>{a.apy > 0 ? `${a.apy}%` : "—"}</div></div>
-                  <div><div className="text-[10px] mb-0.5" style={{ ...sans, color: "#475569" }}>Latency</div><div className="text-sm font-bold" style={{ ...mono, color: a.latency < 100 ? M : a.latency < 200 ? C : "#64748b" }}>{a.latency}ms</div></div>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={10} style={{ color: "#475569" }} />
+                  <span className="text-[10px]" style={{ ...mono, color: "#475569" }}>published {new Date(l.createdAt).toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center justify-between pt-1 border-t" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                  <div className="flex items-center gap-1.5"><Activity size={10} style={{ color: "#475569" }} /><span className="text-[10px]" style={{ ...mono, color: "#475569" }}>{a.executions} ops</span></div>
-                  <div className="flex items-center gap-1"><Star size={10} style={{ color: A, fill: A }} /><span className="text-[10px] font-semibold" style={{ ...mono, color: A }}>{a.stars}</span><span className="text-[10px]" style={{ ...sans, color: "#334155" }}>({a.reviews})</span></div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">{a.tags.map((t, ti) => (<span key={`mkt-tag-${a.id}-${ti}`} className="text-[9px] px-2 py-0.5 rounded-md font-semibold" style={{ ...mono, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>{t}</span>))}</div>
               </div>
               <div className="px-6 py-4 border-t flex flex-col gap-3" style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.25)" }}>
-                <div className="flex items-center justify-between"><div><div className="text-[10px]" style={{ ...sans, color: "#334155" }}>Buy</div><div className="text-base font-bold" style={{ ...mono, color: "#e2e8f0" }}>{a.price}</div></div><div className="text-right"><div className="text-[10px]" style={{ ...sans, color: "#334155" }}>Rent</div><div className="text-[11px] font-semibold" style={{ ...mono, color: a.accent }}>{a.rent}</div></div></div>
-                <div className="flex gap-2"><ShimmerBtn label="Rent" accent={C} full /><ShimmerBtn label="Buy" accent={a.accent} full /></div>
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px]" style={{ ...sans, color: "#334155" }}>{priced ? `${fmtSol(l.priceLamports)} SOL per 24h` : "Rate"}</div>
+                    <div className="text-base font-bold" style={{ ...mono, color: priced ? "#e2e8f0" : "#475569" }}>
+                      {priced ? `${fmtSol(String(BigInt(l.priceLamports) * BigInt(periodsFor(l.id))))} SOL` : "no price set"}
+                    </div>
+                    {priced
+                      ? <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>total for {hoursFor(l.id)}h</div>
+                      : <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>Claim it to set a price and start renting</div>}
+                  </div>
+                  {priced && (
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: "#334155" }}>Duration</span>
+                      <div className="flex gap-1">
+                        {[24, 72, 168].map(h => (
+                          <button type="button" key={`${l.id}-h${h}`} onClick={() => setHours(v => ({ ...v, [l.id]: h }))} aria-pressed={hoursFor(l.id) === h}
+                            className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                            style={{ ...mono, background: hoursFor(l.id) === h ? `${accent}18` : "rgba(255,255,255,0.04)", border: `1px solid ${hoursFor(l.id) === h ? accent + "35" : "rgba(255,255,255,0.07)"}`, color: hoursFor(l.id) === h ? accent : "#475569" }}>
+                            {h === 168 ? "7d" : h === 72 ? "3d" : "1d"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {mine && <div className="text-[10px]" style={{ ...sans, color: A }}>You publish this agent — you cannot rent it from yourself.</div>}
+                {editing === l.id ? (
+                  <div className="flex items-center gap-2">
+                    <input value={priceSol} onChange={e => setPriceSol(e.target.value.replace(/[^\d.]/g, ""))} aria-label="Rental price in SOL"
+                      className="w-24 px-3 py-2 rounded-xl text-xs text-right" style={{ ...mono, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#e2e8f0" }} />
+                    <button type="button" disabled={busy === l.id} onClick={() => savePrice(l)} className="flex-1 px-3 py-2 rounded-xl text-[11px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}14`, border: `1px solid ${M}30`, color: M }}>
+                      {busy === l.id ? "Saving…" : "Save price"}
+                    </button>
+                    <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl text-[11px]" style={{ ...sans, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#475569" }}>Cancel</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button type="button" disabled={!connected?.signer || !priced || busy === l.id || mine} onClick={() => rent(l)}
+                      title={mine ? "You publish this agent" : !priced ? "The publisher has not set a price" : !connected?.signer ? "Connect a wallet to rent" : ""}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-40"
+                      style={{ ...sans, background: `${C}14`, border: `1px solid ${C}30`, color: C }}>
+                      {busy === l.id ? "Paying…" : `Rent ${hoursFor(l.id)}h`}
+                    </button>
+                    {/* Shown unless the listing belongs to someone else — the
+                        payout wallet is write-once, so offering "Claim" there
+                        would only lead to a 403. An unclaimed listing always
+                        keeps the button so the card is never a dead end. */}
+                    {(mine || !l.developerWallet) && (
+                      <button type="button" disabled={!wallet}
+                        title={wallet ? "" : "Connect a wallet — it receives the rental payments"}
+                        onClick={() => { setEditing(l.id); setPriceSol(priced ? String(Number(l.priceLamports) / LAMPORTS_PER_SOL) : "0.05"); }}
+                        className="px-3 py-2.5 rounded-xl text-[11px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}28`, color: accent }}>
+                        {mine ? "Edit price" : "Claim"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -702,230 +740,89 @@ function MarketplacePage() {
 
 /* ── 5. VAULT ── */
 function VaultPage() {
-  const assets = [
-    { symbol: "SOL", name: "Solana", bal: "84.21", usd: "$18,540", change: "+2.4%", up: true, color: "#9945ff" },
-    { symbol: "USDC", name: "USD Coin", bal: "12,847.20", usd: "$12,847", change: "+0.01%", up: true, color: "#2775ca" },
-    { symbol: "JUP", name: "Jupiter", bal: "4,184", usd: "$11,230", change: "+3.1%", up: true, color: "#14f195" },
-    { symbol: "JTO", name: "Jito", bal: "2,200", usd: "$3,192", change: "-1.2%", up: false, color: "#8b5cf6" },
-    { symbol: "PYTH", name: "Pyth Network", bal: "6,100", usd: "$2,100", change: "+0.00%", up: true, color: A },
-  ];
-  const txns = [
-    { type: "Swap", desc: "SOL → USDC proposal via QuantPilot", amount: "+$2,847", hash: "5mQe…9a41", ts: "2 min ago", col: M },
-    { type: "Deposit", desc: "Treasury funding for YieldGuard", amount: "+$847.20", hash: "3Kcp…c810", ts: "18 min ago", col: C },
-    { type: "Fee", desc: "Devnet policy proof fee", amount: "-0.000005 SOL", hash: "8Trf…e200", ts: "34 min ago", col: "#475569" },
-    { type: "Proof", desc: "Policy digest anchored on Devnet", amount: "verified", hash: "7eNb…3dc9", ts: "1h ago", col: M },
-    { type: "Withdraw", desc: "USDC withdrawal after human approval", amount: "-$5,000", hash: "2bRa…f140", ts: "3h ago", col: "#ef4444" },
-  ];
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const owner = connected ? String(connected.account.address) : "";
+  const [sol, setSol] = useState<number | null>(null);
+  const [events, setEvents] = useState<AuditRow[]>([]);
+
+  useEffect(() => {
+    if (!owner) { setSol(null); setEvents([]); return; }
+    let live = true;
+    const load = async () => {
+      try {
+        const balance = await client.rpc.getBalance(address(owner)).send();
+        if (live) setSol(Number(balance.value) / 1_000_000_000);
+      } catch { if (live) setSol(null); }
+      try {
+        const rows = await api.audit();
+        if (live) setEvents(rows.filter(r => r.actorType === "owner" || r.eventType.startsWith("chain.") || r.eventType === "vault.funded").slice(-8).reverse());
+      } catch { /* the panel above already surfaces API errors */ }
+    };
+    void load();
+    const t = setInterval(() => void load(), 15_000);
+    return () => { live = false; clearInterval(t); };
+  }, [client, owner]);
 
   return (
     <div className="space-y-7">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Vault</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Solana treasury · policy-bounded agent permissions</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Treasury</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Solana Devnet · your wallet and the program-owned vault</p>
       </div>
 
       {/* Real program vault for the connected wallet */}
       <VaultPanel />
 
-      {/* Total balance card */}
-      <div className="rounded-2xl p-7 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
-        <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
-        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 0% 50%, ${M}07, transparent 55%)` }} />
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ ...mono, color: "#475569" }}>Total Portfolio Value</div>
-            <div className="text-4xl font-bold" style={{ ...mono, color: "#e2e8f0", textShadow: `0 0 40px ${M}25` }}>$47,909.00</div>
-            <div className="flex items-center gap-2 mt-2">
-              <ArrowUpRight size={14} style={{ color: M }} />
-              <span className="text-sm font-semibold" style={{ ...mono, color: M }}>+$2,847.20 today (+6.3%)</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs mb-1" style={{ ...sans, color: "#475569" }}>Smart Account</div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold" style={{ ...mono, color: C }}>7Aqv…fK3p</span>
-              <button type="button" disabled aria-label="Copy prototype account — unavailable" title="Prototype account only" className="p-1 rounded-md cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><Copy size={11} /></button>
-              <button type="button" disabled aria-label="Open prototype account — unavailable" title="Prototype account only" className="p-1 rounded-md cursor-not-allowed opacity-50" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}><ExternalLink size={11} /></button>
-            </div>
-            <div className="text-[10px] mt-1" style={{ ...sans, color: "#334155" }}>Policy PDA · Solana Devnet</div>
-          </div>
+      {!owner && (
+        <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
+          <p className="text-sm" style={{ ...sans, color: "#64748b" }}>Connect a wallet to see its balances and recent on-chain activity.</p>
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-          {[["Agent P&L", "+$6,272", M], ["Staked", "$14,200", C], ["Claimable", "$821.40", A]].map(([k, v, col], i) => (
-            <div key={`vault-sum-${i}`}>
-              <div className="text-[10px] mb-1" style={{ ...sans, color: "#475569" }}>{k}</div>
-              <div className="text-lg font-bold" style={{ ...mono, color: col as string }}>{v}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        {/* Asset table */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-          <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Assets</span>
-            <span className="text-[10px]" style={{ ...sans, color: "#475569" }}>5 tokens</span>
-          </div>
-          {assets.map((a, i) => (
-            <div key={`asset-${i}`} className="flex items-center gap-4 px-5 py-3.5 border-b hover:bg-white/[0.02] transition-colors"
-              style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm" style={{ background: `${a.color}18`, border: `1px solid ${a.color}25`, color: a.color }}>{a.symbol[0]}</div>
-              <div className="flex-1">
-                <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>{a.symbol}</div>
-                <div className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.name}</div>
+      {owner && (
+        <>
+          <div className="rounded-2xl p-7 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
+            <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div>
+                <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ ...mono, color: "#475569" }}>Wallet SOL Balance</div>
+                <div className="text-4xl font-bold" style={{ ...mono, color: "#e2e8f0", textShadow: `0 0 40px ${M}25` }}>{sol === null ? "—" : `${sol.toFixed(4)} SOL`}</div>
+                <div className="text-[11px] mt-2" style={{ ...sans, color: "#475569" }}>Devnet SOL · pays transaction fees</div>
               </div>
               <div className="text-right">
-                <div className="text-xs font-semibold" style={{ ...mono, color: "#e2e8f0" }}>{a.bal}</div>
-                <div className="text-[11px]" style={{ ...mono, color: "#475569" }}>{a.usd}</div>
-              </div>
-              <div className="text-[11px] font-semibold min-w-[52px] text-right" style={{ color: a.up ? M : "#ef4444" }}>{a.change}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Recent txns */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-          <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Recent Transactions</span>
-          </div>
-          {txns.map((tx, i) => (
-            <div key={`tx-${i}`} className="px-5 py-3.5 border-b hover:bg-white/[0.018] transition-colors" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ ...mono, background: `${tx.col}12`, color: tx.col, border: `1px solid ${tx.col}22` }}>{tx.type}</span>
-                <span className="text-xs font-bold" style={{ ...mono, color: tx.col }}>{tx.amount}</span>
-              </div>
-              <div className="text-[11px] mb-1" style={{ ...sans, color: "#94a3b8" }}>{tx.desc}</div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px]" style={{ ...mono, color: "#334155" }}>{tx.hash}</span>
-                <span className="text-[10px]" style={{ ...sans, color: "#334155" }}>{tx.ts}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── 6. SECURITY ── */
-function SecurityPage() {
-  const [twoFA, setTwoFA] = useState(true);
-  const [alertsOn, setAlertsOn] = useState(true);
-  const [autoRenew, setAutoRenew] = useState(false);
-
-  const audits = [
-    { name: "QuantPilot", status: "PASSED", score: 94, date: "2026-08-23", accent: M },
-    { name: "RouteScout", status: "PASSED", score: 91, date: "2026-08-23", accent: M },
-    { name: "SignalOracle", status: "REVIEW", score: 78, date: "2026-08-22", accent: A },
-    { name: "YieldGuard", status: "EXPIRED", score: null, date: "2026-08-22", accent: "#ef4444" },
-    { name: "RiskSentinel", status: "PASSED", score: 97, date: "2026-08-23", accent: M },
-  ];
-
-  const events = [
-    { icon: ShieldCheck, text: "Policy simulation passed · QuantPilot", ts: "2m ago", col: M },
-    { icon: AlertTriangle, text: "Policy near expiry · SignalOracle", ts: "28m ago", col: A },
-    { icon: Lock, text: "Deterministic risk fallback activated · RiskSentinel", ts: "1h ago", col: C },
-    { icon: ShieldCheck, text: "Token allowlist updated · RouteScout", ts: "3h ago", col: M },
-    { icon: AlertTriangle, text: "Policy expired · YieldGuard paused", ts: "5h ago", col: "#ef4444" },
-  ];
-
-  function Toggle({ on, toggle, label }: { on: boolean; toggle: () => void; label: string }) {
-    return (
-      <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-        <span className="text-xs font-medium" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
-        <button type="button" onClick={toggle} aria-label={label} aria-pressed={on} className="relative w-10 h-5 rounded-full transition-all duration-200"
-          style={{ background: on ? `${M}35` : "rgba(255,255,255,0.07)", border: `1px solid ${on ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
-          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200"
-            style={{ left: on ? "calc(100% - 18px)" : 2, background: on ? M : "#475569", boxShadow: on ? `0 0 10px ${M}` : "none" }} />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-7">
-      <div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Security Center</h1>
-          <span className="text-[9px] font-bold tracking-widest px-2 py-1 rounded-lg" style={{ ...mono, color: A, background: `${A}12`, border: `1px solid ${A}25` }}>SIMULATED PROTOTYPE DATA</span>
-        </div>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Prototype policy checks, review results, and local access-control settings</p>
-      </div>
-
-      {/* Security score */}
-      <div className="rounded-2xl p-6 flex items-center gap-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
-        <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}50, transparent)` }} />
-        <div className="relative shrink-0">
-          <RadialBarChart width={120} height={120} innerRadius={40} outerRadius={56} data={[{ value: 94 }]} startAngle={90} endAngle={-270}>
-            <RadialBar dataKey="value" cornerRadius={6} fill={M} background={{ fill: "rgba(255,255,255,0.04)" }} />
-          </RadialBarChart>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold" style={{ ...mono, color: M, textShadow: `0 0 20px ${M}50` }}>94</span>
-            <span className="text-[9px]" style={{ ...mono, color: "#475569" }}>/ 100</span>
-          </div>
-        </div>
-        <div>
-          <div className="text-lg font-bold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Prototype posture score: <span style={{ color: M }}>94 / 100</span></div>
-          <p className="text-xs" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>Illustrative score derived from the demo policies below. It is not a production security audit or a guarantee of fund safety.</p>
-          <div className="flex gap-2 mt-3">
-            <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>
-              <CheckCircle2 size={10} />5 policies reviewed
-            </span>
-            <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg" style={{ ...sans, background: `${A}12`, color: A, border: `1px solid ${A}22` }}>
-              <AlertTriangle size={10} />2 need attention
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Audit results */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-          <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Policy Review Results</span>
-          </div>
-          {audits.map((a, i) => (
-            <div key={`audit-${i}`} className="flex items-center gap-3 px-5 py-3.5 border-b hover:bg-white/[0.018] transition-colors" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${a.accent}12`, border: `1px solid ${a.accent}20` }}><Bot size={13} style={{ color: a.accent }} /></div>
-              <div className="flex-1"><div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>{a.name}</div><div className="text-[10px]" style={{ ...sans, color: "#475569" }}>{a.date}</div></div>
-              {a.score !== null ? (
-                <div className="text-right">
-                  <div className="text-xs font-bold" style={{ ...mono, color: a.accent }}>{a.score}/100</div>
-                  <span className="text-[10px] font-bold" style={{ ...mono, color: a.accent }}>{a.status}</span>
+                <div className="text-xs mb-1" style={{ ...sans, color: "#475569" }}>Owner wallet</div>
+                <div className="flex items-center gap-2 justify-end">
+                  <span className="text-sm font-semibold" style={{ ...mono, color: C }}>{short(owner)}</span>
+                  <a href={explorerAddressUrl(owner)} target="_blank" rel="noreferrer" aria-label="Open wallet in Solana Explorer" className="p-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: C }}><ExternalLink size={11} /></a>
                 </div>
-              ) : (
-                <span className="text-[10px] font-bold" style={{ ...mono, color: a.accent }}>{a.status}</span>
-              )}
+                <div className="text-[10px] mt-1" style={{ ...sans, color: "#334155" }}>Solana Devnet</div>
+              </div>
             </div>
-          ))}
-        </div>
-
-        {/* Settings + events */}
-        <div className="space-y-4">
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-3" style={{ ...sans, color: "#e2e8f0" }}>Security Settings</div>
-            <Toggle on={twoFA} toggle={() => setTwoFA(v => !v)} label="Two-Factor Authentication" />
-            <Toggle on={alertsOn} toggle={() => setAlertsOn(v => !v)} label="On-Chain Anomaly Alerts" />
-            <Toggle on={autoRenew} toggle={() => setAutoRenew(v => !v)} label="Auto-Renew Low-Risk Policies" />
           </div>
+
+          {/* Recent on-chain activity, straight from the audit trail */}
           <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
-            <div className="px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}><span className="text-xs font-semibold" style={{ ...sans, color: "#94a3b8" }}>Security Events</span></div>
-            {events.map((e, i) => {
-              const Icon = e.icon;
-              return (
-                <div key={`sec-ev-${i}`} className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-                  <Icon size={13} style={{ color: e.col, flexShrink: 0 }} />
-                  <span className="text-[11px] flex-1" style={{ ...sans, color: "#94a3b8" }}>{e.text}</span>
-                  <span className="text-[10px] shrink-0" style={{ ...sans, color: "#334155" }}>{e.ts}</span>
+            <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Recent Transactions</span>
+            </div>
+            {events.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: "#475569" }}>No on-chain activity recorded yet.</div>}
+            {events.map(e => (
+              <div key={e.id} className="px-5 py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ ...mono, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>{e.eventType}</span>
+                  <span className="text-[10px]" style={{ ...sans, color: "#334155" }}>{new Date(e.createdAt).toLocaleString()}</span>
                 </div>
-              );
-            })}
+                {e.chainSignature && (
+                  <a href={explorerTransactionUrl(e.chainSignature)} target="_blank" rel="noreferrer" className="text-[10px]" style={{ ...mono, color: "#475569" }}>
+                    {short(e.chainSignature, 8)} ↗
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1114,35 +1011,24 @@ function SessionsPage() {
 
 /* ── 8. SETTINGS ── */
 function SettingsPage() {
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
-  const [gasAlerts, setGasAlerts] = useState(true);
-  const [autoSlippage, setAutoSlippage] = useState(false);
-  const [slippage, setSlippage] = useState(0.5);
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const wallet = connected ? String(connected.account.address) : "";
+  const [health, setHealth] = useState<Health | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [notificationStates, setNotificationStates] = useState([true, true, false, true, true]);
-  const tabs = ["General", "Network", "Notifications", "API Keys"];
+  const tabs = ["Network", "Environment"];
+
+  useEffect(() => {
+    let live = true;
+    api.health().then(h => { if (live) setHealth(h); }).catch(() => { if (live) setHealth(null); });
+    return () => { live = false; };
+  }, []);
 
   function Row({ label, value, accent = M }: { label: string; value: string; accent?: string }) {
     return (
-      <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-        <span className="text-xs" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
-        <span className="text-xs font-semibold" style={{ ...mono, color: accent }}>{value}</span>
-      </div>
-    );
-  }
-
-  function ToggleRow({ on, toggle, label, sub }: { on: boolean; toggle: () => void; label: string; sub?: string }) {
-    return (
-      <div className="flex items-center justify-between py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-        <div>
-          <div className="text-xs font-medium" style={{ ...sans, color: "#e2e8f0" }}>{label}</div>
-          {sub && <div className="text-[10px] mt-0.5" style={{ ...sans, color: "#475569" }}>{sub}</div>}
-        </div>
-        <button type="button" onClick={toggle} aria-label={label} aria-pressed={on} className="relative w-10 h-5 rounded-full transition-all duration-200 shrink-0 ml-4"
-          style={{ background: on ? `${M}35` : "rgba(255,255,255,0.07)", border: `1px solid ${on ? M + "50" : "rgba(255,255,255,0.1)"}` }}>
-          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: on ? "calc(100% - 18px)" : 2, background: on ? M : "#475569", boxShadow: on ? `0 0 10px ${M}` : "none" }} />
-        </button>
+      <div className="flex items-center justify-between py-3 border-b gap-4" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+        <span className="text-xs shrink-0" style={{ ...sans, color: "#94a3b8" }}>{label}</span>
+        <span className="text-xs font-semibold text-right break-all" style={{ ...mono, color: accent }}>{value}</span>
       </div>
     );
   }
@@ -1151,25 +1037,24 @@ function SettingsPage() {
     <div className="space-y-7">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Settings</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Configure your REDLINE workspace</p>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: "#475569" }}>Live configuration of this REDLINE deployment</p>
       </div>
 
-      {/* Profile card */}
+      {/* Connected wallet */}
       <div className="rounded-2xl p-6 flex items-center gap-5 relative overflow-hidden" style={{ ...glass() }}>
         <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}40, transparent)` }} />
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
-          style={{ background: `linear-gradient(135deg, ${M}22, ${C}18)`, border: `1px solid ${M}28`, boxShadow: `0 0 24px ${M}18`, color: M }}>
-          KP
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${M}22, ${C}18)`, border: `1px solid ${M}28`, color: M }}>
+          <Wallet size={22} />
         </div>
-        <div className="flex-1">
-          <div className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>Devnet Operator</div>
-          <div className="text-[11px] mt-0.5" style={{ ...mono, color: C }}>Connect a Wallet Standard account to load the live address</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold" style={{ ...sans, color: "#e2e8f0" }}>{wallet ? "Connected wallet" : "No wallet connected"}</div>
+          <div className="text-[11px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || "Connect a Wallet Standard account to sign grants"}</div>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
           </div>
         </div>
-        <ShimmerBtn label="Edit Profile" accent={M} />
+        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[11px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>View on Explorer</a>}
       </div>
 
       {/* Tab bar */}
@@ -1186,93 +1071,40 @@ function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {activeTab === 0 && (<>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Appearance</div>
-            <ToggleRow on={darkMode} toggle={() => setDarkMode(v => !v)} label="Dark Mode" sub="Obsidian theme (recommended)" />
-            <ToggleRow on={notifications} toggle={() => setNotifications(v => !v)} label="In-app notifications" sub="Real-time agent status updates" />
-            <div className="py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-              <div className="text-xs font-medium mb-2" style={{ ...sans, color: "#e2e8f0" }}>Accent Color</div>
-              <div className="flex gap-2">{[M, C, A, "#8b5cf6", "#ef4444"].map((col, ci) => (<button type="button" disabled key={`acc-col-${ci}`} aria-label={`Accent color ${ci + 1} — coming soon`} title="Theme switching is coming soon" className="w-7 h-7 rounded-full border-2 cursor-not-allowed opacity-60" style={{ background: col, borderColor: col === M ? "#e2e8f0" : "transparent" }} />))}</div>
-            </div>
-          </div>
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Trading Preferences</div>
-            <ToggleRow on={autoSlippage} toggle={() => setAutoSlippage(v => !v)} label="Auto Slippage" sub="Dynamically set slippage tolerance" />
-            {!autoSlippage && (
-              <div className="py-3">
-                <div className="flex justify-between mb-2"><span className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Slippage Tolerance</span><span className="text-xs font-bold" style={{ ...mono, color: M }}>{slippage}%</span></div>
-                <div className="relative h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${(slippage / 5) * 100}%`, background: `linear-gradient(90deg, ${M}60, ${M})` }} />
-                  <input type="range" aria-label="Slippage tolerance" min={0.1} max={5} step={0.1} value={slippage} onChange={e => setSlippage(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2" style={{ left: `calc(${(slippage / 5) * 100}% - 7px)`, background: BG, borderColor: M, boxShadow: `0 0 10px ${M}70` }} />
-                </div>
-              </div>
-            )}
-          </div>
-        </>)}
-        {activeTab === 1 && (<>
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>RPC Configuration</div>
-            <Row label="Network" value="Solana Devnet" />
-            <Row label="RPC Endpoint" value="api.devnet.solana.com" accent={C} />
-            <Row label="Wallet API" value="Wallet Standard" accent={C} />
+            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Chain</div>
+            <Row label="Cluster" value="Solana Devnet" />
+            <Row label="Backend adapter" value={health?.chain ?? "unreachable"} accent={health ? C : "#ef4444"} />
+            <Row label="Program" value={health ? short(health.programId, 8) : "—"} accent={C} />
+            <Row label="Executor" value={health ? short(health.executor, 8) : "—"} accent={C} />
             <Row label="Commitment" value="confirmed" accent={M} />
-            <Row label="Policy Proof" value="SPL Memo" accent={A} />
-            <div className="mt-4"><ShimmerBtn label="Change RPC" accent={C} /></div>
           </div>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Transaction Safety</div>
-            <Row label="Preflight" value="enabled" accent={C} />
-            <Row label="Policy Digest" value="SHA-256" accent={M} />
-            <Row label="Proof Program" value="SPL Memo" accent={C} />
-            <ToggleRow on={gasAlerts} toggle={() => setGasAlerts(v => !v)} label="Priority Fee Alerts" sub="Warn before unusually high priority fees" />
+            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Policy Enforcement</div>
+            <Row label="Gates enforced on-chain" value="7" accent={M} />
+            <Row label="Policy digest" value="SHA-256" accent={M} />
+            <Row label="Allowlist size limit" value="4 mints · 4 destinations" accent={C} />
+            <Row label="Mock clock speed" value={health ? `${health.clockSpeed}×` : "—"} accent={A} />
           </div>
         </>)}
-        {activeTab === 2 && (
-          <div className="rounded-2xl p-5 col-span-2" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>Notification Channels</div>
-            {[
-              { label: "Agent status changes", sub: "Active, paused, expired events", on: true },
-              { label: "Policy expiry warnings", sub: "Alert 1h and 10min before expiry", on: true },
-              { label: "P&L threshold alerts", sub: "Trigger on ±10% daily swing", on: false },
-              { label: "Priority fee spikes", sub: "Notify before unusually expensive transactions", on: true },
-              { label: "Security anomalies", sub: "Unusual on-chain behavior detected", on: true },
-            ].map((n, ni) => (
-              <ToggleRow key={`notif-${ni}`} on={notificationStates[ni] ?? n.on} toggle={() => setNotificationStates(values => values.map((value, index) => index === ni ? !value : value))} label={n.label} sub={n.sub} />
-            ))}
-          </div>
-        )}
-        {activeTab === 3 && (
-          <div className="rounded-2xl p-5 col-span-2" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: "#e2e8f0" }}>API Keys</div>
-            {[
-              { label: "REDLINE API", value: "Server-side only", active: true },
-              { label: "Solana RPC", value: "Configured via environment", active: true },
-              { label: "OpenAI Risk Copilot", value: "Optional server-side key", active: false },
-            ].map((k, ki) => (
-              <div key={`api-key-${ki}`} className="flex items-center gap-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: k.active ? `${M}12` : "rgba(255,255,255,0.04)", border: `1px solid ${k.active ? M + "22" : "rgba(255,255,255,0.07)"}` }}>
-                  <Key size={13} style={{ color: k.active ? M : "#475569" }} />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium" style={{ ...sans, color: "#e2e8f0" }}>{k.label}</div>
-                  <div className="text-[10px]" style={{ ...mono, color: k.active ? C : "#334155" }}>{k.value}</div>
-                </div>
-                <ShimmerBtn label={k.active ? "Rotate" : "Add Key"} accent={k.active ? A : M} size="xs" />
-              </div>
-            ))}
+        {activeTab === 1 && (
+          <div className="rounded-2xl p-5 col-span-full" style={{ ...glass() }}>
+            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#e2e8f0" }}>Environment</div>
+            <p className="text-[11px] mb-4" style={{ ...sans, color: "#475569" }}>Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.</p>
+            <Row label="API URL" value={API_URL} accent={C} />
+            <Row label="Program ID (frontend)" value={short(PROGRAM_ID, 8)} accent={C} />
+            <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? short(String(import.meta.env.VITE_DEMO_USDC_MINT), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? M : A} />
+            <Row label="Demo destination" value={import.meta.env.VITE_DEMO_OPS_DESTINATION ? short(String(import.meta.env.VITE_DEMO_OPS_DESTINATION), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_OPS_DESTINATION ? M : A} />
+            <Row label="Write key" value={import.meta.env.VITE_API_KEY ? "configured" : "open (local/mock)"} accent={import.meta.env.VITE_API_KEY ? M : A} />
           </div>
         )}
       </div>
 
       {/* Danger zone */}
       <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-        <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#ef4444" }}>Danger Zone</div>
-        <p className="text-xs mb-4" style={{ ...sans, color: "#64748b" }}>Destructive actions are intentionally disabled in this prototype.</p>
-        <div className="flex flex-wrap gap-2">
-          {['Revoke All Agent Policies', 'Disconnect Wallet', 'Delete All Agents'].map(action => (
-            <button type="button" disabled key={action} title="Unavailable in this prototype" className="px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed opacity-50" style={{ ...sans, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444" }}>{action}</button>
-          ))}
-        </div>
+        <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#ef4444" }}>Revoking access</div>
+        <p className="text-xs" style={{ ...sans, color: "#64748b" }}>
+          Grants are revoked one at a time from Guardrails → Active Policy Accounts, because each revocation is a transaction the owner signs in their own wallet. There is no bulk switch: the program only accepts a signature per grant.
+        </p>
       </div>
     </div>
   );
@@ -1328,7 +1160,6 @@ export default function App() {
                 {on && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ background: M, boxShadow: `0 0 10px ${M}` }} />}
                 <Icon size={15} style={{ color: on ? M : "#334155", flexShrink: 0 }} />
                 <span className="hidden lg:block text-xs font-medium flex-1 text-left" style={{ ...sans, color: on ? "#e2e8f0" : "#334155" }}>{item.label}</span>
-                {item.badge && <span className="hidden lg:flex items-center justify-center text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ ...mono, background: `${M}18`, color: M, border: `1px solid ${M}22` }}>{item.badge}</span>}
               </button>
             );
           })}
@@ -1363,7 +1194,6 @@ export default function App() {
             <span style={{ color: "#334155" }}>SOLANA</span>
             <span style={{ color: M }}>DEVNET</span>
             <span style={{ color: C }}>RPC CONFIGURED</span>
-            <span style={{ color: A }}>PROTOTYPE DATA</span>
             <div className="w-px h-3" style={{ background: "rgba(255,255,255,0.07)" }} />
             <Clock size={10} style={{ color: "#334155" }} />
             <span style={{ color: "#94a3b8" }}>{time.toLocaleTimeString("en-US", { hour12: false })}</span>
