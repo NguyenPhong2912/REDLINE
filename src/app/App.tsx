@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  LayoutDashboard, Bot, BarChart3, Globe, Wallet, Shield,
+  LayoutDashboard, Bot, BarChart3, Globe, Wallet, ScrollText,
   Layers, Settings, Zap, ChevronRight, Search, ShieldCheck,
   Star, Activity, ArrowUpRight, ArrowDownRight, Sparkles,
   Filter, ArrowDownUp, Eye, Key, Timer, Lock, Bell,
@@ -9,7 +9,7 @@ import {
   ToggleLeft, ToggleRight, User, Palette, Globe2, ChevronDown,
   Plus, Trash2, Edit3, MoreHorizontal, Download, Upload,
   PieChart, LineChart as LineChartIcon, BarChart2, Circle,
-  Wifi, WifiOff, Info, X, Check,
+  Wifi, WifiOff, Info, X, Check, Shield,
 } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -21,6 +21,8 @@ import { GrantsPanel } from "./components/GrantsPanel";
 import { LiveFeed } from "./components/LiveFeed";
 import { VaultPanel } from "./components/VaultPanel";
 import { SolanaWalletControl } from "./components/SolanaWalletControl";
+import { AuditPage } from "./components/AuditPage";
+import { DashboardLiveGrants } from "./components/DashboardLiveGrants";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -105,7 +107,7 @@ const NAV = [
   { icon: BarChart3, label: "Analytics" },
   { icon: Globe, label: "Marketplace" },
   { icon: Wallet, label: "Treasury" },
-  { icon: Shield, label: "Security" },
+  { icon: ScrollText, label: "Audit" },
   { icon: Layers, label: "Guardrails" },
   { icon: Settings, label: "Settings" },
 ];
@@ -221,7 +223,7 @@ function ParticleGrid() {
 ══════════════════════════════════════════════════════════════ */
 
 /* ── 1. DASHBOARD ── */
-function DashboardPage() {
+function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
 
   return (
     <div className="space-y-7">
@@ -293,6 +295,9 @@ function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Live grants from on-chain */}
+      <DashboardLiveGrants onNavigate={setNav ? () => setNav(6) : undefined} />
 
       {/* Activity log + quick agent list */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1276,12 +1281,12 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [DashboardPage, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, SecurityPage, SessionsPage, SettingsPage];
+const PAGES = [DashboardPage, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage];
 
 export default function App() {
   const [nav, setNav] = useState(0);
   const [time, setTime] = useState(new Date());
-  const Page = PAGES[nav];
+  const Page = PAGES[nav] as React.ComponentType<{ setNav?: (n: number) => void }>;
 
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
@@ -1371,7 +1376,7 @@ export default function App() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto px-5 lg:px-8 py-7">
-          <Page />
+          <Page setNav={setNav} />
           <div className="h-8" />
         </main>
       </div>
