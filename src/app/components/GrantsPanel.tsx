@@ -74,6 +74,8 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         const accent = revoked ? R : running ? M : C;
         const dest = (JSON.parse(g.policyVersion.allowedDests) as string[])[0];
         const mint = (JSON.parse(g.policyVersion.allowedMints) as string[])[0];
+        const ownerWallet = connected ? String(connected.account.address) : "";
+        const isOwner = ownerWallet === g.owner.wallet;
         return (
           <div key={g.id} className="px-5 py-4 border-b space-y-3" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
             <div className="flex items-center gap-4">
@@ -100,10 +102,16 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             </div>
             {!revoked && (
               <div className="flex flex-wrap gap-2">
-                <Btn icon={Play} label={running ? "Agent running…" : "Start agent (scripted)"} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id))} />
-                <Btn icon={Zap} label={`Force ${fmtUsdc(cap)} USDC (over cap)`} accent={A} disabled={!!busy} busy={busy === `force-${g.id}`}
-                  onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }))} />
-                <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
+                {isOwner ? (
+                  <>
+                    <Btn icon={Play} label={running ? "Agent running…" : "Start agent (scripted)"} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id))} />
+                    <Btn icon={Zap} label={`Force ${fmtUsdc(cap)} USDC (over cap)`} accent={A} disabled={!!busy} busy={busy === `force-${g.id}`}
+                      onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }))} />
+                    <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
+                  </>
+                ) : (
+                  <div className="text-[10px] py-1.5" style={{ ...mono, color: "#64748b" }}>Read-only · Connect owner wallet to manage</div>
+                )}
               </div>
             )}
           </div>
