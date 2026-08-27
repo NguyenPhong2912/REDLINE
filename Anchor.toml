@@ -9,7 +9,7 @@ skip-lint = false
 redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
 
 [programs.devnet]
-redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
+redline_guardrails = "BYDBYcQcqSkNMmJTU47aYJxprL8k2RM9iTTogADBmpVW"
 
 [provider]
 cluster = "Devnet"
