@@ -13,7 +13,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("BYDBYcQcqSkNMmJTU47aYJxprL8k2RM9iTTogADBmpVW");
+// Must match the address this is deployed at: Anchor rejects every
+// instruction with DeclaredProgramIdMismatch when it does not. The binary
+// live on Devnet embeds this exact id — verified by decoding the fetched
+// programdata — so a rebuild from this source reproduces what is running.
+declare_id!("Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4");
 
 pub const MAX_ALLOWLIST: usize = 4;
 pub const VAULT_SEED: &[u8] = b"vault";

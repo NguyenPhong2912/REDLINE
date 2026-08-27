@@ -5,11 +5,12 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
+# Matches declare_id! in src/lib.rs and the binary deployed on Devnet.
 [programs.localnet]
 redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
 
 [programs.devnet]
-redline_guardrails = "BYDBYcQcqSkNMmJTU47aYJxprL8k2RM9iTTogADBmpVW"
+redline_guardrails = "Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4"
 
 [provider]
 cluster = "Devnet"
