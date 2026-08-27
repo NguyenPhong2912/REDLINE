@@ -4,8 +4,8 @@
 
 ### ⚡ Autonomous finance. Hard limits.
 
-REDLINE is the **programmable safety layer** for autonomous DeFi agents on Solana.
-The agent proposes; **the chain decides**.
+**The programmable safety layer for autonomous DeFi agents on Solana.**
+The agent proposes · **the chain decides** · nobody can talk it out of the answer.
 
 [![Backend CI](https://img.shields.io/github/actions/workflow/status/anky06-ky/CSaCLAB/backend-ci.yml?branch=main&label=CI&style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/anky06-ky/CSaCLAB/actions/workflows/backend-ci.yml)
 [![Solana Devnet](https://img.shields.io/badge/Solana-Devnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)
@@ -18,8 +18,8 @@ The agent proposes; **the chain decides**.
 
 <br>
 
-| [📘 README](README.md) | [🔐 Security](docs/SECURITY.md) | [🛠️ Hướng dẫn cài đặt & sử dụng](docs/USER_GUIDE.md) |
-|:---:|:---:|:---:|
+| [📘 README](README.md) | [🔐 Security](docs/SECURITY.md) | [🛠️ Hướng dẫn cài đặt & sử dụng](docs/USER_GUIDE.md) | [🏗️ Architecture](docs/TECHNICAL_ARCHITECTURE.md) |
+|:---:|:---:|:---:|:---:|
 
 </div>
 
@@ -27,9 +27,14 @@ The agent proposes; **the chain decides**.
 
 ## 📌 Table of Contents
 
+- [💡 What Is REDLINE](#-what-is-redline)
 - [😬 The Problem](#-the-problem)
+- [🌍 Real-World Scenarios](#-real-world-scenarios)
+- [✨ Features](#-features)
 - [⚙️ How It Works](#️-how-it-works)
+- [🚦 The Seven Gates](#-the-seven-gates)
 - [✅ What Is Real Today](#-what-is-real-today)
+- [🧰 Tech Stack](#-tech-stack)
 - [🗂️ Repository Layout](#️-repository-layout)
 - [🚀 Quick Start](#-quick-start)
 - [🧪 Quality Checks](#-quality-checks)
@@ -38,11 +43,155 @@ The agent proposes; **the chain decides**.
 
 <br>
 
+## 💡 What Is REDLINE
+
+An owner writes a narrow policy — *which assets, to which addresses, how much, how often, for how long* — and signs it **once**. From that moment a Solana program enforces it on **every single transfer** the agent attempts.
+
+The agent can be a script, an LLM planner, or a compromised process. It makes no difference: it can only ever **propose**. The program checks the proposal against the signed policy and either moves the funds or fails the transaction with a named error — and when it fails, **nothing moves at all**.
+
+> 🔑 **The core idea:** stop trusting the agent to behave, and start relying on a limit it is mathematically incapable of crossing.
+
+<br>
+
 ## 😬 The Problem
 
-DeFi automation forces a choice between approving every action by hand and giving a bot dangerously broad wallet access. Teams also cannot prove afterwards what an agent was allowed to do, and a compromised server or a prompt-injected model can drain a treasury in one transaction.
+Automating DeFi today forces an unpleasant choice:
 
-> An owner defines a narrow policy — asset and destination allowlists, spend cap, transaction cap, cooldown, expiry — signs it **once**, and a Solana program enforces it on **every** transfer the agent attempts.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🖐️ Approve everything by hand
+Safe, but it doesn't scale. A treasury paying five contributors every week burns days of multisig coordination on payments that are entirely predictable.
+
+</td>
+<td width="50%" valign="top">
+
+### 🤖 Give the bot the keys
+Fast, but the blast radius is the whole treasury. One bug, one prompt injection, one compromised server — and it's gone in a single transaction.
+
+</td>
+</tr>
+</table>
+
+And afterwards, there's a third problem nobody solves: dashboards show you **what an agent did**. Almost none can prove **what it was allowed to do** in the first place.
+
+| ⚠️ Risk | 💥 Without REDLINE | 🛡️ With REDLINE |
+|---|---|---|
+| Buggy agent miscalculates an amount | Treasury drained in one transfer | `SPEND_CAP_EXCEEDED` — transaction fails, nothing moves |
+| Phishing swaps a payee address | Funds sent to the attacker | `DESTINATION_NOT_ALLOWED` — address was never in the signed allowlist |
+| Agent server is compromised | Attacker has full wallet authority | Damage is capped at the spend limit, on the allowlisted addresses only |
+| Prompt injection rewrites the plan | Model reasons its way into a transfer | The model never signs; the on-chain policy is unchanged and unreachable |
+| Auditor asks "who authorised this?" | A server log you have to be trusted on | A signed policy digest and a transaction signature anyone can verify |
+
+<br>
+
+## 🌍 Real-World Scenarios
+
+<details open>
+<summary><strong>💸 DAO payroll — pay contributors without a multisig round every time</strong></summary>
+
+<br>
+
+A DAO pays five contributors weekly. Today every payment waits 1–2 days for signatures, even though the recipients and the amounts barely change.
+
+With REDLINE the treasury lead signs **one** grant per week: *USDC only · max 8,000 · max 10 transactions · 1h cooldown · these 4 addresses · expires in 7 days.* The payroll bot then runs unattended, and the interesting part is what happens when something goes wrong:
+
+- Accounting typo turns 2,500 into 25,000 → `SPEND_CAP_EXCEEDED`, nothing sent
+- A phishing email changes a vendor address in the bot's config → `DESTINATION_NOT_ALLOWED`
+- The grant simply expires on Sunday — authority never lingers by default
+
+</details>
+
+<details>
+<summary><strong>📊 Automated rebalancing — bounded execution for a lean fund</strong></summary>
+
+<br>
+
+A small fund wants an agent to move capital between strategies without waking anyone at 3am. The risk is not the strategy, it's the authority the strategy runs with.
+
+The grant bounds the agent to a single asset, a per-session budget, a transaction count, and a cooldown that makes runaway loops impossible. If the agent misbehaves the loss is a number the owner chose in advance — not "everything".
+
+</details>
+
+<details>
+<summary><strong>🧾 Proving compliance — evidence instead of assurances</strong></summary>
+
+<br>
+
+An auditor asks what a bot was permitted to do last quarter. Instead of exporting server logs and asking to be believed, the treasury points at the chain: the policy digest signed by the owner's wallet, and every ALLOW/REJECT decision the program emitted, each with a transaction signature that anyone can verify independently on Solana Explorer.
+
+</details>
+
+<details>
+<summary><strong>🛍️ Renting an agent you did not write</strong></summary>
+
+<br>
+
+A developer publishes an agent version; its `agentHash` pins model, code and config so the build cannot be swapped silently. A treasury rents it for a fixed term, paying the publisher in SOL.
+
+Crucially, renting a stranger's agent does not mean trusting it: it still runs inside a grant the renter signed, so the worst it can do is bounded before it executes a single instruction.
+
+</details>
+
+<br>
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🧭 Policy Builder
+A four-step wizard for asset scope, spend and transaction caps, cooldown and expiry — with an **AI risk copilot** that explains the risk in plain language.
+
+Its advice sits on top of a deterministic floor it **cannot lower**: a `BLOCK` verdict disables signing, and the model never holds a key.
+
+</td>
+<td width="33%" valign="top">
+
+### ⛓️ On-Chain Enforcement
+Seven gates checked by the Anchor program **inside the same transaction** that moves the funds.
+
+A rejection is a real failed transaction with a named error code — evidence on-chain, not a log line on a server you have to trust.
+
+</td>
+<td width="33%" valign="top">
+
+### 🔓 Non-Custodial Vault
+Funds sit in a program-owned PDA. The backend never holds the owner's key and cannot sign on their behalf.
+
+Owners **revoke** or **withdraw** at any time, straight from the wallet.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### 📜 Verifiable Audit Trail
+Every intent, decision and signature is appended, never edited.
+
+An indexer reads the **program's own events**, so the dashboard's numbers come from the chain rather than from the server that produced them.
+
+</td>
+<td valign="top">
+
+### 🤖 Agent Runtime
+Scripted or LLM-planned. An LLM proposal is clamped to the allowlists and then judged by the program like any other intent.
+
+The planner gets no special privileges for being clever.
+
+</td>
+<td valign="top">
+
+### 🛍️ Agent Marketplace
+Publish an immutable agent version, claim your listing, set a 24h rate.
+
+Renting is a real SOL payment that the backend **re-reads from Devnet** — checking signer, payee and amount — before the agreement is recorded.
+
+</td>
+</tr>
+</table>
 
 <br>
 
@@ -56,13 +205,31 @@ agent runtime ──execute_transfer(nonce, amount)──┤  🚦 7 gates → C
 indexer ◄── PolicyDecision events ──────────┘  → 📜 append-only audit trail → 📊 live dashboard feed
 ```
 
-| Step | | |
+| | Step | What happens |
 |:---:|---|---|
-| 🧭 | **Policy builder + AI risk copilot** | The model explains risk; a deterministic rule floor it cannot lower decides `ALLOW` / `REVIEW` / `BLOCK`. |
-| ✍️ | **One signature** | The wallet signs `create_grant`. Funds sit in a program-owned vault; the backend never holds the owner's key. |
-| 🚧 | **Bounded execution** | The runtime (scripted or LLM-planned) sends `execute_transfer`. The program checks **revoked → expiry → nonce → mint allowlist → destination allowlist → transaction cap → spend cap → cooldown**, then transfers via CPI and updates counters in the same transaction. |
-| 🧾 | **Evidence** | Every proposal, decision and signature is written to an append-only audit trail; an indexer reads the program's own events so dashboard numbers come from the chain, not the server. |
-| 🔓 | **Owner control** | Revoke or withdraw at any time from the wallet. |
+| 🧭 | **Design the policy** | The AI copilot explains the risk; a deterministic rule floor it cannot lower returns `ALLOW` / `REVIEW` / `BLOCK`. |
+| ✍️ | **One signature** | The wallet signs `create_grant`. Funds move into a program-owned vault; the backend never holds the owner's key. |
+| 🚧 | **Bounded execution** | The runtime sends `execute_transfer`. The program runs all seven gates, then transfers via CPI and updates its counters — atomically, in one transaction. |
+| 🧾 | **Evidence** | Every proposal, decision and signature is appended to the audit trail; the indexer reads the program's own events. |
+| 🔓 | **Owner control** | Revoke or withdraw at any moment, from the wallet. |
+
+<br>
+
+## 🚦 The Seven Gates
+
+Checked in this exact order, on-chain, before a single token moves:
+
+| # | Gate | Rejects when |
+|:---:|---|---|
+| 1️⃣ | `REVOKED` | The owner has already revoked the grant |
+| 2️⃣ | `EXPIRED` | The grant is past its expiry |
+| 3️⃣ | `NONCE_REPLAY` | An intent is replayed |
+| 4️⃣ | `MINT_NOT_ALLOWED` | The asset is not in the signed allowlist |
+| 5️⃣ | `DESTINATION_NOT_ALLOWED` | The recipient is not in the signed allowlist |
+| 6️⃣ | `TX_CAP_EXCEEDED` / `SPEND_CAP_EXCEEDED` | The transfer would exceed the transaction or spend budget |
+| 7️⃣ | `COOLDOWN_ACTIVE` | The agent is acting sooner than the cooldown permits |
+
+> 🧯 Fail any one of them and the transaction fails as a whole. Balances before and after are **identical** — you can check them yourself on Explorer.
 
 <br>
 
@@ -73,21 +240,36 @@ indexer ◄── PolicyDecision events ──────────┘  → �
 | 🦀 Program `redline_guardrails` (vault PDA, gated `execute_transfer`, revoke, withdraw, events, error codes) | 🟢 **Deployed on Devnet** |
 | 👛 Wallet-signed vault / grant / revoke / withdraw from the browser | 🟢 **Live** |
 | 🤖 Agent runtime, policy engine, indexer, audit trail, SSE feed | 🟢 **Live on Railway + Postgres** |
+| 🛍️ Marketplace — publish, claim, rent for real SOL with on-chain payment verification | 🟢 **Live** |
+| 📊 Analytics computed from the audit trail (volume, allow/block, decision latency) | 🟢 **Live** |
 | 🧪 On-chain gate tests against the deployed binary (LiteSVM) | 🟢 **CI on every push** |
-| 🛍️ Marketplace (publish, claim, rent for real SOL), analytics from the audit trail | 🟢 **Live** |
-| 💹 P&L, APY, win-rate panels | ⚪ **Removed — no price feed to compute them honestly** |
+| 💹 P&L, APY, win-rate, uptime panels | ⚪ **Removed — nothing in the system measures them, so they are not shown** |
 
-📖 See [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) for the design and [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md) for the submission.
+> ⚠️ **Devnet only.** No professional security audit has been performed, and no returns are promised.
+
+<br>
+
+## 🧰 Tech Stack
+
+| Layer | Built with |
+|---|---|
+| ⛓️ **On-chain** | Rust · Anchor 0.32 · Solana Devnet · SPL Token CPI |
+| 🧠 **Backend** | Node 22 · Fastify 5 · Prisma + PostgreSQL · `@solana/kit` · Zod · OpenAI (risk copilot) · SSE |
+| 💻 **Frontend** | React 19 · Vite 6 · Tailwind 4 · Radix UI · Recharts · Wallet Standard |
+| 🧪 **Testing** | Vitest · **LiteSVM** running the *real deployed binary* · GitHub Actions on every push |
+| ☁️ **Hosting** | Netlify (dashboard) · Railway + Postgres (API) |
+
+The backend speaks Anchor's wire format **by hand** — discriminators, Borsh arguments, the `Grant` account layout, error codes and events are all encoded in `src/chain/anchor.ts` and pinned by tests, with no generated client in the loop.
 
 <br>
 
 ## 🗂️ Repository Layout
 
 ```text
-programs/redline_guardrails   🦀 Anchor program (Rust)
+programs/redline_guardrails   🦀 Anchor program (Rust) — the only thing that can move funds
 backend/                      🧠 API, policy engine, agent runtime, indexer, tests — see backend/README.md
 src/                          💻 React dashboard (Vite, @solana/kit, Wallet Standard)
-docs/                         📚 product, business, architecture, security, submission
+docs/                         📚 product, business, architecture, security, user guide
 ```
 
 <br>
@@ -102,7 +284,7 @@ cp .env.example .env        # VITE_API_URL etc. — see backend/README.md for th
 npm run dev                 # http://localhost:5173
 ```
 
-Point `VITE_API_URL` at the hosted backend or at a local one (`cd backend && npm run dev`). With `CHAIN=mock` on the backend the whole flow runs without a wallet or RPC.
+Point `VITE_API_URL` at the hosted backend, or run one locally (`cd backend && npm run dev`). With `CHAIN=mock` the whole flow runs without a wallet or an RPC endpoint.
 
 <br>
 
@@ -127,7 +309,7 @@ cd backend && npm run typecheck && npm test
 </details>
 
 <details>
-<summary><strong>⛓️ LiteSVM gate tests (Linux/macOS)</strong></summary>
+<summary><strong>⛓️ LiteSVM gate tests — against the real deployed binary (Linux/macOS)</strong></summary>
 
 ```bash
 cd backend && npm run program:fetch && npm run test:onchain
@@ -143,8 +325,10 @@ cd backend && npm run program:fetch && npm run test:onchain
 |:---:|---|
 | 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx). |
 | 2️⃣ | ▶️ **Start agent (scripted)**. Dashboard feed: three transfers confirmed on-chain, counters rising on the PDA. |
-| 3️⃣ | 🛑 The fourth transfer exceeds the cap. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved` with an explorer link; token balances before/after are identical. |
+| 3️⃣ | 🛑 The fourth transfer exceeds the cap. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved`, with an Explorer link — token balances before and after are identical. |
 | 4️⃣ | 🔒 **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**. |
+
+📖 Step-by-step walkthrough: [docs/USER_GUIDE.md](docs/USER_GUIDE.md) · Design: [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) · Threat model: [docs/SECURITY.md](docs/SECURITY.md)
 
 <br>
 
@@ -160,6 +344,6 @@ Trần An Kỳ · Nguyễn Thành Phong · Nguyễn Hà Thu · Trần Hoàng Th�
 
 ---
 
-⚠️ *Devnet only. No returns are promised; simulated panels are labelled; no professional audit has been performed.*
+⚠️ *Devnet only. No returns are promised, and no professional security audit has been performed.*
 
 </div>
