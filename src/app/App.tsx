@@ -544,6 +544,7 @@ function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [pricedOnly, setPricedOnly] = useState(false);
   const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -554,9 +555,11 @@ function MarketplacePage() {
   const hoursFor = (id: string) => hours[id] ?? 24;
   const periodsFor = (id: string) => Math.ceil(hoursFor(id) / 24);
 
+  // `error` also carries claim/rent failures, so the empty state needs its own
+  // flag to tell "the API said no listings" apart from "the API never answered".
   const load = useCallback(async () => {
-    try { setListings(await api.listings()); setError(""); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    try { setListings(await api.listings()); setError(""); setLoadFailed(false); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); setLoadFailed(true); }
   }, []);
   useEffect(() => { void load(); const t = setInterval(() => void load(), 20_000); return () => clearInterval(t); }, [load]);
 
@@ -629,9 +632,20 @@ function MarketplacePage() {
         {notice && <span className="text-[11px]" style={{ ...mono, color: M }}>{notice}</span>}
       </div>
 
+      {/* A failed load must not read as "there is nothing here": telling
+          someone to publish an agent when the API is unreachable sends them
+          down the wrong path entirely. */}
       {filtered.length === 0 && (
         <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
-          <p className="text-sm" style={{ ...sans, color: "#64748b" }}>No listings yet — publish an agent from the Agents page and it appears here.</p>
+          {loadFailed ? (
+            <>
+              <p className="text-sm" style={{ ...sans, color: "#e2e8f0" }}>Could not load listings from the API.</p>
+              <p className="text-[11px] mt-1" style={{ ...mono, color: "#64748b" }}>{API_URL} · {error}</p>
+              <p className="text-[11px] mt-2" style={{ ...sans, color: "#475569" }}>If this says “Not Found”, the API is running a build without the marketplace routes.</p>
+            </>
+          ) : (
+            <p className="text-sm" style={{ ...sans, color: "#64748b" }}>No listings yet — publish an agent from the Agents page and it appears here.</p>
+          )}
         </div>
       )}
 
