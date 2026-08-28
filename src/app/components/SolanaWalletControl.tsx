@@ -8,8 +8,10 @@ import {
   useWalletStatus,
 } from "@solana/kit-plugin-wallet/react";
 import { useClient, useRequest } from "@solana/react";
-import { ChevronDown, LoaderCircle, PlugZap, Wallet } from "lucide-react";
+import { ChevronDown, KeyRound, LoaderCircle, PlugZap, Wallet } from "lucide-react";
 import type { AppClient } from "../solana/client";
+import { loadSession } from "../lib/api";
+import { sessionFor, signIn, signOut } from "../lib/signin";
 
 const ACCENT = "#00ffc4";
 
@@ -34,22 +36,54 @@ export function SolanaWalletControl() {
   const connect = useConnect(client);
   const disconnect = useDisconnect(client);
   const [open, setOpen] = useState(false);
+  // Mirrors the stored session so the button re-renders when it changes;
+  // localStorage on its own does not notify React.
+  const [sessionWallet, setSessionWallet] = useState<string | null>(() => loadSession()?.wallet ?? null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signinError, setSigninError] = useState("");
 
   if (connected) {
     const owner = String(connected.account.address);
     const short = `${owner.slice(0, 4)}…${owner.slice(-4)}`;
+    const signedIn = !!sessionFor(owner) && sessionWallet === owner;
     return (
       <div className="relative flex items-center gap-2">
         <WalletBalance owner={owner} />
+        {!signedIn && (
+          <button
+            type="button"
+            onClick={async () => {
+              setSigninError("");
+              setSigningIn(true);
+              try {
+                const s = await signIn(client, owner);
+                setSessionWallet(s.wallet);
+              } catch (e) {
+                setSigninError(e instanceof Error ? e.message : "Sign-in was rejected.");
+              } finally {
+                setSigningIn(false);
+              }
+            }}
+            disabled={signingIn}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-60"
+            style={{ background: "#38bdf80e", border: "1px solid #38bdf835", color: "#38bdf8" }}
+            title="Prove you hold this wallet. Signs a message only — no transfer, no funds moved."
+          >
+            {signingIn ? <LoaderCircle size={12} className="animate-spin" /> : <KeyRound size={12} />}
+            {signingIn ? "Check your wallet…" : "Sign in"}
+          </button>
+        )}
+        {signinError && <span role="alert" className="hidden lg:inline text-[10px]" style={{ color: "#f87171" }}>{signinError}</span>}
         <button
           type="button"
-          onClick={() => disconnect.dispatch()}
+          onClick={() => { signOut(); setSessionWallet(null); disconnect.dispatch(); }}
           className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all"
           style={{ background: `${ACCENT}0e`, border: `1px solid ${ACCENT}35`, color: ACCENT }}
-          title="Disconnect Solana wallet"
+          title={signedIn ? "Signed in. Click to disconnect and end the session." : "Disconnect Solana wallet"}
         >
           <Wallet size={13} />
           <span>{short}</span>
+          {signedIn && <KeyRound size={11} style={{ color: "#38bdf8" }} />}
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
         </button>
       </div>

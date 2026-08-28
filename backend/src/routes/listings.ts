@@ -5,6 +5,7 @@ import { getChain } from "../chain/index.js";
 import { SolanaChain } from "../chain/solana.js";
 import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
+import { requireWallet } from "../auth.js";
 import { json } from "./json.js";
 
 // Real marketplace: a listing is the (already-existing) default AgentListing
@@ -44,13 +45,10 @@ export async function listingRoutes(app: FastifyInstance) {
   // A publisher claims their listing by setting a price and the wallet that
   // should receive rental payments.
   //
-  // Honest scope: nothing here proves the caller controls that wallet — this
-  // API has no sessions (see auth.ts). So the payout wallet is write-once:
-  // whoever claims first owns the listing, and later calls may only change
-  // the price, and only by naming the same wallet. That closes the damaging
-  // case — repointing someone else's rental income at your own wallet — but
-  // an unclaimed listing can still be claimed by anyone who gets there first.
-  // Sign-in-with-Solana is what actually fixes this.
+  // The payout wallet must be one the caller has signed in with, so a listing
+  // can only be claimed by someone holding that key. The write-once rule stays
+  // underneath it: once claimed, later calls may only change the price, and
+  // only from the same wallet.
   app.patch("/listings/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = z.object({
@@ -59,6 +57,7 @@ export async function listingRoutes(app: FastifyInstance) {
     }).parse(req.body);
     const listing = await prisma.agentListing.findUnique({ where: { id } });
     if (!listing) return reply.code(404).send({ error: "listing not found" });
+    requireWallet(req, body.developerWallet);
     if (listing.developerWallet && listing.developerWallet !== body.developerWallet) {
       return reply.code(403).send({ error: "this listing is already claimed by another wallet" });
     }

@@ -48,6 +48,6 @@ Reference, if the live run is slow: [the rejection](https://explorer.solana.com/
 
 What is real today: the Anchor program on Devnet, wallet-signed grants, seven gates enforced on every transfer, an audit trail sourced from chain events, marketplace rentals whose SOL payment is verified against the chain, and analytics computed from the trail. P&L and APY are absent on purpose — the system has no price feed, so there is no honest number to show.
 
-Where it goes: treasury teams first, subscription plus marketplace fee. Next technical milestones are DEX adapters with instruction inspection, and sign-in-with-Solana replacing the shared API key.
+Where it goes: treasury teams first, subscription plus marketplace fee. The next technical milestone is DEX adapters with instruction inspection, so agents can trade inside a policy rather than only transfer.
 
 Be direct about scope: Devnet only, no professional audit yet.

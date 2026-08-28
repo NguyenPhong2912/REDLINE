@@ -47,11 +47,19 @@ The backend speaks Anchor's wire format without a generated client: `src/chain/a
 
 ## API
 
-Reads are public. Writes (`POST`, except `/risk-assess`) require the `x-redline-key` header when `REDLINE_API_KEY` is set — a drive-by guard for a public demo, not authentication; owner actions are authorised by the wallet signature the program verifies.
+Reads are public. A write needs either a **wallet session** or the shared key.
+
+A session is the real credential: `POST /auth/nonce` returns a challenge naming the wallet and a one-time nonce, the wallet signs those bytes, and `POST /auth/verify` exchanges the signature for a bearer token. A Solana address *is* an ed25519 public key, so the signature verifies against the address itself. Nonces are single-use and expire in 5 minutes; sessions last 12 hours and are stored as a SHA-256 of the token, never the token.
+
+Routes that act on someone's property call `requireWallet` and accept nothing else — `PATCH /listings/:id` is the first, so a listing can only be claimed by the wallet that will be paid for it.
+
+`REDLINE_API_KEY` in `x-redline-key` remains as a fallback for the scripted demo and headless callers. It is a drive-by guard, not authentication: it ships to a public frontend and anyone can read it out of the bundle. Owner actions on-chain are authorised by the wallet signature the program verifies, whatever the API thinks.
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | chain kind, program id, executor pubkey, build version |
+| POST | `/auth/nonce` · `/auth/verify` | wallet sign-in: issue a challenge, exchange a signature for a session |
+| GET | `/auth/me` | the wallet behind the current session |
 | POST | `/agents` · GET `/agents` | publish / list immutable agent versions (`agent_hash`) |
 | POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy) |
 | GET | `/grants`, `/grants/:id` | grants with live on-chain state |
@@ -85,7 +93,7 @@ A subscription only delivers what happens while it is open, so on every connect 
 ## Tests
 
 ```bash
-npm test                 # 43 tests: gates, wire format, transient errors, API key guard, risk floor, failure reporting
+npm test                 # 49 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```

@@ -58,7 +58,7 @@ Making enforcement real without a local Solana toolchain and without trusting th
 ## What is next
 
 - DEX adapters (Jupiter/Orca) with instruction inspection so agents can trade, not just transfer.
-- Sign-in-with-Solana sessions replacing the shared API key; organisation accounts and approval workflows.
+- Retiring the shared API key entirely: wallet sign-in now backs ownership checks, but routes with no owner to check still fall back to the key. Then organisation accounts and approval workflows.
 - Design-partner pilots with three treasury teams on Devnet, then a security review before any mainnet claim.
 
 ## Suggested pitch opening

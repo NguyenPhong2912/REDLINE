@@ -188,3 +188,24 @@ model AuditEvent {
 
   @@index([subjectType, subjectId])
 }
+
+// Wallet sign-in. A nonce is issued for one wallet, signed once, and consumed;
+// keeping the row after use is what makes a replayed signature detectable.
+model AuthNonce {
+  nonce     String    @id
+  wallet    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Sessions are stored by SHA-256 of the token, never the token itself, so a
+// dump of this table does not hand anyone a working session.
+model Session {
+  tokenHash String   @id
+  wallet    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([wallet])
+}

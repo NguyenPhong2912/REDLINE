@@ -44,8 +44,34 @@ export interface Analytics {
   topAgentsByVolume: { name: string; volumeUsdc: number; grants: number }[];
 }
 
+// Wallet session. Kept in localStorage so a reload does not force another
+// signature, and sent ahead of the shared key: the key says "some caller",
+// a session says which wallet.
+const SESSION_KEY = "redline.session";
+export interface WalletSession { token: string; wallet: string; expiresAt: string }
+
+export function loadSession(): WalletSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as WalletSession;
+    if (!s?.token || !s.wallet || new Date(s.expiresAt) <= new Date()) return null;
+    return s;
+  } catch {
+    return null; // private mode, blocked storage, or a value we did not write
+  }
+}
+
+export function storeSession(session: WalletSession | null): void {
+  try {
+    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch { /* a session we cannot persist still works for this page */ }
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-redline-key": API_KEY } : {}), ...(init?.headers ?? {}) } });
+  const session = loadSession();
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-redline-key": API_KEY } : {}), ...(session ? { Authorization: `Bearer ${session.token}` } : {}), ...(init?.headers ?? {}) } });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try { const body = await res.json() as { error?: string; details?: unknown }; if (body.error) msg = body.error; } catch { /* keep status text */ }
@@ -56,6 +82,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => req<Health>("/health"),
+  authNonce: (wallet: string) => req<{ nonce: string; message: string; expiresAt: string }>("/auth/nonce", { method: "POST", body: JSON.stringify({ wallet }) }),
+  authVerify: (b: { wallet: string; nonce: string; signature: string }) => req<WalletSession>("/auth/verify", { method: "POST", body: JSON.stringify(b) }),
   agents: () => req<AgentVersion[]>("/agents"),
   publishAgent: (a: { name: string; version: string; strategy: string; modelRef: string; codeRef: string; config?: Record<string, unknown> }) =>
     req<{ agent: AgentVersion }>("/agents", { method: "POST", body: JSON.stringify(a) }),
