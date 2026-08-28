@@ -11,3 +11,11 @@ target
 
 # Local Netlify folder
 .netlify
+
+# Solana wallet keypairs (devnet/local signer secrets)
+executor.json
+owner.json
+id.json
+*-keypair.json
+backend/executor.json
+backend/owner.json
