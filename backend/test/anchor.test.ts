@@ -70,6 +70,16 @@ describe("errors", () => {
     expect(errorCodeToReason(6012).reasonCode).toBe("COOLDOWN_ACTIVE");
     expect(errorCodeToReason(6000).reasonCode).toBeNull();
   });
+  // Anchor's own framework errors share the error space with the program's.
+  // A caller that treated an unmapped code as a gate reported a missing token
+  // account (3012) as REVOKED, which stopped agent runs on grants nobody had
+  // revoked. Anything outside 6005–6012 must decline to name a gate.
+  it("refuse to map framework errors onto a policy gate", () => {
+    expect(errorCodeToReason(3012)).toEqual({ variant: "Unknown(3012)", reasonCode: null });
+    expect(errorCodeToReason(2001).reasonCode).toBeNull();
+    expect(errorCodeToReason(0).reasonCode).toBeNull();
+    expect(errorCodeToReason(6013).reasonCode).toBeNull();
+  });
   it("extract the code from meta.err and from log text", () => {
     expect(extractCustomError({ InstructionError: [0, { Custom: 6011 }] })).toBe(6011);
     expect(extractCustomError("Program failed: custom program error: 0x177b")).toBe(6011);

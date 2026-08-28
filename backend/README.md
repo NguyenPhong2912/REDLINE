@@ -80,10 +80,12 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 
 With `CHAIN=solana` the server subscribes to `logsNotifications` for the program. Every transaction that mentions it — ours or anyone's — is decoded: `PolicyDecision` events update mirrored counters and become `chain.policy_decision` audit rows; failed transactions become `chain.tx_failed` with the mapped reason code.
 
+A subscription only delivers what happens while it is open, so on every connect the indexer first replays anything recorded on-chain after the newest signature already in the audit trail (`getSignaturesForAddress`, capped at 1,000). A restart, a dropped socket or a host spin-down therefore leaves no hole in the record. Writes are idempotent per signature, so the overlap between the replay and the live stream is free.
+
 ## Tests
 
 ```bash
-npm test                 # 34 tests: gates, wire format, transient errors, API key guard, risk floor
+npm test                 # 35 tests: gates, wire format, transient errors, API key guard, risk floor
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```

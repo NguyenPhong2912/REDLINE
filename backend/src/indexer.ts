@@ -1,4 +1,5 @@
-import type { Address } from "@solana/kit";
+import type { Address, Signature } from "@solana/kit";
+import { withRetry } from "./chain/solana.js";
 import { eventsFromLogs, errorCodeToReason, extractCustomError } from "./chain/anchor.js";
 import type { SolanaChain } from "./chain/solana.js";
 import { prisma } from "./db/client.js";
@@ -10,6 +11,53 @@ import { audit } from "./db/audit.js";
 // runtime thought happened. Works for transactions we sent AND for ones sent
 // by anyone else (browser wallet, another runtime, an attacker).
 
+// A subscription only delivers what happens while it is open, so anything the
+// chain emitted while this process was down or disconnected is lost to it. On
+// every (re)connect, replay from the newest signature already recorded — a
+// restart or a host spin-down must not leave a hole in the audit trail.
+const BACKFILL_LIMIT = 1_000;
+
+async function backfill(chain: SolanaChain, log: (msg: string) => void) {
+  const last = await prisma.auditEvent.findFirst({
+    where: { actorType: "chain", chainSignature: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { chainSignature: true },
+  });
+  // Nothing recorded yet: there is no gap to close, and replaying the
+  // program's entire history on a fresh database is not the same thing.
+  if (!last?.chainSignature) return;
+
+  const missed = await withRetry(
+    () => chain.rpc
+      .getSignaturesForAddress(chain.programId as Address, {
+        until: last.chainSignature as Signature,
+        limit: BACKFILL_LIMIT,
+        commitment: "confirmed",
+      })
+      .send(),
+    "getSignaturesForAddress",
+  );
+  if (!missed.length) return;
+  log(`indexer: backfilling ${missed.length} transaction(s) missed since ${last.chainSignature.slice(0, 8)}`);
+
+  // Newest first from the RPC; replay oldest first so mirrored counters land
+  // in the order the chain produced them.
+  for (const entry of [...missed].reverse()) {
+    try {
+      const tx = await withRetry(
+        () => chain.rpc
+          .getTransaction(entry.signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 })
+          .send(),
+        "getTransaction",
+      );
+      if (!tx) continue;
+      await handle(chain, entry.signature as string, tx.meta?.err ?? null, BigInt(tx.slot), [...(tx.meta?.logMessages ?? [])]);
+    } catch (e) {
+      log(`indexer: backfill failed on ${entry.signature}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+}
+
 export async function startIndexer(chain: SolanaChain, log: (msg: string) => void) {
   let backoff = 1_000;
   for (;;) {
@@ -20,6 +68,10 @@ export async function startIndexer(chain: SolanaChain, log: (msg: string) => voi
         .subscribe({ abortSignal: abort.signal });
       log(`indexer: subscribed to ${chain.programId}`);
       backoff = 1_000;
+      // After subscribing, not before: the stream is already capturing new
+      // events, so the replay closes the gap without opening another one.
+      // handle() is idempotent, so the overlap costs nothing.
+      await backfill(chain, log);
       for await (const n of notifications) {
         try {
           await handle(chain, n.value.signature as string, n.value.err, n.context.slot, n.value.logs ?? []);

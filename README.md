@@ -301,7 +301,7 @@ npm run typecheck && npm test && npm run build
 </details>
 
 <details>
-<summary><strong>🧠 Backend (34 tests)</strong></summary>
+<summary><strong>🧠 Backend (35 tests)</strong></summary>
 
 ```bash
 cd backend && npm run typecheck && npm test
