@@ -80,6 +80,26 @@ export function loadKeypair(pathOrJson: string): Promise<KeyPairSigner> {
   return createKeyPairSignerFromBytes(new Uint8Array(raw));
 }
 
+// How a failed execute_transfer is reported. Kept out of the class so the rule
+// can be tested without standing up a chain.
+//
+// Only the program's own codes (6005–6012) name a gate. Anything else — an
+// Anchor framework error such as AccountNotInitialized (3012), or an error
+// shape carrying no code at all — is an infrastructure failure. Reporting one
+// as REVOKED told operators the owner had pulled a grant nobody had touched,
+// and the runtime ended the run on that false reading.
+export function executionFailure(err: unknown, logs: readonly string[], signature: string, slot?: bigint): ExecutionResult {
+  const code = extractCustomError(err) ?? extractCustomError(logs.join("\n"));
+  const mapped = code === null ? null : errorCodeToReason(code);
+  return {
+    signature,
+    success: false,
+    reasonCode: mapped?.reasonCode ?? "CHAIN_ERROR",
+    error: mapped ? `${mapped.variant} (${code})` : JSON.stringify(err),
+    slot,
+  };
+}
+
 export class SolanaChain implements ChainAdapter {
   readonly kind = "solana" as const;
   readonly programId: string;
@@ -216,19 +236,7 @@ export class SolanaChain implements ChainAdapter {
     };
     const r = await this.send([ix], this.executor, true);
     if (!r.err) return { signature: r.signature, success: true, reasonCode: "OK", slot: r.slot };
-    const code = extractCustomError(r.err) ?? extractCustomError(r.logs.join("\n"));
-    const mapped = code === null ? null : errorCodeToReason(code);
-    return {
-      signature: r.signature,
-      success: false,
-      // Only the program's own error codes map to a gate. Anything else — an
-      // Anchor framework error, a missing account — is an infrastructure
-      // failure, and calling it REVOKED both misleads the operator and stops
-      // the run as though the owner had revoked the grant.
-      reasonCode: mapped?.reasonCode ?? "CHAIN_ERROR",
-      error: mapped ? `${mapped.variant} (${code})` : JSON.stringify(r.err),
-      slot: r.slot,
-    };
+    return executionFailure(r.err, r.logs, r.signature, r.slot);
   }
 
   async revokeGrant(grantPda: string) {

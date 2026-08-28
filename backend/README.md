@@ -85,7 +85,7 @@ A subscription only delivers what happens while it is open, so on every connect 
 ## Tests
 
 ```bash
-npm test                 # 35 tests: gates, wire format, transient errors, API key guard, risk floor
+npm test                 # 42 tests: gates, wire format, transient errors, API key guard, risk floor, failure reporting
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```
