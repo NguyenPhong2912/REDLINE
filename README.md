@@ -7,7 +7,7 @@
 **The programmable safety layer for autonomous DeFi agents on Solana.**
 The agent proposes · **the chain decides** · nobody can talk it out of the answer.
 
-[![Backend CI](https://img.shields.io/github/actions/workflow/status/anky06-ky/CSaCLAB/backend-ci.yml?branch=main&label=CI&style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/anky06-ky/CSaCLAB/actions/workflows/backend-ci.yml)
+[![Backend CI](https://img.shields.io/github/actions/workflow/status/NguyenPhong2912/REDLINE/backend-ci.yml?branch=main&label=CI&style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/NguyenPhong2912/REDLINE/actions/workflows/backend-ci.yml)
 [![Solana Devnet](https://img.shields.io/badge/Solana-Devnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)
 [![Anchor](https://img.shields.io/badge/Anchor-Rust-14F195?style=for-the-badge&logo=rust&logoColor=white)](programs/redline_guardrails)
 [![React](https://img.shields.io/badge/React-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=white)](src)

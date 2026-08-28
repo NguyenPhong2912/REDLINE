@@ -25,4 +25,4 @@ Validate whether treasury operators and agent developers understand the permissi
 
 Do not fabricate responses or count internal team opinions as external validation. Record the participant role, test date, top problem, trust concern, requested feature, and willingness to pilot. Never collect seed phrases, private keys, API keys, wallet balances, or personally identifiable financial data.
 
-Feedback intake: https://github.com/anky06-ky/CSaCLAB/issues/new?template=user-feedback.yml
+Feedback intake: https://github.com/NguyenPhong2912/REDLINE/issues/new?template=user-feedback.yml
