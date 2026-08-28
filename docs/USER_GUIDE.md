@@ -120,7 +120,7 @@ Ba nút thao tác (ẩn nếu grant đã bị revoke):
 
 | Nút | Chức năng |
 |---|---|
-| **Start agent (scripted)** | Gọi `POST /runs`, khởi động agent runtime kịch bản sẵn: 3 giao dịch = 20% hạn mức (được duyệt), rồi 1 giao dịch = 60% hạn mức cố tình vượt cap để minh hoạ on-chain reject. Trong lúc chạy nút đổi thành *"Agent running…"* |
+| **Start agent (scripted)** | Gọi `POST /runs`, khởi động agent runtime kịch bản sẵn: 3 giao dịch = 20% hạn mức (được duyệt), rồi 1 giao dịch = 60% hạn mức cố tình vượt cap để minh hoạ on-chain reject. Trong lúc chạy nút đổi thành *"Agent running…"*. **Lưu ý về thời gian:** runtime tự giãn nhịp đúng bằng cooldown để không vấp cổng 7, nên với cooldown 10 phút thì bốn bước này mất hơn nửa tiếng. Muốn xem ngay cú bị chặn thì bấm **Force** ở dòng dưới thay vì chờ. |
 | **Force `<cap>` USDC (over cap)** | Gửi thẳng một intent vượt hạn mức để xem chương trình từ chối on-chain |
 | **Revoke** | Ký `revoke_grant` bằng ví chủ (hoặc revoke qua backend nếu đang ở chế độ mock); sau khi revoke, mọi lệnh thực thi tiếp theo đều bị từ chối với lỗi `Revoked` |
 

@@ -16,7 +16,7 @@ Connect a Wallet Standard wallet on Devnet. Show the address and SOL balance, th
 
 ## 0:40–1:20 — Write the policy
 
-Guardrails → wizard. Pick SOL and USDC, a **500 USDC cap**, 25 transactions, 12-hour expiry, 10-minute cooldown.
+Guardrails → wizard. Pick SOL and USDC, a **500 USDC cap**, 25 transactions, 12-hour expiry, and the **1-minute cooldown** — the shortest the wizard offers. The runtime paces itself to the cooldown so it never trips gate 7, so a long one means long silences on stage.
 
 Run the risk assessment. Show the score, the verdict, and the `source` label. Make the design point: deterministic rules set a floor the model can only raise — a BLOCK verdict disables signing, and the model cannot argue a policy down. With no API key configured it answers from those rules alone, so the copilot cannot become a dependency.
 
@@ -26,15 +26,17 @@ Run the risk assessment. Show the score, the verdict, and the `source` label. Ma
 
 ## 1:40–2:20 — The moment that matters
 
-**Start agent (scripted).** Watch the live feed: transfers confirm on-chain and the counters on the PDA rise.
+**Start agent (scripted).** The first transfer confirms on-chain within seconds; point at the counters rising on the PDA. Say what happens next: the agent now waits out its cooldown before proposing again, because the runtime paces itself rather than letting the chain reject it for going too fast.
 
-Then the agent proposes a transfer that would cross the cap. The feed shows:
+Do not wait for that. Hit **Force `<cap>` USDC (over cap)** — an intent deliberately larger than the remaining budget. The feed shows:
 
 ```
 on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved
 ```
 
 Open the Explorer link. The transaction is *on-chain and failed* — `custom program error: 0x177b` (6011) — and the token balances before and after are identical. That is the whole product in one screen: the agent asked, the chain refused, and the refusal is public.
+
+The spend cap is gate 6 and the cooldown is gate 7, so this rejection lands on the cap no matter how the cooldown is set. It is the one beat that cannot go wrong on timing.
 
 Reference, if the live run is slow: [the rejection](https://explorer.solana.com/tx/5wK3Cp6gY3Ayymwwnnjiptbhq8St5MWwKcJ7d3qRtYy12VWHkR5yfm3JkCCrTtwjh71AtuexJWtSRbYYZtaGB5MC?cluster=devnet).
 

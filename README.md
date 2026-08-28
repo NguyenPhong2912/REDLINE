@@ -324,9 +324,9 @@ cd backend && npm run program:fetch && npm run test:onchain
 
 | # | Step |
 |:---:|---|
-| 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx). |
-| 2️⃣ | ▶️ **Start agent (scripted)**. Dashboard feed: three transfers confirmed on-chain, counters rising on the PDA. |
-| 3️⃣ | 🛑 The fourth transfer exceeds the cap. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved`, with an Explorer link — token balances before and after are identical. |
+| 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx, **1-minute cooldown**). |
+| 2️⃣ | ▶️ **Start agent (scripted)**. The first transfer confirms on-chain within seconds and the counters on the PDA move. The agent then waits out the cooldown before proposing again — it paces itself so it never trips gate 7. |
+| 3️⃣ | 🛑 Don't wait for it: hit **Force `<cap>` USDC (over cap)**. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved`, with an Explorer link — token balances before and after are identical. The spend cap is gate 6, checked before the cooldown, so this rejection is the same whatever cooldown you picked. |
 | 4️⃣ | 🔒 **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**. |
 
 📖 Step-by-step walkthrough: [docs/USER_GUIDE.md](docs/USER_GUIDE.md) · Design: [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) · Threat model: [docs/SECURITY.md](docs/SECURITY.md)
