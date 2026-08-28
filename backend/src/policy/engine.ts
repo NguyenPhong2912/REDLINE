@@ -18,6 +18,7 @@ const MESSAGES: Record<ReasonCode, string> = {
   TX_CAP_EXCEEDED: "Transaction count would exceed the grant cap.",
   SPEND_CAP_EXCEEDED: "Cumulative spend would exceed the grant cap.",
   COOLDOWN_ACTIVE: "Cooldown since the last execution has not elapsed.",
+  CHAIN_ERROR: "The chain rejected the transaction for a reason outside the policy.",
 };
 
 function fail(gate: number, reasonCode: ReasonCode): Verdict {

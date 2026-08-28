@@ -50,6 +50,9 @@ export async function startRun(grantId: string, mode: "scripted" | "llm", tickMs
       // so the owner can watch the agent keep getting denied.
       if (res.precheck.reasonCode === "REVOKED" || res.onchainReason === "REVOKED") return finish("stopped", "grant revoked");
       if (res.precheck.reasonCode === "EXPIRED") return finish("stopped", "grant expired");
+      // A gate denial is the demo; a chain error is a broken setup the agent
+      // cannot retry its way out of, so end the run instead of looping on it.
+      if (res.onchainReason === "CHAIN_ERROR") return finish("failed", "chain rejected the transfer outside the policy");
     } catch (err) {
       if (isTransientChainError(err)) {
         // RPC throttled: keep the run alive, retry this step on the next tick.

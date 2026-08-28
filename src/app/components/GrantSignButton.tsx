@@ -43,8 +43,13 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
       setPhase("vault");
       const vaultPda = await findVaultPda(owner);
       const { value: vaultAccount } = await client.rpc.getAccountInfo(address(vaultPda), { encoding: "base64" }).send();
-      if (!vaultAccount) {
-        await client.sendTransaction([await initVaultInstruction(owner)]);
+      if (!vaultAccount) await client.sendTransaction([await initVaultInstruction(owner)]);
+      // Fund on balance, not on "the vault is new". An init that landed while
+      // its funding call did not leaves a vault with no token account at all,
+      // and execute_transfer then fails on vault_token_account with
+      // AccountNotInitialized — every later attempt would skip funding again.
+      const vault = await api.vault(owner);
+      if (vault.balanceUnits === null || BigInt(vault.balanceUnits) === 0n) {
         await api.fundVault(owner); // demo USDC so the agent has something to move
       }
 

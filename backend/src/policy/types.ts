@@ -39,7 +39,11 @@ export type ReasonCode =
   | "DESTINATION_NOT_ALLOWED"
   | "TX_CAP_EXCEEDED"
   | "SPEND_CAP_EXCEEDED"
-  | "COOLDOWN_ACTIVE";
+  | "COOLDOWN_ACTIVE"
+  // Not a gate: the chain rejected the transaction for a reason outside the
+  // policy (an Anchor framework error, a missing account). Kept distinct so an
+  // infrastructure failure is never reported as an owner's policy decision.
+  | "CHAIN_ERROR";
 
 export interface Verdict {
   allow: boolean;

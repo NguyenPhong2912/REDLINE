@@ -195,7 +195,9 @@ export class SolanaChain implements ChainAdapter {
 
   async executeTransfer(intent: Intent): Promise<ExecutionResult> {
     const grant = await this.readGrant(intent.grantPda);
-    if (!grant) return { signature: "", success: false, reasonCode: "REVOKED", error: "grant account not found" };
+    // revoke_grant only flips `active`, so a revoked grant still reads back.
+    // A missing account means a wrong PDA or a grant that was never created.
+    if (!grant) return { signature: "", success: false, reasonCode: "CHAIN_ERROR", error: "grant account not found" };
     const vault = (grant as GrantState & { vault: string }).vault;
     const [vaultAta] = await findAssociatedTokenPda({ mint: intent.mint as Address, owner: vault as Address, tokenProgram: TOKEN_PROGRAM_ADDRESS });
     const [destAta] = await findAssociatedTokenPda({ mint: intent.mint as Address, owner: intent.destination as Address, tokenProgram: TOKEN_PROGRAM_ADDRESS });
@@ -219,7 +221,11 @@ export class SolanaChain implements ChainAdapter {
     return {
       signature: r.signature,
       success: false,
-      reasonCode: mapped?.reasonCode ?? "REVOKED",
+      // Only the program's own error codes map to a gate. Anything else — an
+      // Anchor framework error, a missing account — is an infrastructure
+      // failure, and calling it REVOKED both misleads the operator and stops
+      // the run as though the owner had revoked the grant.
+      reasonCode: mapped?.reasonCode ?? "CHAIN_ERROR",
       error: mapped ? `${mapped.variant} (${code})` : JSON.stringify(r.err),
       slot: r.slot,
     };
