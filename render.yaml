@@ -67,21 +67,43 @@ services:
     runtime: static
     buildCommand: npm install --no-audit --no-fund && npm run build
     staticPublishPath: ./dist
+    # Every value here is derived from redline-api, so there is nothing to fill
+    # in twice and the two services cannot drift apart. Render supplies `host`
+    # as a bare hostname; src/app/lib/api.ts adds the scheme.
     envVars:
-      # Set to the API service's URL once it has one (https://<api>.onrender.com).
-      # Blueprints cannot interpolate a service host into a full URL.
       - key: VITE_API_URL
-        sync: false
+        fromService:
+          type: web
+          name: redline-api
+          property: host
+      # Picks up the value Render generated for REDLINE_API_KEY.
       - key: VITE_API_KEY
-        sync: false # same value as REDLINE_API_KEY above
+        fromService:
+          type: web
+          name: redline-api
+          envVarKey: REDLINE_API_KEY
       - key: VITE_SOLANA_RPC_URL
-        sync: false
+        fromService:
+          type: web
+          name: redline-api
+          envVarKey: SOLANA_RPC_URL
+      # A mismatch here would silently derive vault and grant PDAs against a
+      # different program, so take it from the API rather than repeating it.
       - key: VITE_REDLINE_PROGRAM_ID
-        value: Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4
+        fromService:
+          type: web
+          name: redline-api
+          envVarKey: REDLINE_PROGRAM_ID
       - key: VITE_DEMO_USDC_MINT
-        sync: false
+        fromService:
+          type: web
+          name: redline-api
+          envVarKey: DEMO_USDC_MINT
       - key: VITE_DEMO_OPS_DESTINATION
-        sync: false
+        fromService:
+          type: web
+          name: redline-api
+          envVarKey: DEMO_OPS_DESTINATION
     routes:
       # SPA fallback: every path serves index.html so client routing works.
       - type: rewrite
