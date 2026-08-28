@@ -12,7 +12,7 @@ The agent proposes · **the chain decides** · nobody can talk it out of the ans
 [![Anchor](https://img.shields.io/badge/Anchor-Rust-14F195?style=for-the-badge&logo=rust&logoColor=white)](programs/redline_guardrails)
 [![React](https://img.shields.io/badge/React-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=white)](src)
 
-**🔗 [Live Demo](https://redline-dashboard.onrender.com)** &nbsp;•&nbsp;
+**🔗 [Live Demo](https://redline-dashboard-28t9.onrender.com)** &nbsp;•&nbsp;
 **⛓️ [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)** &nbsp;•&nbsp;
 **🚫 [A Rejected Agent Transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)**
 

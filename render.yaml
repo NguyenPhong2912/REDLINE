@@ -68,14 +68,15 @@ services:
     buildCommand: npm install --no-audit --no-fund && npm run build
     staticPublishPath: ./dist
     # Every value here is derived from redline-api, so there is nothing to fill
-    # in twice and the two services cannot drift apart. Render supplies `host`
-    # as a bare hostname; src/app/lib/api.ts adds the scheme.
+    # in twice and the two services cannot drift apart.
     envVars:
+      # RENDER_EXTERNAL_URL, not `property: host`: host resolves to the private
+      # network name (redline-api-xxxx), which a browser cannot reach.
       - key: VITE_API_URL
         fromService:
           type: web
           name: redline-api
-          property: host
+          envVarKey: RENDER_EXTERNAL_URL
       # Picks up the value Render generated for REDLINE_API_KEY.
       - key: VITE_API_KEY
         fromService:

@@ -2,7 +2,7 @@
 
 Off-chain services for REDLINE: REST API, policy engine, agent runtime, log indexer, audit trail and live feed. The chain is the only authority — everything here either *proposes* an action or *records* what the chain decided.
 
-Hosted instance: `https://redline-api.onrender.com` (Render web service + Render Postgres, dedicated Devnet RPC). Provisioned from `render.yaml` at the repo root. Program: `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4`.
+Hosted instance: `https://redline-api-ku3s.onrender.com` (Render web service + Render Postgres, dedicated Devnet RPC). Provisioned from `render.yaml` at the repo root. Program: `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4`.
 
 ```text
 React app ──► API (Fastify) ──► Agent Runtime ──► ChainAdapter ──► Solana program
@@ -83,7 +83,7 @@ With `CHAIN=solana` the server subscribes to `logsNotifications` for the program
 ## Tests
 
 ```bash
-npm test                 # 29 tests: gates, wire format, transient errors, API key guard
+npm test                 # 34 tests: gates, wire format, transient errors, API key guard, risk floor
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```

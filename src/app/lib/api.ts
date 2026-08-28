@@ -1,8 +1,8 @@
 // Single place the UI talks to the REDLINE backend. Every page reads through
 // these helpers so switching hosts (localhost → Render) is one env change.
 
-// render.yaml injects VITE_API_URL from the API service's `host`, which Render
-// hands over as a bare hostname; accept that as well as a full URL.
+// render.yaml injects VITE_API_URL from the API service's RENDER_EXTERNAL_URL,
+// which already carries a scheme; tolerate a bare hostname too.
 const configuredApi = (import.meta.env.VITE_API_URL ?? "").trim().replace(/\/+$/, "");
 export const API_URL = !configuredApi
   ? "http://localhost:8787"

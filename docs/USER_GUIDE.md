@@ -8,7 +8,7 @@ Bạn cần:
 
 - Một ví hỗ trợ **Wallet Standard** đã cài trên trình duyệt (ví dụ Phantom, Solflare), chuyển sang mạng **Devnet**.
 - Một ít SOL Devnet trong ví để trả phí giao dịch (xin từ [Solana faucet](https://faucet.solana.com)).
-- Backend REDLINE đang chạy — dùng bản hosted (`https://redline-api.onrender.com`) qua [demo trực tuyến](https://redline-dashboard.onrender.com), hoặc chạy local (xem mục 1).
+- Backend REDLINE đang chạy — dùng bản hosted (`https://redline-api-ku3s.onrender.com`) qua [demo trực tuyến](https://redline-dashboard-28t9.onrender.com), hoặc chạy local (xem mục 1).
 
 > ℹ️ Mọi số liệu trên dashboard đều lấy từ chuỗi hoặc từ audit trail — không còn dữ liệu mô phỏng. Những chỉ số không thể đo được một cách trung thực (P&L, APY, win rate, uptime) đã bị bỏ hẳn thay vì bịa số: hệ thống chỉ ghi nhận *đã chi bao nhiêu, bao nhiêu giao dịch được duyệt/bị chặn, quyết định mất bao lâu*, và không có nguồn giá nào để tính lời lỗ.
 
