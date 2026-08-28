@@ -12,14 +12,13 @@ import { createGrantInstruction, findVaultPda, initVaultInstruction, policyHashH
 const ACCENT = "#00ffc4";
 const CYAN = "#06b6d4";
 const USDC_MINT = import.meta.env.VITE_DEMO_USDC_MINT ?? "";
-const OPS_DESTINATION = import.meta.env.VITE_DEMO_OPS_DESTINATION ?? "";
 
 // Owner-side flow, all signed in the browser wallet:
 //   1. init_vault if this wallet has no vault yet (+ ask the API to mint demo USDC into it)
 //   2. create_grant with the reviewed policy's hash and limits
 //   3. tell the API the grant exists (grantPda + signature) so the runtime can use it
 // The backend never sees the owner's key.
-export function GrantSignButton({ policy, assessment, onCreated }: { policy: AgentPolicyInput; assessment: RiskAssessment | null; onCreated?: (grantId: string) => void }) {
+export function GrantSignButton({ policy, assessment, destinations, destinationsInvalid, onCreated }: { policy: AgentPolicyInput; assessment: RiskAssessment | null; destinations: string[]; destinationsInvalid: boolean; onCreated?: (grantId: string) => void }) {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const [health, setHealth] = useState<Health | null>(null);
@@ -44,7 +43,7 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
   }, []);
 
   async function sign() {
-    if (!connected?.signer || blocked || held || !health) return;
+    if (!connected?.signer || blocked || held || destinationsInvalid || !health) return;
     setError("");
     const owner = String(connected.account.address);
     try {
@@ -66,7 +65,8 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
       setPhase("grant");
       const agentId = randomAgentId();
       const allowedMints = [USDC_MINT];
-      const allowedDestinations = [OPS_DESTINATION];
+      // The owner's list, capped at what the Grant account can hold.
+      const allowedDestinations = destinations.slice(0, 4);
       const full = { ...policy, allowedMints, allowedDestinations };
       const hash = await policyHashHex(full);
       const now = Math.floor(Date.now() / 1000);
@@ -112,6 +112,7 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
 
   const label = apiError ? "Backend offline" : !connected ? "Connect wallet to sign grant"
     : blocked ? "Blocked by risk policy"
+    : destinationsInvalid ? "Add a valid destination address"
     : held ? "Accept the flagged risk to continue"
     : phase === "vault" ? "Creating vault…" : phase === "grant" ? "Sign create_grant…" : phase === "register" ? "Registering…"
     : "Sign & create on-chain grant";
@@ -127,7 +128,7 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
           </span>
         </label>
       )}
-      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || !!apiError || !health}
+      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || destinationsInvalid || !!apiError || !health}
         className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
         style={{ background: `linear-gradient(135deg, ${ACCENT}dd, ${CYAN}cc)`, color: "#040707" }}>
         {busy ? <LoaderCircle size={13} className="animate-spin" /> : <ShieldCheck size={13} />}

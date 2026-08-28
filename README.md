@@ -292,7 +292,7 @@ Point `VITE_API_URL` at the hosted backend, or run one locally (`cd backend && n
 ## 🧪 Quality Checks
 
 <details>
-<summary><strong>💻 Dashboard</strong></summary>
+<summary><strong>💻 Dashboard (12 tests)</strong></summary>
 
 ```bash
 npm run typecheck && npm test && npm run build

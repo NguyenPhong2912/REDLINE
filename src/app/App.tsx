@@ -28,7 +28,11 @@ import { api, API_URL, fmtUsdc, short, type Analytics, type AuditRow, type Healt
 import { PROGRAM_ID } from "./solana/redline";
 import { useRealAgents } from "./lib/agents";
 import type { AppClient } from "./solana/client";
-import { explorerAddressUrl, explorerTransactionUrl } from "./solana/client";
+import { explorerAddressUrl, explorerTransactionUrl, isAddressLike } from "./solana/client";
+
+// The program's Grant account stores at most four of each.
+const MAX_DESTS = 4;
+const DEMO_OPS_DESTINATION = String(import.meta.env.VITE_DEMO_OPS_DESTINATION ?? "");
 import { transferSolInstruction } from "./solana/payments";
 
 /* ── palette ── */
@@ -849,12 +853,23 @@ function SessionsPage() {
   const [txn, setTxn] = useState(50);
   const [dur, setDur] = useState(24);
   const [cool, setCool] = useState(6);
+  // Seeded from the demo ops wallet so the default flow still works, but the
+  // destination allowlist is the product's headline promise — it belongs to
+  // the owner, not to a build-time constant.
+  const [dests, setDests] = useState<string[]>([DEMO_OPS_DESTINATION].filter(Boolean));
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [assessing, setAssessing] = useState(false);
   const [assessmentError, setAssessmentError] = useState("");
   const [grantsKey, setGrantsKey] = useState(0);
   const tList = ["SOL", "USDC", "JUP", "JTO", "BONK", "PYTH"];
-  const STEPS = ["Token Scope", "Spend Limits", "Time Bounds", "Review & Sign"];
+  const STEPS = ["Scope", "Spend Limits", "Time Bounds", "Review & Sign"];
+
+  const cleanDests = [...new Set(dests.map(d => d.trim()).filter(Boolean))];
+  const destError = dests.some(d => d.trim() && !isAddressLike(d.trim())) ? "One of these is not a valid Solana address."
+    : cleanDests.length === 0 ? "Add at least one address the agent may pay."
+    : cleanDests.length !== dests.filter(d => d.trim()).length ? "Duplicate destinations are ignored."
+    : "";
+  const destsInvalid = cleanDests.length === 0 || dests.some(d => d.trim() && !isAddressLike(d.trim()));
 
   const policy: AgentPolicyInput = {
     agentName: "YieldGuard Alpha",
@@ -866,10 +881,12 @@ function SessionsPage() {
     cooldownMinutes: cool,
   };
 
+  // Destinations are part of the signed policy digest, so a change to them
+  // invalidates the reviewed policy just as a cap change does.
   useEffect(() => {
     setAssessment(null);
     setAssessmentError("");
-  }, [tokens, cap, txn, dur, cool]);
+  }, [tokens, cap, txn, dur, cool, dests]);
 
   async function assessPolicy() {
     setAssessing(true);
@@ -945,9 +962,29 @@ function SessionsPage() {
                   </button>
                 ); })}
               </div>
+              <div className="pt-1 space-y-2">
+                <p className="text-xs" style={{ ...sans, color: "#94a3b8", lineHeight: 1.7 }}>Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to {MAX_DESTS}.</p>
+                {dests.map((d, di) => (
+                  <div key={`dest-${di}`} className="flex gap-2">
+                    <input value={d} onChange={e => setDests(p => p.map((x, i) => i === di ? e.target.value.trim() : x))}
+                      placeholder="Recipient address (base58)" aria-label={`Allowed destination ${di + 1}`} spellCheck={false}
+                      className="flex-1 px-3 py-2 rounded-xl text-[11px] outline-none"
+                      style={{ ...mono, background: "rgba(255,255,255,0.03)", border: `1px solid ${d && !isAddressLike(d) ? "#ef444455" : "rgba(255,255,255,0.07)"}`, color: "#e2e8f0" }} />
+                    {dests.length > 1 && (
+                      <button type="button" onClick={() => setDests(p => p.filter((_, i) => i !== di))} aria-label={`Remove destination ${di + 1}`}
+                        className="px-3 rounded-xl text-[11px]" style={{ ...mono, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "#64748b" }}>×</button>
+                    )}
+                  </div>
+                ))}
+                {dests.length < MAX_DESTS && (
+                  <button type="button" onClick={() => setDests(p => [...p, ""])}
+                    className="text-[11px] px-3 py-1.5 rounded-xl" style={{ ...mono, background: `${C}10`, border: `1px solid ${C}25`, color: C }}>+ Add destination</button>
+                )}
+                {destError && <p role="alert" className="text-[10px]" style={{ ...sans, color: "#f87171" }}>{destError}</p>}
+              </div>
               <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
                 <Lock size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-                <p className="text-[11px]" style={{ ...sans, color: "#94a3b8", lineHeight: 1.6 }}>The policy digest binds token scope, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
+                <p className="text-[11px]" style={{ ...sans, color: "#94a3b8", lineHeight: 1.6 }}>The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
               </div>
             </div>
           )}
@@ -984,7 +1021,7 @@ function SessionsPage() {
             <div className="space-y-4">
               <p className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.</p>
               <div>
-              {[["Token Scope", tokens.join(", "), C], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
+              {[["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || "none", A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                   <span className="text-[11px]" style={{ ...sans, color: "#64748b" }}>{k}</span>
                   <span className="text-[11px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
@@ -1002,7 +1039,7 @@ function SessionsPage() {
                   </div>
                   <p className="text-[11px]" style={{ color: "#94a3b8" }}>{assessment.summary}</p>
                   <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[10px] flex gap-2" style={{ color: "#64748b" }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
-                  <GrantSignButton policy={policy} assessment={assessment} onCreated={() => setGrantsKey(k => k + 1)} />
+                  <GrantSignButton policy={policy} assessment={assessment} destinations={cleanDests} destinationsInvalid={destsInvalid} onCreated={() => setGrantsKey(k => k + 1)} />
                 </div>
               )}
               {assessmentError && <p role="alert" className="text-[10px]" style={{ color: "#f87171" }}>{assessmentError}</p>}

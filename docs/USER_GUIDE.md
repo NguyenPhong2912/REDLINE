@@ -94,7 +94,9 @@ Kéo hai thanh trượt:
 ### Bước 4 — Review & Sign
 Xem lại bảng tóm tắt policy, sau đó bấm **"Run AI risk assessment"**. Copilot AI trả về điểm rủi ro (0–100), verdict `ALLOW` / `REVIEW` / `BLOCK`, tóm tắt và tối đa 3 phát hiện. Nếu verdict là `BLOCK`, nút ký ở bước tiếp theo sẽ bị khoá (*"Blocked by risk policy"*) — đây là rule floor xác định, AI không thể ký thay hay hạ mức rủi ro.
 
-> Danh sách tài sản/đích được phép (`allowedMints` / `allowedDestinations`) **không phải trường nhập tay** trong wizard — chúng lấy cố định từ biến môi trường `VITE_DEMO_USDC_MINT` và `VITE_DEMO_OPS_DESTINATION` đã cấu hình ở bước 1.
+> **Danh sách đích được phép** (`allowedDestinations`) nhập trực tiếp ở bước 1, tối đa 4 địa chỉ — đây chính là ranh giới mà chương trình kiểm tra ở mọi lệnh chuyển: địa chỉ không nằm trong danh sách này thì không thể nhận tiền, dù agent đề xuất gì. Ô đầu tiên điền sẵn `VITE_DEMO_OPS_DESTINATION` cho tiện demo, bạn xoá và thay được.
+>
+> `allowedMints` vẫn lấy cố định từ `VITE_DEMO_USDC_MINT`: vault demo chỉ giữ đúng loại token đó, nên thêm mint khác vào danh sách cũng không có gì để chuyển.
 
 ## 5. Ký & tạo Grant on-chain
 
