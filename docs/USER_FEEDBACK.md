@@ -7,7 +7,7 @@ Validate whether treasury operators and agent developers understand the permissi
 ## Test flow
 
 1. Open the production demo.
-2. Identify which data is simulated and which actions are live.
+2. Say which numbers on screen you would trust, and what would make you doubt one.
 3. Build one low-risk policy and one intentionally dangerous policy.
 4. Compare the ALLOW/REVIEW/BLOCK verdicts.
 5. If a Devnet wallet is available, publish a Memo proof and inspect it in Explorer.

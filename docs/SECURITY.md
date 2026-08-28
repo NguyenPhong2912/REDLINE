@@ -19,7 +19,7 @@
 | AI provider outage/refusal | deterministic fallback returns a labeled result |
 | Replay or policy substitution | canonical SHA-256 digest binds all displayed policy fields |
 | Unsafe high-frequency loop | cooldown and transaction counter checked on-chain |
-| Misleading metrics | all non-RPC product analytics are labeled simulated |
+| Misleading metrics | analytics are derived from the audit trail; figures with no source in the system (P&L, APY, win rate, uptime) are not shown at all |
 | RPC failure | explicit error states; no fabricated confirmation or signature |
 
 ## Current limitations

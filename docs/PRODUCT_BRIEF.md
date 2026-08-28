@@ -44,4 +44,4 @@ The deterministic engine provides a non-reducible safety floor. The AI layer exp
 - Value and transaction count protected by active policies.
 - Paid teams and monthly active treasury operators.
 
-Prototype metrics shown in the UI are simulated and are not success claims.
+The metrics shown in the UI are computed from the audit trail, not simulated. Anything the system cannot measure honestly — P&L, APY, win rate, uptime — is absent rather than estimated. None of these figures are success claims for the product.

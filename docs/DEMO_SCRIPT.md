@@ -1,27 +1,51 @@
 # Three-minute demo script
 
-## 0:00–0:25 — Problem
+Everything below is live on Devnet. Nothing on screen is a fixture.
 
-Open the dashboard and state: autonomous DeFi is useful, but unrestricted wallet authority creates a catastrophic blast radius. REDLINE makes the boundary explicit and verifiable.
+**Before you present.** The API sleeps after ~15 minutes idle on Render's free tier and takes about a minute to wake, so open `https://redline-api-ku3s.onrender.com/health` a few minutes early and leave the dashboard loaded. Have a Devnet wallet connected with a little SOL for fees. If the vault is empty, Treasury → **Refill 1,000 (devnet)**.
 
-Point to the “simulated data” label so judges understand which dashboard elements are presentation fixtures.
+## 0:00–0:20 — The problem
 
-## 0:25–0:50 — Real Solana connection
+Automating a treasury forces a bad choice: approve every transaction by hand, or hand a bot broad wallet authority and hope. And afterwards nobody can prove what the agent was *allowed* to do — only what it did.
 
-Connect a Wallet Standard wallet configured for Devnet. Show the live wallet address and SOL balance.
+State the claim you are about to demonstrate: REDLINE makes the boundary explicit, and a Solana program — not the agent's good behaviour — enforces it.
 
-## 0:50–1:35 — Build a policy
+## 0:20–0:40 — Connect
 
-Open Guardrails. Select SOL and USDC, set a 500 USDC cap, 25 transactions, 12-hour expiry, and 10-minute cooldown. Explain that these fields become one canonical digest.
+Connect a Wallet Standard wallet on Devnet. Show the address and SOL balance, then Treasury: the vault PDA, its balance, and the point that the vault is owned by the program, not by the server.
 
-## 1:35–2:05 — AI plus deterministic safety
+## 0:40–1:20 — Write the policy
 
-Run the risk assessment. Show the score, verdict, model/source label, findings, and the fact that a BLOCK verdict disables signing. Mention that deterministic rules remain available if the model or network fails.
+Guardrails → wizard. Pick SOL and USDC, a **500 USDC cap**, 25 transactions, 12-hour expiry, 10-minute cooldown.
 
-## 2:05–2:35 — On-chain proof
+Run the risk assessment. Show the score, the verdict, and the `source` label. Make the design point: deterministic rules set a floor the model can only raise — a BLOCK verdict disables signing, and the model cannot argue a policy down. With no API key configured it answers from those rules alone, so the copilot cannot become a dependency.
 
-Publish the policy proof, approve the wallet transaction, and open Solana Explorer. Explain that only the SHA-256 digest is public.
+## 1:20–1:40 — Sign it on-chain
 
-## 2:35–3:00 — Business and technical close
+**Sign & create on-chain grant.** The wallet signs `create_grant`; the backend only records the resulting PDA and signature. Say plainly: the owner's key never leaves the browser, and the server has no authority to widen this policy afterwards.
 
-Target treasury teams first with subscriptions and approval/audit features. Close by showing the Anchor policy-account scaffold, then state clearly that build/test, Devnet deployment, and transfer mediation are the next technical milestones.
+## 1:40–2:20 — The moment that matters
+
+**Start agent (scripted).** Watch the live feed: transfers confirm on-chain and the counters on the PDA rise.
+
+Then the agent proposes a transfer that would cross the cap. The feed shows:
+
+```
+on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved
+```
+
+Open the Explorer link. The transaction is *on-chain and failed* — `custom program error: 0x177b` (6011) — and the token balances before and after are identical. That is the whole product in one screen: the agent asked, the chain refused, and the refusal is public.
+
+Reference, if the live run is slow: [the rejection](https://explorer.solana.com/tx/5wK3Cp6gY3Ayymwwnnjiptbhq8St5MWwKcJ7d3qRtYy12VWHkR5yfm3JkCCrTtwjh71AtuexJWtSRbYYZtaGB5MC?cluster=devnet).
+
+## 2:20–2:40 — The owner stays in control
+
+**Revoke** from the wallet — the next attempt fails with `Revoked`. Then Treasury → **Withdraw**: no gates apply, because the owner's key is the authority. Show the Audit page: every proposal, decision and signature, appended, with the indexer's own record read back from the program's logs rather than from the server's memory.
+
+## 2:40–3:00 — Close
+
+What is real today: the Anchor program on Devnet, wallet-signed grants, seven gates enforced on every transfer, an audit trail sourced from chain events, marketplace rentals whose SOL payment is verified against the chain, and analytics computed from the trail. P&L and APY are absent on purpose — the system has no price feed, so there is no honest number to show.
+
+Where it goes: treasury teams first, subscription plus marketplace fee. Next technical milestones are DEX adapters with instruction inspection, and sign-in-with-Solana replacing the shared API key.
+
+Be direct about scope: Devnet only, no professional audit yet.
