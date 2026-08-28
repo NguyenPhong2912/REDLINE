@@ -194,6 +194,11 @@ model AuditEvent {
 model AuthNonce {
   nonce     String    @id
   wallet    String
+  // The exact bytes handed to the wallet. Stored rather than rebuilt at
+  // verification: the issued-at stamp in the text comes from the API process
+  // while `createdAt` comes from the database clock, so a reconstruction is
+  // never quite the string that was signed.
+  message   String
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())

@@ -86,8 +86,9 @@ export function registerAuth(app: FastifyInstance) {
     const nonce = randomBytes(24).toString("base64url");
     const issuedAt = new Date();
     const expiresAt = new Date(issuedAt.getTime() + NONCE_TTL_MS);
-    await prisma.authNonce.create({ data: { nonce, wallet, expiresAt } });
-    return { nonce, message: challenge(wallet, nonce, issuedAt), expiresAt: expiresAt.toISOString() };
+    const message = challenge(wallet, nonce, issuedAt);
+    await prisma.authNonce.create({ data: { nonce, wallet, message, expiresAt } });
+    return { nonce, message, expiresAt: expiresAt.toISOString() };
   });
 
   app.post("/auth/verify", async (req, reply) => {
@@ -104,8 +105,8 @@ export function registerAuth(app: FastifyInstance) {
     if (row.usedAt) return reply.code(400).send({ error: "that challenge was already used" });
     if (row.expiresAt < new Date()) return reply.code(400).send({ error: "that challenge has expired" });
 
-    const message = challenge(row.wallet, row.nonce, row.createdAt);
-    if (!(await verifySignature(body.wallet, message, body.signature))) {
+    // The stored text, byte for byte — not a rebuild that could differ.
+    if (!(await verifySignature(body.wallet, row.message, body.signature))) {
       return reply.code(401).send({ error: "signature does not match that wallet" });
     }
 

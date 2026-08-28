@@ -63,6 +63,20 @@ describe("challenge message", () => {
     expect(text).toContain("2026-01-01T00:00:00.000Z");
   });
 
+  // Why the issued message is stored instead of rebuilt at verification: the
+  // stamp inside it comes from the API process, while a row's createdAt comes
+  // from the database clock. A few milliseconds apart is still a different
+  // string, and a signature over one never verifies against the other.
+  it("changes with the issued-at stamp, so it cannot be reconstructed later", async () => {
+    const wallet = await walletFixture();
+    const issued = new Date("2026-01-01T00:00:00.000Z");
+    const aMomentLater = new Date("2026-01-01T00:00:00.004Z");
+    const signed = challenge(wallet.address, "n", issued);
+
+    expect(challenge(wallet.address, "n", aMomentLater)).not.toBe(signed);
+    expect(await verifySignature(wallet.address, challenge(wallet.address, "n", aMomentLater), await wallet.sign(signed))).toBe(false);
+  });
+
   it("tells the signer what they are agreeing to", () => {
     const text = challenge("2828FT2CggMGyHUPucL8Bv16FXXGhitnMgSM3Cc6ZEye", "abc123", new Date());
     expect(text).toMatch(/authorises no transfer and moves no funds/);
