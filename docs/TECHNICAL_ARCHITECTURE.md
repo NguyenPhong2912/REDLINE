@@ -51,8 +51,8 @@ require!(now - last_execution_at >= cooldown,              CooldownActive);     
 
 `PolicyDecision` is emitted only on success; a rejection surfaces as the transaction error, which the explorer shows verbatim (e.g. `custom program error: 0x177b` = 6011).
 
-Reference transaction — an agent trying to move 300 USDC against a remaining budget of 200, rejected on-chain with token balances unchanged:
-<https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet>
+Reference transaction — an agent trying to move 500 USDC against a remaining budget of 400 (500 cap, 100 already spent), rejected on-chain with token balances unchanged:
+<https://explorer.solana.com/tx/5wK3Cp6gY3Ayymwwnnjiptbhq8St5MWwKcJ7d3qRtYy12VWHkR5yfm3JkCCrTtwjh71AtuexJWtSRbYYZtaGB5MC?cluster=devnet>
 
 ## Off-chain services (`backend/`)
 
