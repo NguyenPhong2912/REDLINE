@@ -64,6 +64,9 @@ export const api = {
   createGrant: (b: {
     ownerWallet: string; vaultPda: string; agentVersionId: string; grantPda: string; createSignature: string; agentId: string;
     policy: { agentName: string; strategy: string; tokens: string[]; spendCapUsdc: number; maxTransactions: number; durationHours: number; cooldownMinutes: number; allowedMints: string[]; allowedDestinations: string[] };
+    // True when the owner was shown a REVIEW verdict and accepted it. The API
+    // recomputes the verdict itself; this only records that the human saw it.
+    riskAcknowledged?: boolean;
   }) => req<{ grant: Grant; policyHash: string; chain: string }>("/grants", { method: "POST", body: JSON.stringify(b) }),
   revoke: (id: string, signature?: string) => req<{ ok: boolean; signature: string }>(`/grants/${id}/revoke`, { method: "POST", body: JSON.stringify({ signature }) }),
   intents: (grantId: string) => req<IntentRow[]>(`/grants/${grantId}/intents`),

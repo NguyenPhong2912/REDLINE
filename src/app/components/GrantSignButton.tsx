@@ -28,14 +28,23 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
   const [signature, setSignature] = useState("");
   const [grantId, setGrantId] = useState("");
   const [error, setError] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const blocked = assessment?.decision === "BLOCK";
+  // The copilot is told REVIEW means a human must approve. Until this feature
+  // that verdict only tinted the panel, so a policy the engine wanted a person
+  // to look at could be signed without anyone confirming they had.
+  const needsAcceptance = assessment?.decision === "REVIEW";
+  const held = needsAcceptance && !accepted;
+
+  // A fresh assessment is a fresh decision to make.
+  useEffect(() => { setAccepted(false); }, [assessment]);
 
   useEffect(() => {
     api.health().then(setHealth).catch(e => setApiError(e instanceof Error ? e.message : "API unreachable"));
   }, []);
 
   async function sign() {
-    if (!connected?.signer || blocked || !health) return;
+    if (!connected?.signer || blocked || held || !health) return;
     setError("");
     const owner = String(connected.account.address);
     try {
@@ -77,7 +86,7 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
       setPhase("register");
       const agents = await api.agents();
       const agent = agents[0] ?? (await api.publishAgent({ name: policy.agentName, version: "v0.1.0", strategy: policy.strategy, modelRef: "openai:gpt-5.4-mini", codeRef: "git:redline-runtime@main" })).agent;
-      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agent.id, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full });
+      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agent.id, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined });
       setGrantId(created.grant.id);
       setPhase("done");
       onCreated?.(created.grant.id);
@@ -103,13 +112,22 @@ export function GrantSignButton({ policy, assessment, onCreated }: { policy: Age
 
   const label = apiError ? "Backend offline" : !connected ? "Connect wallet to sign grant"
     : blocked ? "Blocked by risk policy"
+    : held ? "Accept the flagged risk to continue"
     : phase === "vault" ? "Creating vault…" : phase === "grant" ? "Sign create_grant…" : phase === "register" ? "Registering…"
     : "Sign & create on-chain grant";
   const busy = phase !== "idle";
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || !!apiError || !health}
+      {needsAcceptance && (
+        <label className="flex items-start gap-2 p-3 rounded-xl cursor-pointer" style={{ background: "#f59e0b0b", border: "1px solid #f59e0b30" }}>
+          <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 accent-amber-500" />
+          <span className="text-[10px] leading-relaxed" style={{ color: "#fbbf24" }}>
+            This policy was rated <strong>REVIEW</strong>: the risk engine wants a person to approve it before it is signed. I have read the findings above and accept this risk. Your acceptance is recorded in the audit trail against this grant.
+          </span>
+        </label>
+      )}
+      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || !!apiError || !health}
         className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
         style={{ background: `linear-gradient(135deg, ${ACCENT}dd, ${CYAN}cc)`, color: "#040707" }}>
         {busy ? <LoaderCircle size={13} className="animate-spin" /> : <ShieldCheck size={13} />}

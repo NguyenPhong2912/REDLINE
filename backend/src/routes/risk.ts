@@ -21,7 +21,9 @@ type Decision = "ALLOW" | "REVIEW" | "BLOCK";
 type Level = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 interface Assessment { score: number; level: Level; decision: Decision; summary: string; findings: string[]; recommendations: string[]; source: string; model: string }
 
-function deterministic(input: RiskInput): Assessment {
+// Exported so grant registration can recompute the floor for itself instead of
+// trusting the verdict a browser reports.
+export function deterministic(input: RiskInput): Assessment {
   let score = 8;
   const findings: string[] = [];
   const recommendations: string[] = [];

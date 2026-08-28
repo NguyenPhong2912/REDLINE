@@ -66,6 +66,23 @@ describe("POST /risk-assess", () => {
     expect(body.score).toBe(100);
   });
 
+  // The middle band is the one grant registration acts on: it recomputes this
+  // verdict itself, so a browser that skips the acceptance prompt cannot also
+  // report the policy as ALLOW.
+  it("puts a broad but not extreme policy in REVIEW", async () => {
+    const app = await build();
+    const res = await app.inject({
+      method: "POST",
+      url: "/risk-assess",
+      payload: { ...safePolicy, spendCapUsdc: 15_000, maxTransactions: 150, durationHours: 100, cooldownMinutes: 4 },
+    });
+    const body = res.json();
+
+    expect(body.decision).toBe("REVIEW");
+    expect(body.score).toBeGreaterThanOrEqual(60);
+    expect(body.score).toBeLessThan(80);
+  });
+
   it("rejects malformed input", async () => {
     const app = await build();
     expect((await app.inject({ method: "POST", url: "/risk-assess", payload: {} })).statusCode).toBe(400);

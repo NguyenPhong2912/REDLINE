@@ -6,6 +6,7 @@ import { nowSeconds } from "../clock.js";
 import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
 import { PolicySchema, canonicalPolicy, policyHash, toGrantLimits } from "../policy/canonical.js";
+import { deterministic } from "./risk.js";
 import { json } from "./json.js";
 
 const CreateGrant = z.object({
@@ -18,6 +19,10 @@ const CreateGrant = z.object({
   grantPda: z.string().optional(),
   createSignature: z.string().optional(),
   agentId: z.string().regex(/^[0-9a-f]{32}$/).optional(),
+  // Set when the owner was shown a REVIEW verdict and accepted it anyway. The
+  // browser reports this; the server recomputes the deterministic floor below
+  // rather than taking the claim at face value.
+  riskAcknowledged: z.boolean().optional(),
 });
 
 export async function grantRoutes(app: FastifyInstance) {
@@ -63,10 +68,31 @@ export async function grantRoutes(app: FastifyInstance) {
         grantPda, agentId, executorPubkey: chain.executorPubkey, createSignature,
       },
     });
+    // The wallet signs create_grant before this call, so the grant already
+    // exists on-chain and refusing here would only orphan it. What the record
+    // can do is state the risk this policy carried and whether the owner
+    // acknowledged it — recomputed here, not taken from the browser, so a
+    // client that skips the prompt cannot also erase the verdict.
+    const floor = deterministic(body.policy);
+    const risk = {
+      deterministicDecision: floor.decision,
+      deterministicScore: floor.score,
+      findings: floor.findings,
+      acknowledged: body.riskAcknowledged === true,
+      acknowledgementRequired: floor.decision !== "ALLOW",
+    };
     await audit({
       actorType: "owner", actorId: body.ownerWallet, eventType: "grant.created", subjectType: "grant", subjectId: grant.id, chainSignature: createSignature,
-      payload: { grantId: grant.id, grantPda, agentId, policyHash: hash, agentHash: agentVersion.agentHash, limits },
+      payload: { grantId: grant.id, grantPda, agentId, policyHash: hash, agentHash: agentVersion.agentHash, limits, risk },
     });
+    // An unacknowledged non-ALLOW policy is worth its own row: it is the case
+    // an auditor would want to find without reading every grant payload.
+    if (risk.acknowledgementRequired && !risk.acknowledged) {
+      await audit({
+        actorType: "system", actorId: "risk-engine", eventType: "grant.risk_unacknowledged", subjectType: "grant", subjectId: grant.id, chainSignature: createSignature,
+        payload: { grantId: grant.id, decision: floor.decision, score: floor.score, findings: floor.findings },
+      });
+    }
     return reply.code(201).send(json({ grant, policyHash: hash, chain: chain.kind }));
   });
 
