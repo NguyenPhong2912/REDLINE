@@ -91,5 +91,5 @@ Program           the sole authority over vault funds
 
 - Adapter v0 is SPL transfer to an allowlisted destination. DEX adapters (Jupiter/Orca) need instruction inspection and are the next milestone; Devnet liquidity makes them impractical to demo today.
 - Demo USDC is a Devnet mint we control; `POST /devnet/fund` exists only for demos.
-- Public Devnet RPC rate-limits shared cloud IPs; a dedicated RPC (Helius) is configured for the hosted demo.
+- The hosted demo runs on the public Devnet endpoint, which rate-limits shared cloud IPs like Render's. The chain adapter retries with backoff and an agent run survives a throttled step, but a dedicated RPC is the real fix and is not yet in place.
 - The shared API key is a drive-by guard, not authentication. No professional audit has been performed; mainnet use is out of scope.

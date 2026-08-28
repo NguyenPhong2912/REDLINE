@@ -49,11 +49,11 @@ AI × Web3 · DeFi & Digital Assets.
 
 ## Current progress
 
-Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, on-chain rejection of an over-cap transfer, owner revoke and withdraw, live audit feed. Backend, Postgres and dashboard all deployed on Render from one blueprint, against a dedicated RPC. Marketplace, analytics, P&L and APY panels are still simulated and labelled.
+Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, on-chain rejection of an over-cap transfer, owner revoke and withdraw, live audit feed. Backend, Postgres and dashboard all deployed on Render from one blueprint, against the public Devnet endpoint. Marketplace, analytics, P&L and APY panels are still simulated and labelled.
 
 ## Biggest challenge
 
-Making enforcement real without a local Solana toolchain and without trusting the server: the program had to be built and deployed from Solana Playground, so the backend speaks Anchor's wire format by hand (discriminators, Borsh, account layout, error codes, events) and tests pin that format against the deployed binary. The second challenge is keeping the demo honest under Devnet conditions — public RPC throttling on shared cloud IPs forced retry logic and a dedicated RPC before the flow was reliable.
+Making enforcement real without a local Solana toolchain and without trusting the server: the program had to be built and deployed from Solana Playground, so the backend speaks Anchor's wire format by hand (discriminators, Borsh, account layout, error codes, events) and tests pin that format against the deployed binary. The second challenge is keeping the demo honest under Devnet conditions — public RPC throttling on shared cloud IPs forced retry-with-backoff in the chain adapter, and a rule that a throttled step retries instead of ending an agent run. The hosted demo still speaks to the public Devnet endpoint, so throttling is absorbed rather than avoided.
 
 ## What is next
 

@@ -30,7 +30,9 @@ services:
       - key: CHAIN
         value: solana
       - key: SOLANA_RPC_URL
-        sync: false # use a dedicated RPC: public Devnet throttles cloud IPs
+        # https://api.devnet.solana.com works; a dedicated RPC avoids the
+        # throttling the public endpoint applies to shared cloud IPs.
+        sync: false
       - key: SOLANA_WS_URL
         sync: false
       - key: REDLINE_PROGRAM_ID
