@@ -10,7 +10,7 @@ CSaCLAB — Trần An Kỳ (representative), Nguyễn Thành Phong, Nguyễn Hà
 
 ## Links
 
-- Live demo (Devnet, hosted backend): https://redline-devnet.netlify.app
+- Live demo (Devnet, hosted backend): https://redline-dashboard.onrender.com
 - Repository: https://github.com/NguyenPhong2912/REDLINE
 - Program: `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4` — https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet
 - A rejected agent transfer, on-chain: https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet
@@ -49,7 +49,7 @@ AI × Web3 · DeFi & Digital Assets.
 
 ## Current progress
 
-Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, on-chain rejection of an over-cap transfer, owner revoke and withdraw, live audit feed. Backend deployed on Railway with Postgres and a dedicated RPC; dashboard on Netlify. Marketplace, analytics, P&L and APY panels are still simulated and labelled.
+Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, on-chain rejection of an over-cap transfer, owner revoke and withdraw, live audit feed. Backend, Postgres and dashboard all deployed on Render from one blueprint, against a dedicated RPC. Marketplace, analytics, P&L and APY panels are still simulated and labelled.
 
 ## Biggest challenge
 

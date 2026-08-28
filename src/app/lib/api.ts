@@ -1,5 +1,5 @@
 // Single place the UI talks to the REDLINE backend. Every page reads through
-// these helpers so switching hosts (localhost → Railway) is one env change.
+// these helpers so switching hosts (localhost → Render) is one env change.
 
 export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8787").replace(/\/$/, "");
 // Shared write key (see backend/src/auth.ts for what it does and does not protect).

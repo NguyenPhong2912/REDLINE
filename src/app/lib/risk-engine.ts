@@ -1,3 +1,5 @@
+import { API_URL } from "./api";
+
 export type RiskDecision = "ALLOW" | "REVIEW" | "BLOCK";
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -117,7 +119,7 @@ export async function requestRiskAssessment(input: AgentPolicyInput): Promise<Ri
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 12_000);
   try {
-    const response = await fetch("/api/risk-assess", {
+    const response = await fetch(`${API_URL}/risk-assess`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),

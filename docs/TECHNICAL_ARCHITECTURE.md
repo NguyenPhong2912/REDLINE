@@ -1,6 +1,6 @@
 # Technical architecture — REDLINE
 
-Status: deployed on Solana Devnet. Program `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4`, backend on Railway, dashboard on Netlify. Every number below is verifiable on Solana Explorer.
+Status: deployed on Solana Devnet. Program `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4`; backend, Postgres and dashboard all on Render from the repo's `render.yaml` blueprint. Every number below is verifiable on Solana Explorer.
 
 ## The one-line design
 

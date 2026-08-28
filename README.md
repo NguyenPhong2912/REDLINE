@@ -12,7 +12,7 @@ The agent proposes · **the chain decides** · nobody can talk it out of the ans
 [![Anchor](https://img.shields.io/badge/Anchor-Rust-14F195?style=for-the-badge&logo=rust&logoColor=white)](programs/redline_guardrails)
 [![React](https://img.shields.io/badge/React-Vite-61DAFB?style=for-the-badge&logo=react&logoColor=white)](src)
 
-**🔗 [Live Demo](https://redline-devnet.netlify.app)** &nbsp;•&nbsp;
+**🔗 [Live Demo](https://redline-dashboard.onrender.com)** &nbsp;•&nbsp;
 **⛓️ [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)** &nbsp;•&nbsp;
 **🚫 [A Rejected Agent Transfer](https://explorer.solana.com/tx/2FMhtv3C9HjXbgmRaWzU3tMABjo8TvmDPnSiUGMXiDsD4xetWaL2ahRhMAA14WY5zdH2JX7JPtQJfxoG75LWoVYw?cluster=devnet)**
 
@@ -239,7 +239,7 @@ Checked in this exact order, on-chain, before a single token moves:
 |---|:---:|
 | 🦀 Program `redline_guardrails` (vault PDA, gated `execute_transfer`, revoke, withdraw, events, error codes) | 🟢 **Deployed on Devnet** |
 | 👛 Wallet-signed vault / grant / revoke / withdraw from the browser | 🟢 **Live** |
-| 🤖 Agent runtime, policy engine, indexer, audit trail, SSE feed | 🟢 **Live on Railway + Postgres** |
+| 🤖 Agent runtime, policy engine, indexer, audit trail, SSE feed | 🟢 **Live on Render + Postgres** |
 | 🛍️ Marketplace — publish, claim, rent for real SOL with on-chain payment verification | 🟢 **Live** |
 | 📊 Analytics computed from the audit trail (volume, allow/block, decision latency) | 🟢 **Live** |
 | 🧪 On-chain gate tests against the deployed binary (LiteSVM) | 🟢 **CI on every push** |
@@ -257,7 +257,7 @@ Checked in this exact order, on-chain, before a single token moves:
 | 🧠 **Backend** | Node 22 · Fastify 5 · Prisma + PostgreSQL · `@solana/kit` · Zod · OpenAI (risk copilot) · SSE |
 | 💻 **Frontend** | React 19 · Vite 6 · Tailwind 4 · Radix UI · Recharts · Wallet Standard |
 | 🧪 **Testing** | Vitest · **LiteSVM** running the *real deployed binary* · GitHub Actions on every push |
-| ☁️ **Hosting** | Netlify (dashboard) · Railway + Postgres (API) |
+| ☁️ **Hosting** | Render — static site (dashboard) · web service + Postgres (API), one `render.yaml` blueprint |
 
 The backend speaks Anchor's wire format **by hand** — discriminators, Borsh arguments, the `Grant` account layout, error codes and events are all encoded in `src/chain/anchor.ts` and pinned by tests, with no generated client in the loop.
 
@@ -270,6 +270,7 @@ programs/redline_guardrails   🦀 Anchor program (Rust) — the only thing that
 backend/                      🧠 API, policy engine, agent runtime, indexer, tests — see backend/README.md
 src/                          💻 React dashboard (Vite, @solana/kit, Wallet Standard)
 docs/                         📚 product, business, architecture, security, user guide
+render.yaml                   ☁️ Render blueprint — Postgres, API and dashboard in one file
 ```
 
 <br>
@@ -300,7 +301,7 @@ npm run typecheck && npm test && npm run build
 </details>
 
 <details>
-<summary><strong>🧠 Backend (29 tests)</strong></summary>
+<summary><strong>🧠 Backend (34 tests)</strong></summary>
 
 ```bash
 cd backend && npm run typecheck && npm test

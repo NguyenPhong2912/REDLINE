@@ -64,7 +64,7 @@ app.setErrorHandler((err, _req, reply) => {
 
 app.get("/health", async () => {
   const chain = getChain();
-  return { ok: true, chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey, clockSpeed, version: (process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_SHA ?? "local").slice(0, 7) };
+  return { ok: true, chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey, clockSpeed, version: (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_SHA ?? "local").slice(0, 7) };
 });
 
 await app.register(agentRoutes);

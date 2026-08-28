@@ -9,9 +9,6 @@ coverage
 target
 .anchor
 
-# Local Netlify folder
-.netlify
-
 # Solana wallet keypairs (devnet/local signer secrets)
 executor.json
 owner.json

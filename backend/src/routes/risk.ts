@@ -2,9 +2,9 @@ import type { FastifyInstance } from "fastify";
 import OpenAI from "openai";
 import { z } from "zod";
 
-// Port of netlify/functions/risk-assess.mjs so the API is the single origin
-// for the frontend (GitHub Pages cannot host the Netlify function).
-// Behaviour is unchanged: deterministic floor, AI can only raise severity.
+// The single origin for the frontend's risk copilot: the dashboard is a static
+// site with no serverless functions of its own, so it calls this route.
+// Deterministic floor first — the model can only raise severity, never lower it.
 
 const Input = z.object({
   agentName: z.string().trim().min(1).max(80),
