@@ -68,7 +68,7 @@ TypeScript throughout, sharing one canonical policy hash with the frontend.
 
 ## Frontend
 
-React 19 + Vite + `@solana/kit` 8 + Wallet Standard. The wizard builds the policy, runs the AI risk copilot (deterministic floor the model cannot lower), then the wallet signs `create_grant`; the API only records `grantPda` + signature. Active Policy Accounts reads counters from the PDA; the Treasury page shows the live vault balance with owner-signed `withdraw`. Marketplace, analytics, P&L and APY cards remain simulated and are labelled as such.
+React 19 + Vite + `@solana/kit` 8 + Wallet Standard. The wizard builds the policy, runs the AI risk copilot (deterministic floor the model cannot lower), then the wallet signs `create_grant`; the API only records `grantPda` + signature. Active Policy Accounts reads counters from the PDA; the Treasury page shows the live vault balance with owner-signed `withdraw`. The Marketplace publishes and rents agents for real SOL, with the payment checked against the chain before the agreement is written; Analytics is computed from the audit trail. P&L, APY, win-rate and uptime cards were removed rather than simulated — nothing in the system measures them.
 
 ## Trust boundaries
 
