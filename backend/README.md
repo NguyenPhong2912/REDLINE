@@ -87,7 +87,9 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 ## Runtime modes
 
 - `scripted` — 3 transfers of 20 % of cap, then one of 60 % that exceeds the cap and is submitted anyway. The demo story, independent of any LLM.
-- `llm` — OpenAI proposes an action under a strict JSON schema; the proposal is clamped to the allowlists and judged by the program like any other intent. Needs `OPENAI_API_KEY`.
+- `llm` — a model proposes an action under a strict JSON schema; the proposal is clamped to the allowlists and judged by the program like any other intent. Needs `OPENAI_API_KEY`.
+
+Both the planner and the risk copilot talk to any OpenAI-compatible chat-completions endpoint (`src/llm-client.ts`). Set `OPENAI_BASE_URL` to point at one — Groq's free tier needs no card — or leave it unset for OpenAI, which has no free tier. `OPENAI_MODEL` must name a model that endpoint serves; when it does not, the call fails and the copilot answers from the deterministic floor, with the reason logged.
 
 ## Indexer
 

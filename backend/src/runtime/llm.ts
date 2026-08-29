@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { askForJson, isConfigured } from "../llm-client.js";
 import { prisma } from "../db/client.js";
 import type { GrantState } from "../policy/types.js";
 import type { PlannedIntent } from "./scripted.js";
@@ -20,31 +20,27 @@ const planSchema = {
 } as const;
 
 export async function llmPlan(grant: GrantState, grantId: string): Promise<PlannedIntent | null> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
+  if (!isConfigured()) return null;
   const dbGrant = await prisma.agentGrant.findUniqueOrThrow({ where: { id: grantId }, include: { agentVersion: true, policyVersion: true } });
   const remaining = Number(grant.spendCapUnits - grant.spentUnits) / 1e6;
 
-  const client = new OpenAI({ apiKey: key });
-  const result = await client.responses.create({
-    model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-    store: false,
-    max_output_tokens: 300,
-    instructions: [
+  const plan = await askForJson<{ action: string; amountUsdc: number; destinationIndex: number; reason: string }>({
+    system: [
       "You are an autonomous treasury operations agent on Solana Devnet.",
       "You may only propose SPL transfers to the listed destinations. You cannot see prices; do not invent market data.",
       "Propose at most one action per call. Prefer small, staged amounts. Choose 'hold' when nothing is needed.",
     ].join(" "),
-    input: JSON.stringify({
+    input: {
       strategy: dbGrant.agentVersion.strategy,
       remainingBudgetUsdc: remaining,
       transactionsLeft: grant.maxTransactions - grant.transactionCount,
       destinations: grant.allowedDestinations,
-    }),
-    text: { format: { type: "json_schema", name: "redline_agent_plan", strict: true, schema: planSchema } },
+    },
+    schemaName: "redline_agent_plan",
+    schema: planSchema as unknown as Record<string, unknown>,
+    maxTokens: 300,
   });
-  const plan = JSON.parse(result.output_text) as { action: string; amountUsdc: number; destinationIndex: number; reason: string };
-  if (plan.action !== "transfer" || plan.amountUsdc <= 0) return null;
+  if (!plan || plan.action !== "transfer" || plan.amountUsdc <= 0) return null;
   const dest = grant.allowedDestinations[Math.min(plan.destinationIndex, grant.allowedDestinations.length - 1)];
   return {
     mint: grant.allowedMints[0],

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import OpenAI from "openai";
+import { askForJson, isConfigured, modelName } from "../llm-client.js";
 import { z } from "zod";
 
 // The single origin for the frontend's risk copilot: the dashboard is a static
@@ -74,30 +74,29 @@ export async function riskRoutes(app: FastifyInstance) {
   app.post("/risk-assess", async (req) => {
     const input = Input.parse(req.body);
     const baseline = deterministic(input);
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) return baseline;
+    if (!isConfigured()) return baseline;
     try {
-      const model = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-      const client = new OpenAI({ apiKey: key });
-      const result = await client.responses.create({
-        model, store: false, max_output_tokens: 700,
-        instructions: [
+      const assessment = await askForJson<Assessment>({
+        system: [
           "You are the REDLINE risk copilot for autonomous DeFi agents on Solana.",
           "Assess only operational risk from the supplied policy. Do not predict profit, give investment advice, or invent market data.",
           "Prefer bounded permissions, short validity windows, simulation, allowlists, and human review for high-impact actions.",
           "A BLOCK verdict is appropriate when cumulative blast radius is unacceptable; REVIEW means explicit human approval is required.",
         ].join(" "),
-        input: JSON.stringify(input),
-        text: { format: { type: "json_schema", name: "redline_agent_risk_assessment", strict: true, schema } },
+        input,
+        schemaName: "redline_agent_risk_assessment",
+        schema,
+        maxTokens: 700,
       });
-      return mergeAssessments(baseline, JSON.parse(result.output_text) as Assessment, model);
+      if (!assessment) return baseline;
+      return mergeAssessments(baseline, assessment, modelName());
     } catch (err) {
       // Falling back is right — the deterministic floor is the safe answer and
       // the caller still gets a verdict. Staying silent about it was not: a
       // rejected key, a model name that does not exist and no key at all all
       // produced the same reply, so a misconfigured copilot looked exactly
       // like a copilot that was never switched on.
-      req.log.warn({ err: err instanceof Error ? err.message : String(err), model: process.env.OPENAI_MODEL || "gpt-5.4-mini" }, "risk copilot call failed; answering from the deterministic floor");
+      req.log.warn({ err: err instanceof Error ? err.message : String(err), model: modelName(), baseUrl: process.env.OPENAI_BASE_URL || "openai" }, "risk copilot call failed; answering from the deterministic floor");
       return baseline;
     }
   });
