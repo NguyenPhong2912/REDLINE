@@ -7,10 +7,9 @@ import { sessionFor, signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
+import { color, mono, sans } from "../theme";
 
-const M = "#00ffc4", C = "#06b6d4", A = "#e2b714", R = "#ef4444";
-const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-const sans: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
+const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 
 // Real grants from the API with the three demo controls:
 //   Start agent  → POST /runs (scripted: 3 compliant transfers + 1 over cap)
@@ -100,15 +99,15 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(11,17,16,0.6)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-        <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Active Policy Accounts</span>
+    <div className="rounded-2xl overflow-hidden" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
+      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
+        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Active Policy Accounts</span>
         <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
           {grants.filter(g => !g.revoked).length} active · {chain || "api offline"}
         </span>
       </div>
       {error && <div className="px-5 py-2 text-[11px]" style={{ ...mono, color: R }}>{error}</div>}
-      {grants.length === 0 && !error && <div className="px-5 py-6 text-[11px]" style={{ ...mono, color: "#334155" }}>No grants yet — create one in the wizard below.</div>}
+      {grants.length === 0 && !error && <div className="px-5 py-6 text-[11px]" style={{ ...mono, color: color.textDim }}>No grants yet — create one in the wizard below.</div>}
       {grants.map(g => {
         const oc = g.onchain;
         const cap = Number(g.policyVersion.spendCapUnits);
@@ -133,22 +132,22 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         const ownerWallet = connected ? String(connected.account.address) : "";
         const isOwner = ownerWallet === g.owner.wallet;
         return (
-          <div key={g.id} className="px-5 py-4 border-b space-y-3" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+          <div key={g.id} className="px-5 py-4 border-b space-y-3" style={{ borderColor: color.border }}>
             <div className="flex items-center gap-4">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}><Key size={13} style={{ color: accent }} /></div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>{g.agentVersion.name} <span style={{ color: "#475569" }}>{g.agentVersion.version}</span></div>
+                <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span></div>
                 <div className="text-[10px] flex gap-3" style={{ ...mono, color: C }}>
                   <span title={g.grantPda}>grant {short(g.grantPda)}</span>
-                  <span style={{ color: "#475569" }} title={g.policyVersion.policyHash}>policy {g.policyVersion.policyHash.slice(0, 8)}…</span>
+                  <span style={{ color: color.textDim }} title={g.policyVersion.policyHash}>policy {g.policyVersion.policyHash.slice(0, 8)}…</span>
                   {g.createSignature && !g.createSignature.startsWith("MOCK") && <a href={explorerTransactionUrl(g.createSignature)} target="_blank" rel="noreferrer" style={{ color: C }}>explorer <ExternalLink size={9} className="inline" /></a>}
                 </div>
               </div>
               <div className="hidden sm:block text-right">
                 <div className="text-[11px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(spent)} / {fmtUsdc(cap)} USDC</div>
-                <div className="text-[10px]" style={{ ...mono, color: "#475569" }}>
+                <div className="text-[10px]" style={{ ...mono, color: color.textDim }}>
                   tx {oc?.transactionCount ?? g.transactionCount}/{g.policyVersion.maxTransactions} · nonce {oc?.nextNonce ?? g.nextNonce} ·{" "}
-                  <span title={`Gate 2 refuses every transfer after ${expiresAt.toLocaleString()}`} style={{ color: expired ? R : expirySoon ? A : "#475569" }}>{expiry}</span>
+                  <span title={`Gate 2 refuses every transfer after ${expiresAt.toLocaleString()}`} style={{ color: expired ? R : expirySoon ? A : color.textDim }}>{expiry}</span>
                   {g.hire && <> · <span title={`Runs under a marketplace rental ending ${new Date(g.hire.endsAt).toLocaleString()}`} style={{ color: C }}>rented</span></>}
                 </div>
               </div>
@@ -157,7 +156,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 {revoked ? "REVOKED" : expired ? "EXPIRED" : running ? "AGENT RUNNING" : "ACTIVE"}
               </span>
             </div>
-            <div className="relative rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height: 3 }}>
+            <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 3 }}>
               <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${A}60, ${A})` }} />
             </div>
             {!revoked && (
@@ -170,23 +169,23 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                     <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                   </>
                 ) : (
-                  <div className="text-[10px] py-1.5" style={{ ...mono, color: "#64748b" }}>Read-only · Connect owner wallet to manage</div>
+                  <div className="text-[10px] py-1.5" style={{ ...mono, color: color.textMuted }}>Read-only · Connect owner wallet to manage</div>
                 )}
               </div>
             )}
 
             <button type="button" onClick={() => void toggleIntents(g.id)} aria-expanded={openGrant === g.id}
-              className="flex items-center gap-1.5 text-[10px] pt-0.5" style={{ ...mono, color: "#475569" }}>
+              className="flex items-center gap-1.5 text-[10px] pt-0.5" style={{ ...mono, color: color.textDim }}>
               <ChevronRight size={11} style={{ transform: openGrant === g.id ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
               {openGrant === g.id ? "Hide" : "Show"} every proposal this agent made
             </button>
 
             {openGrant === g.id && (
-              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                 {!intents[g.id] ? (
-                  <div className="px-3 py-3 text-[10px] flex items-center gap-2" style={{ ...mono, color: "#475569" }}><LoaderCircle size={11} className="animate-spin" /> loading…</div>
+                  <div className="px-3 py-3 text-[10px] flex items-center gap-2" style={{ ...mono, color: color.textDim }}><LoaderCircle size={11} className="animate-spin" /> loading…</div>
                 ) : intents[g.id].length === 0 ? (
-                  <div className="px-3 py-3 text-[10px]" style={{ ...mono, color: "#475569" }}>No proposals yet — start the agent, or force one over the cap.</div>
+                  <div className="px-3 py-3 text-[10px]" style={{ ...mono, color: color.textDim }}>No proposals yet — start the agent, or force one over the cap.</div>
                 ) : intents[g.id].map(it => {
                   const d = it.decision;
                   const tx = d?.chainTx;
@@ -196,11 +195,11 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                   const allowed = tx ? tx.result === "success" : d?.allow;
                   const colour = allowed ? M : R;
                   return (
-                    <div key={it.id} className="px-3 py-2 border-b last:border-0 flex items-center gap-3" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-                      <span className="text-[10px] w-8 shrink-0" style={{ ...mono, color: "#334155" }}>#{it.nonce}</span>
-                      <span className="text-[10px] shrink-0" style={{ ...mono, color: "#94a3b8" }}>{fmtUsdc(it.amountUnits)} USDC</span>
-                      <span className="text-[10px] shrink-0" style={{ ...mono, color: "#475569" }}>→ {short(it.destination, 4)}</span>
-                      <span className="text-[10px] flex-1 truncate" style={{ ...sans, color: "#475569" }} title={it.reason}>{it.reason}</span>
+                    <div key={it.id} className="px-3 py-2 border-b last:border-0 flex items-center gap-3" style={{ borderColor: color.border }}>
+                      <span className="text-[10px] w-8 shrink-0" style={{ ...mono, color: color.textDim }}>#{it.nonce}</span>
+                      <span className="text-[10px] shrink-0" style={{ ...mono, color: color.textSecondary }}>{fmtUsdc(it.amountUnits)} USDC</span>
+                      <span className="text-[10px] shrink-0" style={{ ...mono, color: color.textDim }}>→ {short(it.destination, 4)}</span>
+                      <span className="text-[10px] flex-1 truncate" style={{ ...sans, color: color.textDim }} title={it.reason}>{it.reason}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-md shrink-0" style={{ ...mono, background: `${colour}12`, color: colour, border: `1px solid ${colour}25` }}>
                         {tx ? (tx.result === "success" ? "moved" : d?.reasonCode ?? "refused") : d ? (d.allow ? "passed precheck" : d.reasonCode) : "pending"}
                       </span>

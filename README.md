@@ -255,7 +255,7 @@ Checked in this exact order, on-chain, before a single token moves:
 |---|---|
 | ⛓️ **On-chain** | Rust · Anchor 0.32 · Solana Devnet · SPL Token CPI |
 | 🧠 **Backend** | Node 22 · Fastify 5 · Prisma + PostgreSQL · `@solana/kit` · Zod · OpenAI (risk copilot) · SSE |
-| 💻 **Frontend** | React 19 · Vite 6 · Tailwind 4 · Radix UI · Recharts · Wallet Standard |
+| 💻 **Frontend** | React 19 · Vite 6 · Tailwind 4 · Radix UI · Recharts · Wallet Standard · one semantic theme in `src/app/theme.ts` |
 | 🧪 **Testing** | Vitest · **LiteSVM** running the *real deployed binary* · GitHub Actions on every push |
 | ☁️ **Hosting** | Render — static site (dashboard) · web service + Postgres (API), one `render.yaml` blueprint |
 

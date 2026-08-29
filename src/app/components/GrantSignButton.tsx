@@ -8,9 +8,10 @@ import { api, type Health } from "../lib/api";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { createGrantInstruction, findVaultPda, initVaultInstruction, policyHashHex, randomAgentId, toHex } from "../solana/redline";
+import { color } from "../theme";
 
-const ACCENT = "#00ffc4";
-const CYAN = "#06b6d4";
+const ACCENT = color.primary;
+const CYAN = color.info;
 const USDC_MINT = import.meta.env.VITE_DEMO_USDC_MINT ?? "";
 
 // Owner-side flow, all signed in the browser wallet:
@@ -108,7 +109,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
         <a className="flex items-center justify-center gap-1 text-[10px]" style={{ color: CYAN }} href={explorerTransactionUrl(signature)} target="_blank" rel="noreferrer">
           View create_grant on Solana Explorer <ExternalLink size={10} />
         </a>
-        <p className="text-[10px] text-center" style={{ color: "#475569" }}>Open Agent Guardrails → Active Policy Accounts to start the agent.</p>
+        <p className="text-[10px] text-center" style={{ color: color.textDim }}>Open Agent Guardrails → Active Policy Accounts to start the agent.</p>
       </div>
     );
   }
@@ -126,21 +127,21 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
       {needsAcceptance && (
         <label className="flex items-start gap-2 p-3 rounded-xl cursor-pointer" style={{ background: "#f59e0b0b", border: "1px solid #f59e0b30" }}>
           <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 accent-amber-500" />
-          <span className="text-[10px] leading-relaxed" style={{ color: "#fbbf24" }}>
+          <span className="text-[10px] leading-relaxed" style={{ color: color.warn }}>
             This policy was rated <strong>REVIEW</strong>: the risk engine wants a person to approve it before it is signed. I have read the findings above and accept this risk. Your acceptance is recorded in the audit trail against this grant.
           </span>
         </label>
       )}
       <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || destinationsInvalid || !!apiError || !health}
         className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
-        style={{ background: `linear-gradient(135deg, ${ACCENT}dd, ${CYAN}cc)`, color: "#040707" }}>
+        style={{ background: `linear-gradient(135deg, ${ACCENT}dd, ${CYAN}cc)`, color: color.bg }}>
         {busy ? <LoaderCircle size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
         {label}
       </button>
-      <p className="text-[10px] text-center" style={{ color: "#475569" }}>
+      <p className="text-[10px] text-center" style={{ color: color.textDim }}>
         {health ? `Program ${health.programId.slice(0, 6)}… · executor ${health.executor.slice(0, 6)}… · ${health.chain}` : apiError ? `API: ${apiError}` : "Connecting to REDLINE API…"}
       </p>
-      {error && <p role="alert" className="text-[10px] text-center" style={{ color: "#f87171" }}>{error}</p>}
+      {error && <p role="alert" className="text-[10px] text-center" style={{ color: color.danger }}>{error}</p>}
     </div>
   );
 }

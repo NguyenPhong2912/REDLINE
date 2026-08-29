@@ -7,15 +7,13 @@ import {
 } from "lucide-react";
 import { api, subscribeFeed, fmtUsdc, short, type AuditRow, type Grant, type FeedEvent } from "../lib/api";
 import { explorerTransactionUrl } from "../solana/client";
+import { color, mono, sans } from "../theme";
 
-const M = "#00ffc4", C = "#06b6d4", A = "#e2b714", R = "#ef4444";
-const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-const sans: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
+const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
-  background: "rgba(11,17,16,0.6)",
-  backdropFilter: "blur(24px)",
-  WebkitBackdropFilter: "blur(24px)",
-  border: "1px solid rgba(255,255,255,0.05)",
+  background: color.surface,
+  boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+  border: `1px solid ${color.border}`,
   ...extra,
 });
 
@@ -25,7 +23,7 @@ function eventMeta(eventType: string): { color: string; icon: React.ElementType;
     case "grant.created": return { color: M, icon: ShieldCheck, label: "Grant Created" };
     case "grant.revoked": return { color: R, icon: ShieldOff, label: "Grant Revoked" };
     case "run.started": return { color: C, icon: Play, label: "Run Started" };
-    case "run.ended": return { color: "#64748b", icon: XCircle, label: "Run Ended" };
+    case "run.ended": return { color: color.textMuted, icon: XCircle, label: "Run Ended" };
     case "intent.created": return { color: C, icon: Zap, label: "Intent Created" };
     case "decision.precheck":return { color: A, icon: Eye, label: "Precheck" };
     case "tx.confirmed": return { color: M, icon: CheckCircle2, label: "TX Confirmed" };
@@ -35,7 +33,7 @@ function eventMeta(eventType: string): { color: string; icon: React.ElementType;
     case "chain.grant_created": return { color: M, icon: ShieldCheck, label: "Chain Grant" };
     case "chain.tx_failed": return { color: R, icon: AlertTriangle, label: "Chain TX Failed" };
     case "agent.published": return { color: C, icon: FileText, label: "Agent Published" };
-    default: return { color: "#64748b", icon: Activity, label: eventType };
+    default: return { color: color.textMuted, icon: Activity, label: eventType };
   }
 }
 
@@ -162,9 +160,9 @@ export function AuditPage() {
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><ScrollText size={12} style={{ color: M }} /></div>
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Verifiable Audit Trail</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Audit <span style={{ color: M }}>Log</span></h1>
-        <p className="text-sm mt-1" style={{ ...sans, color: "#475569" }}>Every intent, decision, and on-chain signature — verifiable on Solana Explorer.</p>
-        <p className="text-xs mt-2 max-w-2xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Audit <span style={{ color: M }}>Log</span></h1>
+        <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>Every intent, decision, and on-chain signature — verifiable on Solana Explorer.</p>
+        <p className="text-xs mt-2 max-w-2xl" style={{ ...sans, color: color.textDim, lineHeight: 1.7 }}>
           Two writers fill this table. The runtime records what it submitted; the indexer decodes the program's own logs and writes its own row — for these transactions and anyone else's. Rows marked <span style={{ ...mono, color: C }}>chain log</span> came from the second, so a decision carrying <ShieldCheck size={11} style={{ color: M, display: "inline", verticalAlign: "-1px" }} /> is one where both accounts agree. Nothing here rests on this server being believed.
         </p>
       </div>
@@ -174,21 +172,21 @@ export function AuditPage() {
         {[
           { label: "Total Events", value: totalEvents.toLocaleString(), color: M, icon: Activity, hint: "Every row this system has written." },
           { label: "On-chain Sigs", value: onchainEvents.toLocaleString(), color: C, icon: ExternalLink, hint: "Rows carrying a real Devnet signature you can open." },
-          { label: "Corroborated", value: corroborated.toLocaleString(), color: corroborated > 0 ? M : "#64748b", icon: ShieldCheck, hint: "Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust." },
-          { label: "TX Rejected", value: rejects.toLocaleString(), color: rejects > 0 ? R : "#64748b", icon: XCircle, hint: "Transfers the program refused. Nothing moved on any of them." },
+          { label: "Corroborated", value: corroborated.toLocaleString(), color: corroborated > 0 ? M : color.textMuted, icon: ShieldCheck, hint: "Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust." },
+          { label: "TX Rejected", value: rejects.toLocaleString(), color: rejects > 0 ? R : color.textMuted, icon: XCircle, hint: "Transfers the program refused. Nothing moved on any of them." },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
             <div key={`audit-stat-${i}`} title={s.hint} className="rounded-2xl p-5 relative overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
-              style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
+              style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
               <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${s.color}50, transparent)` }} />
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 rounded-lg" style={{ background: `${s.color}14`, border: `1px solid ${s.color}20` }}>
                   <Icon size={11} style={{ color: s.color }} />
                 </div>
-                <span className="text-[11px]" style={{ ...sans, color: "#94a3b8" }}>{s.label}</span>
+                <span className="text-[11px]" style={{ ...sans, color: color.textSecondary }}>{s.label}</span>
               </div>
-              <div className="text-xl font-bold" style={{ ...mono, color: "#e2e8f0", textShadow: `0 0 24px ${s.color}30` }}>{s.value}</div>
+              <div className="text-xl font-bold" style={{ ...mono, color: color.text }}>{s.value}</div>
             </div>
           );
         })}
@@ -198,40 +196,40 @@ export function AuditPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search */}
         <div className="relative flex-1">
-          <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#334155" }} />
+          <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: color.textDim }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, signatures, reason codes..."
             className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
-            style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0", caretColor: M }}
+            style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text, caretColor: M }}
             onFocus={e => { e.target.style.borderColor = `${M}35`; e.target.style.boxShadow = `0 0 0 3px ${M}10`; }}
-            onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.06)"; e.target.style.boxShadow = "none"; }} />
+            onBlur={e => { e.target.style.borderColor = color.border; e.target.style.boxShadow = "none"; }} />
         </div>
 
         {/* Grant filter dropdown */}
         <div className="relative">
           <button type="button" onClick={() => setDropdownOpen(v => !v)}
             className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold transition-all shrink-0 min-w-[180px]"
-            style={{ ...sans, background: selectedGrant ? `${C}12` : "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: `1px solid ${selectedGrant ? C + "35" : "rgba(255,255,255,0.06)"}`, color: selectedGrant ? C : "#475569" }}>
+            style={{ ...sans, background: selectedGrant ? `${C}12` : color.surface, border: `1px solid ${selectedGrant ? C + "35" : color.border}`, color: selectedGrant ? C : color.textDim }}>
             <Filter size={13} />
             {selectedGrant ? `Grant …${selectedGrant.slice(-6)}` : "All Grants"}
             <ChevronDown size={12} className="ml-auto" style={{ transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </button>
           {dropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-50"
-              style={{ ...glass(), boxShadow: "0 16px 48px rgba(0,0,0,0.6)" }}>
+              style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
               <button type="button" onClick={() => { setSelectedGrant(""); setDropdownOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs hover:bg-white/[0.04] transition-colors"
-                style={{ ...sans, color: !selectedGrant ? M : "#94a3b8", background: !selectedGrant ? `${M}08` : "transparent" }}>
+                style={{ ...sans, color: !selectedGrant ? M : color.textSecondary, background: !selectedGrant ? `${M}08` : "transparent" }}>
                 All Grants
               </button>
               {grants.map(g => (
                 <button type="button" key={g.id} onClick={() => { setSelectedGrant(g.id); setDropdownOpen(false); }}
                   className="w-full text-left px-4 py-2.5 text-xs hover:bg-white/[0.04] transition-colors border-t"
-                  style={{ ...sans, color: selectedGrant === g.id ? M : "#94a3b8", background: selectedGrant === g.id ? `${M}08` : "transparent", borderColor: "rgba(255,255,255,0.04)" }}>
+                  style={{ ...sans, color: selectedGrant === g.id ? M : color.textSecondary, background: selectedGrant === g.id ? `${M}08` : "transparent", borderColor: color.border }}>
                   <div className="flex items-center justify-between">
-                    <span>{g.agentVersion.name} <span style={{ color: "#475569" }}>{g.agentVersion.version}</span></span>
+                    <span>{g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span></span>
                     <span style={{ ...mono, color: g.revoked ? R : C, fontSize: 10 }}>{g.revoked ? "REVOKED" : "ACTIVE"}</span>
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ ...mono, color: "#334155" }}>grant {short(g.grantPda)} · {short(g.id)}</div>
+                  <div className="text-[10px] mt-0.5" style={{ ...mono, color: color.textDim }}>grant {short(g.grantPda)} · {short(g.id)}</div>
                 </button>
               ))}
             </div>
@@ -241,15 +239,15 @@ export function AuditPage() {
         {/* Refresh button */}
         <button type="button" onClick={() => { setLoading(true); void load(); }}
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold shrink-0 transition-all hover:bg-white/[0.04]"
-          style={{ ...sans, background: "rgba(11,17,16,0.6)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.06)", color: "#475569" }}>
+          style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.textDim }}>
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />Refresh
         </button>
       </div>
 
       {/* Status bar */}
       <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ ...sans, color: "#334155" }}>
-          Showing <span style={{ color: "#e2e8f0" }}>{filtered.length}</span> events
+        <span className="text-xs" style={{ ...sans, color: color.textDim }}>
+          Showing <span style={{ color: color.text }}>{filtered.length}</span> events
           {search && <span> matching &quot;{search}&quot;</span>}
           {selectedGrant && <span> · grant {short(selectedGrant)}</span>}
         </span>
@@ -264,30 +262,30 @@ export function AuditPage() {
         <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${R}09`, border: `1px solid ${R}20` }}>
           <div className="p-2 rounded-xl" style={{ background: `${R}14`, border: `1px solid ${R}25` }}><AlertTriangle size={14} style={{ color: R }} /></div>
           <div className="flex-1">
-            <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Backend Unreachable</div>
-            <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#64748b" }}>{error}. Start the backend with <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
+            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Backend Unreachable</div>
+            <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{error}. Start the backend with <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
           </div>
         </div>
       )}
 
       {/* Audit table */}
-      <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+      <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
         {/* Table header */}
         <div className="grid items-center px-5 py-3 border-b"
-          style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: "rgba(255,255,255,0.05)", background: "rgba(1,3,3,0.5)" }}>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Time</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Event</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Details</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Source</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: "#334155" }}>Signature</span>
+          style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: color.border, background: color.surfaceSubtle }}>
+          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Time</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Event</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Details</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Source</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: color.textDim }}>Signature</span>
         </div>
 
         {/* Empty state */}
         {filtered.length === 0 && !loading && !error && (
           <div className="px-5 py-12 text-center">
-            <ScrollText size={24} style={{ color: "#1e293b", margin: "0 auto 12px" }} />
-            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: "#475569" }}>No audit events yet</div>
-            <div className="text-xs" style={{ ...sans, color: "#334155" }}>Create a grant and start an agent to see events appear here in real time.</div>
+            <ScrollText size={24} style={{ color: color.border, margin: "0 auto 12px" }} />
+            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.textDim }}>No audit events yet</div>
+            <div className="text-xs" style={{ ...sans, color: color.textDim }}>Create a grant and start an agent to see events appear here in real time.</div>
           </div>
         )}
 
@@ -295,7 +293,7 @@ export function AuditPage() {
         {loading && filtered.length === 0 && (
           <div className="px-5 py-8 space-y-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={`skel-${i}`} className="h-5 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.03)", width: `${70 + Math.random() * 30}%` }} />
+              <div key={`skel-${i}`} className="h-5 rounded-lg animate-pulse" style={{ background: color.surfaceSubtle, width: `${70 + Math.random() * 30}%` }} />
             ))}
           </div>
         )}
@@ -316,7 +314,7 @@ export function AuditPage() {
               className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors group"
               style={{
                 gridTemplateColumns: "90px 130px 1fr 120px 90px",
-                borderColor: "rgba(255,255,255,0.03)",
+                borderColor: color.border,
                 background: isReject ? "rgba(239,68,68,0.03)" : isConfirm ? "rgba(0,255,196,0.02)" : "transparent",
                 animation: idx === filtered.length - 1 ? "fadeIn 0.3s ease-out" : undefined,
               }}>
@@ -334,7 +332,7 @@ export function AuditPage() {
               </div>
 
               {/* Description */}
-              <span className="text-[11px] truncate pr-3" style={{ ...sans, color: "#94a3b8" }} title={desc}>{desc}</span>
+              <span className="text-[11px] truncate pr-3" style={{ ...sans, color: color.textSecondary }} title={desc}>{desc}</span>
 
               {/* Source — who wrote this row, and whether the other writer agrees */}
               <div className="flex items-center gap-1.5">
@@ -345,9 +343,9 @@ export function AuditPage() {
                     : `Recorded by the ${row.actorType === "owner" ? "owner's action" : row.actorType} as it happened.`}
                   style={{
                     ...mono,
-                    background: fromIndexer ? `${C}12` : "rgba(255,255,255,0.03)",
-                    color: fromIndexer ? C : "#475569",
-                    border: `1px solid ${fromIndexer ? `${C}25` : "rgba(255,255,255,0.05)"}`,
+                    background: fromIndexer ? `${C}12` : color.border,
+                    color: fromIndexer ? C : color.textDim,
+                    border: `1px solid ${fromIndexer ? `${C}25` : color.border}`,
                   }}>
                   {fromIndexer ? "chain log" : row.actorType}
                 </span>
@@ -370,7 +368,7 @@ export function AuditPage() {
                     <ExternalLink size={9} />
                   </a>
                 ) : (
-                  <span className="text-[10px]" style={{ ...mono, color: "#1e293b" }}>—</span>
+                  <span className="text-[10px]" style={{ ...mono, color: color.border }}>—</span>
                 )}
               </div>
             </div>
@@ -381,7 +379,7 @@ export function AuditPage() {
       {/* Footer note */}
       <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
         <ScrollText size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-        <p className="text-[11px]" style={{ ...sans, color: "#94a3b8", lineHeight: 1.6 }}>
+        <p className="text-[11px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>
           This audit trail is append-only. Every event with a chain signature can be independently verified on{" "}
           <a href="https://explorer.solana.com/?cluster=devnet" target="_blank" rel="noreferrer" style={{ color: C }}>Solana Explorer (Devnet)</a>.
           The indexer reads program logs directly — dashboard numbers come from the chain, not the server.

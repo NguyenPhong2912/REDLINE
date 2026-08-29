@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Key, ExternalLink, Activity, ShieldCheck, ShieldOff } from "lucide-react";
 import { api, subscribeFeed, fmtUsdc, short, type Grant } from "../lib/api";
 import { explorerTransactionUrl } from "../solana/client";
+import { color, mono, sans } from "../theme";
 
-const M = "#00ffc4", C = "#06b6d4", A = "#e2b714", R = "#ef4444";
-const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-const sans: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
+const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 
 // Live summary of all grants from the REDLINE API — shows real on-chain
 // data so the Dashboard isn't purely mock. Refreshes via SSE.
@@ -35,13 +34,13 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
   if (error && grants.length === 0) {
     return (
       <div className="rounded-2xl p-4 flex items-center gap-3"
-        style={{ background: "rgba(11,17,16,0.6)", border: "1px solid rgba(255,255,255,0.05)" }}>
+        style={{ background: color.surface, border: `1px solid ${color.border}` }}>
         <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}>
           <Activity size={13} style={{ color: A }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Live Grants</div>
-          <div className="text-[11px] mt-0.5" style={{ ...sans, color: "#475569" }}>Connect the backend to see on-chain grants here.</div>
+          <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Live Grants</div>
+          <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textDim }}>Connect the backend to see on-chain grants here.</div>
         </div>
       </div>
     );
@@ -51,16 +50,16 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
 
   return (
     <div className="rounded-2xl overflow-hidden relative"
-      style={{ background: "rgba(11,17,16,0.6)", border: `1px solid ${M}18`, boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+      style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
       <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}50, transparent)` }} />
 
       {/* Header */}
-      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}>
             <Key size={12} style={{ color: M }} />
           </div>
-          <span className="text-sm font-semibold" style={{ ...sans, color: "#e2e8f0" }}>Live Grants</span>
+          <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Live Grants</span>
           <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>ON-CHAIN</span>
         </div>
         <div className="flex items-center gap-2">
@@ -78,11 +77,11 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
       {/* Overall progress */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px]" style={{ ...sans, color: "#94a3b8" }}>Total spend across all grants</span>
+          <span className="text-[11px]" style={{ ...sans, color: color.textSecondary }}>Total spend across all grants</span>
           <span className="text-[11px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(totalSpent)} / {fmtUsdc(totalCap)} USDC</span>
         </div>
-        <div className="relative rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height: 4 }}>
-          <div className="absolute left-0 top-0 h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${A}60, ${A})`, boxShadow: `0 0 8px ${A}40` }} />
+        <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 4 }}>
+          <div className="absolute left-0 top-0 h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: A }} />
         </div>
       </div>
 
@@ -93,19 +92,19 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
         const spent = Number(g.spentUnits);
         const rowPct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
         return (
-          <div key={g.id} className="px-5 py-3 border-t flex items-center gap-3 hover:bg-white/[0.018] transition-colors" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <div key={g.id} className="px-5 py-3 border-t flex items-center gap-3 hover:bg-white/[0.018] transition-colors" style={{ borderColor: color.border }}>
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}>
               {g.revoked ? <ShieldOff size={11} style={{ color: accent }} /> : <ShieldCheck size={11} style={{ color: accent }} />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold truncate" style={{ ...sans, color: "#e2e8f0" }}>{g.agentVersion.name}</div>
+              <div className="text-[11px] font-semibold truncate" style={{ ...sans, color: color.text }}>{g.agentVersion.name}</div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px]" style={{ ...mono, color: "#475569" }}>{fmtUsdc(spent)}/{fmtUsdc(cap)} USDC</span>
-                <span className="text-[10px]" style={{ ...mono, color: "#334155" }}>tx {g.transactionCount}/{g.policyVersion.maxTransactions}</span>
+                <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>{fmtUsdc(spent)}/{fmtUsdc(cap)} USDC</span>
+                <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>tx {g.transactionCount}/{g.policyVersion.maxTransactions}</span>
               </div>
             </div>
             <div className="w-16">
-              <div className="relative rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height: 2 }}>
+              <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 2 }}>
                 <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${rowPct}%`, background: accent }} />
               </div>
             </div>
@@ -122,7 +121,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
       {onNavigate && (
         <button type="button" onClick={onNavigate}
           className="w-full px-5 py-3 text-center text-[11px] font-semibold border-t transition-all hover:bg-white/[0.03]"
-          style={{ ...sans, color: C, borderColor: "rgba(255,255,255,0.04)" }}>
+          style={{ ...sans, color: C, borderColor: color.border }}>
           Go to Guardrails →
         </button>
       )}

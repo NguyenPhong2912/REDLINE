@@ -13,8 +13,9 @@ import { ChevronDown, KeyRound, LoaderCircle, PlugZap, Wallet } from "lucide-rea
 import type { AppClient } from "../solana/client";
 import { loadSession } from "../lib/api";
 import { sessionFor, signIn, signOut } from "../lib/signin";
+import { color } from "../theme";
 
-const ACCENT = "#00ffc4";
+const ACCENT = color.primary;
 
 function WalletBalance({ owner }: { owner: string }) {
   const client = useClient<AppClient>();
@@ -23,7 +24,7 @@ function WalletBalance({ owner }: { owner: string }) {
   const sol = data ? Number(data.value) / 1_000_000_000 : null;
 
   return (
-    <span className="hidden xl:inline text-[10px]" style={{ color: "#64748b" }}>
+    <span className="hidden xl:inline text-[10px]" style={{ color: color.textMuted }}>
       {status === "fetching" ? "syncing…" : sol === null ? "balance unavailable" : `${sol.toFixed(3)} SOL`}
     </span>
   );
@@ -68,14 +69,14 @@ export function SolanaWalletControl() {
             }}
             disabled={signingIn}
             className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-60"
-            style={{ background: "#38bdf80e", border: "1px solid #38bdf835", color: "#38bdf8" }}
+            style={{ background: "#38bdf80e", border: "1px solid #38bdf835", color: color.info }}
             title="Prove you hold this wallet. Signs a message only — no transfer, no funds moved."
           >
             {signingIn ? <LoaderCircle size={12} className="animate-spin" /> : <KeyRound size={12} />}
             {signingIn ? "Check your wallet…" : "Sign in"}
           </button>
         )}
-        {signinError && <span role="alert" className="hidden lg:inline text-[10px]" style={{ color: "#f87171" }}>{signinError}</span>}
+        {signinError && <span role="alert" className="hidden lg:inline text-[10px]" style={{ color: color.danger }}>{signinError}</span>}
         <button
           type="button"
           onClick={() => { signOut(); setSessionWallet(null); disconnect.dispatch(); }}
@@ -85,8 +86,8 @@ export function SolanaWalletControl() {
         >
           <Wallet size={13} />
           <span>{short}</span>
-          {signedIn && <KeyRound size={11} style={{ color: "#38bdf8" }} />}
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
+          {signedIn && <KeyRound size={11} style={{ color: color.info }} />}
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
         </button>
       </div>
     );
@@ -101,7 +102,7 @@ export function SolanaWalletControl() {
         onClick={() => setOpen(value => !value)}
         disabled={pending}
         className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
-        style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)", color: "#94a3b8" }}
+        style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}`, color: color.textSecondary }}
       >
         {pending ? <LoaderCircle size={13} className="animate-spin" /> : <PlugZap size={13} />}
         <span>{pending ? "Connecting" : "Connect Solana"}</span>
@@ -111,13 +112,13 @@ export function SolanaWalletControl() {
       {open && !pending && (
         <div
           className="absolute right-0 top-[calc(100%+8px)] w-64 rounded-xl p-2 z-50 shadow-2xl"
-          style={{ background: "#09100f", border: "1px solid rgba(255,255,255,0.1)" }}
+          style={{ background: color.surface, border: `1px solid ${color.border}` }}
         >
-          <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.14em]" style={{ color: "#64748b" }}>
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.14em]" style={{ color: color.textMuted }}>
             Solana Wallet Standard · Devnet
           </div>
           {wallets.length === 0 ? (
-            <div className="px-2 py-3 text-xs" style={{ color: "#94a3b8" }}>
+            <div className="px-2 py-3 text-xs" style={{ color: color.textSecondary }}>
               No compatible wallet detected. Install Phantom, Solflare, or another Wallet Standard wallet.
             </div>
           ) : (
@@ -130,7 +131,7 @@ export function SolanaWalletControl() {
                   setOpen(false);
                 }}
                 className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-colors hover:bg-white/[0.05]"
-                style={{ color: "#e2e8f0" }}
+                style={{ color: color.text }}
               >
                 <span>{wallet.name}</span>
                 <span style={{ color: ACCENT }}>Connect</span>
@@ -138,7 +139,7 @@ export function SolanaWalletControl() {
             ))
           )}
           {Boolean(connect.error) && (
-            <div className="px-2 py-2 text-[10px]" role="alert" style={{ color: "#f87171" }}>
+            <div className="px-2 py-2 text-[10px]" role="alert" style={{ color: color.danger }}>
               Wallet connection was rejected or unavailable.
             </div>
           )}
