@@ -5,6 +5,7 @@ import { useClient } from "@solana/react";
 import { motion, useReducedMotion } from "motion/react";
 import { DashboardLiveGrants } from "./DashboardLiveGrants";
 import { LiveFeed } from "./LiveFeed";
+import { ProtocolConsole } from "./ProtocolConsole";
 import { ProtocolSpine } from "./ProtocolSpine";
 import { api, type Analytics } from "../lib/api";
 import type { AppClient } from "../solana/client";
@@ -160,6 +161,29 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           <h2>Signed boundaries currently in force.</h2>
         </div>
         <DashboardLiveGrants onNavigate={() => setNav?.(6)} />
+      </section>
+
+      {/* Last, because it answers the question the chapters above raise: fine,
+          then ask it yourself. */}
+      <section className="protocol-chapter protocol-console-chapter">
+        <div className="protocol-chapter-heading">
+          <span>Chapter 04 / Interrogate</span>
+          <h2>Ask it what it did, and why.</h2>
+        </div>
+        <div className="protocol-console-layout">
+          <div className="protocol-console-copy">
+            <p>
+              Every figure this protocol holds is queryable. Type <code>gates</code> to see which
+              check has been stopping work, <code>explain SPEND_CAP_EXCEEDED</code> to read what a
+              refusal meant, or <code>ask</code> anything in plain language.
+            </p>
+            <p>
+              The assistant is handed the same recorded state you can read yourself, and nothing
+              else. When it does not know, it says so rather than estimating.
+            </p>
+          </div>
+          <ProtocolConsole owner={owner || undefined} />
+        </div>
       </section>
 
       <footer className="protocol-footer">

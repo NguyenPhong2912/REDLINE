@@ -20,7 +20,7 @@ import { audit } from "./db/audit.js";
 
 const NONCE_TTL_MS = 5 * 60_000;
 const SESSION_TTL_MS = 12 * 60 * 60_000;
-const PUBLIC_WRITES = new Set(["/risk-assess", "/auth/nonce", "/auth/verify"]);
+const PUBLIC_WRITES = new Set(["/risk-assess", "/auth/nonce", "/auth/verify", "/assistant"]);
 
 const addressEncoder = getAddressEncoder();
 

@@ -39,6 +39,12 @@ export interface Hire {
   id: string; listingId: string; ownerWallet: string; paymentSignature: string | null; startsAt: string; endsAt: string; status: string;
   listing: Listing;
 }
+export interface AssistantReply {
+  answer: string;
+  suggestions: { title: string; detail: string }[];
+  source: "model" | "rules";
+  model: string;
+}
 export interface Analytics {
   activeGrants: number; totalGrants: number; totalVolumeUsdc: number; totalTransactions: number; totalRejections: number;
   successRatePct: number | null; avgDecisionLatencyMs: number | null;
@@ -126,6 +132,8 @@ export const api = {
   hire: (b: { listingId: string; ownerWallet: string; durationHours: number; paymentSignature: string }) =>
     req<Hire>("/hires", { method: "POST", body: JSON.stringify(b) }),
   analytics: (owner?: string) => req<Analytics>(`/analytics${owner ? `?owner=${owner}` : ""}`),
+  ask: (question: string, owner?: string) =>
+    req<AssistantReply>("/assistant", { method: "POST", body: JSON.stringify({ question, owner }) }),
   protocolOverview: (owner?: string) => req<ProtocolOverview>(`/protocol/overview${owner ? `?owner=${encodeURIComponent(owner)}` : ""}`),
 };
 

@@ -82,6 +82,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/protocol/overview?owner=` | ordered seven-gate catalog, network state and decision/rejection rollup for the live policy visualization |
 | POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |
+| POST | `/assistant` | answers a question about recorded state; the brief is assembled server-side and is the only fact source the model gets |
 
 Amounts are strings of base units (`"100000000"` = 100 USDC).
 
@@ -101,7 +102,7 @@ A subscription only delivers what happens while it is open, so on every connect 
 ## Tests
 
 ```bash
-npm test                 # 66 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in, protocol gates
+npm test                 # 71 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in, protocol gates, assistant grounding
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```
