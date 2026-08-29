@@ -76,8 +76,10 @@ Hai thao tác có thể làm ở đây:
 
 Vào mục **Guardrails** ở sidebar. Wizard gồm 4 bước:
 
-### Bước 1 — Token Scope
-Chọn (toggle) các token mà agent được phép nhắc tới: `SOL, USDC, JUP, JTO, BONK, PYTH`.
+### Bước 1 — Scope
+Chọn **agent version** mà grant này uỷ quyền: grant ghi lại `agentHash` của nó, nên đây chính là bản build mà chính sách gắn vào. Nếu chưa publish agent nào, ký grant sẽ tự publish một cái mặc định — muốn đặt tên riêng thì publish ở trang Agents trước.
+
+Sau đó chọn (toggle) các token mà agent được phép nhắc tới: `SOL, USDC, JUP, JTO, BONK, PYTH`.
 
 ### Bước 2 — Spend Limits
 Kéo hai thanh trượt:

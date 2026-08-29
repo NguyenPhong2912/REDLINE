@@ -18,7 +18,7 @@ const USDC_MINT = import.meta.env.VITE_DEMO_USDC_MINT ?? "";
 //   2. create_grant with the reviewed policy's hash and limits
 //   3. tell the API the grant exists (grantPda + signature) so the runtime can use it
 // The backend never sees the owner's key.
-export function GrantSignButton({ policy, assessment, destinations, destinationsInvalid, onCreated }: { policy: AgentPolicyInput; assessment: RiskAssessment | null; destinations: string[]; destinationsInvalid: boolean; onCreated?: (grantId: string) => void }) {
+export function GrantSignButton({ policy, assessment, destinations, destinationsInvalid, agentVersionId, onCreated }: { policy: AgentPolicyInput; assessment: RiskAssessment | null; destinations: string[]; destinationsInvalid: boolean; agentVersionId: string | null; onCreated?: (grantId: string) => void }) {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const [health, setHealth] = useState<Health | null>(null);
@@ -84,9 +84,12 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
 
       // 3. register
       setPhase("register");
-      const agents = await api.agents();
-      const agent = agents[0] ?? (await api.publishAgent({ name: policy.agentName, version: "v0.1.0", strategy: policy.strategy, modelRef: "openai:gpt-5.4-mini", codeRef: "git:redline-runtime@main" })).agent;
-      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agent.id, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined });
+      // Bind the grant to the version the owner chose. Falling back to
+      // whichever agent happened to be published first would record a policy
+      // against a build nobody authorised.
+      const agentVersion = agentVersionId
+        ?? (await api.publishAgent({ name: policy.agentName, version: "v0.1.0", strategy: policy.strategy, modelRef: "openai:gpt-5.4-mini", codeRef: "git:redline-runtime@main" })).agent.id;
+      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agentVersion, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined });
       setGrantId(created.grant.id);
       setPhase("done");
       onCreated?.(created.grant.id);
