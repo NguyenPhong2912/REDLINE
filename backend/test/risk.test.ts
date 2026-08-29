@@ -124,6 +124,32 @@ describe("deterministic floor", () => {
     expect(merged.source).toBe("openai+deterministic-floor");
   });
 
+  // Observed live against a real model on identical input: 8/LOW/ALLOW, then
+  // 70/LOW/ALLOW, then 60/MEDIUM/REVIEW. An LLM is entitled to be noisy — the
+  // floor exists because it is. What the merge must not do is publish the
+  // noise as a contradiction: a score in the BLOCK band beside a green verdict
+  // reads as safe to the one thing that gates signing.
+  it("never returns a score that disagrees with its own verdict", () => {
+    const calm = {
+      score: 8, level: "LOW" as const, decision: "ALLOW" as const,
+      summary: "Bounded.", findings: ["Narrow scope."], recommendations: ["Keep alerts on."],
+      source: "deterministic-fallback", model: "redline-rules-v1",
+    };
+    const incoherent = [
+      { score: 85, level: "LOW" as const, decision: "ALLOW" as const },
+      { score: 70, level: "LOW" as const, decision: "ALLOW" as const },
+      { score: 60, level: "MEDIUM" as const, decision: "REVIEW" as const },
+      { score: 95, level: "MEDIUM" as const, decision: "REVIEW" as const },
+    ];
+    for (const ai of incoherent) {
+      const m = mergeAssessments(calm, { ...ai, summary: "s", findings: ["f"], recommendations: ["r"], source: "openai", model: "test" }, "test");
+      const expectedDecision = m.score >= 80 ? "BLOCK" : m.score >= 60 ? "REVIEW" : "ALLOW";
+      const expectedLevel = m.score >= 80 ? "CRITICAL" : m.score >= 60 ? "HIGH" : m.score >= 35 ? "MEDIUM" : "LOW";
+      expect(m.decision, `score ${m.score}`).toBe(expectedDecision);
+      expect(m.level, `score ${m.score}`).toBe(expectedLevel);
+    }
+  });
+
   it("lets the model raise severity above the baseline", () => {
     const baseline = {
       score: 20,

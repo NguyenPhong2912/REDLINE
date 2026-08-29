@@ -48,11 +48,24 @@ export function deterministic(input: RiskInput): Assessment {
 const decisionRank: Record<Decision, number> = { ALLOW: 0, REVIEW: 1, BLOCK: 2 };
 const levelRank: Record<Level, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
 
+// The same bands deterministic() uses, so a merged verdict cannot disagree
+// with the score printed beside it.
+const decisionForScore = (score: number): Decision => (score >= 80 ? "BLOCK" : score >= 60 ? "REVIEW" : "ALLOW");
+const levelForScore = (score: number): Level => (score >= 80 ? "CRITICAL" : score >= 60 ? "HIGH" : score >= 35 ? "MEDIUM" : "LOW");
+const scoreFloorFor = (decision: Decision): number => (decision === "BLOCK" ? 80 : decision === "REVIEW" ? 60 : 0);
+const harsherDecision = (a: Decision, b: Decision): Decision => (decisionRank[a] >= decisionRank[b] ? a : b);
+const harsherLevel = (a: Level, b: Level): Level => (levelRank[a] >= levelRank[b] ? a : b);
+
 export function mergeAssessments(baseline: Assessment, ai: Assessment, model: string): Assessment {
-  const decision = decisionRank[ai.decision] >= decisionRank[baseline.decision] ? ai.decision : baseline.decision;
-  const level = levelRank[ai.level] >= levelRank[baseline.level] ? ai.level : baseline.level;
-  const floor = decision === "BLOCK" ? 80 : decision === "REVIEW" ? 60 : 0;
-  const score = Math.max(baseline.score, ai.score, floor);
+  // Severity only ever goes up, on every axis — and the axes have to agree.
+  // Raising the score to match a decision was never enough on its own: a model
+  // that answered "85, but ALLOW" produced a critical number beside a green
+  // verdict, and signing stayed enabled because only the verdict is read.
+  const raised = Math.max(baseline.score, ai.score);
+  const decision = harsherDecision(harsherDecision(baseline.decision, ai.decision), decisionForScore(raised));
+  const score = Math.max(raised, scoreFloorFor(decision));
+  const level = harsherLevel(harsherLevel(baseline.level, ai.level), levelForScore(score));
+
   const stricter = decision !== ai.decision || level !== ai.level || score !== ai.score;
   return { score, level, decision, summary: stricter ? baseline.summary : ai.summary, findings: [...new Set([...baseline.findings, ...ai.findings])].slice(0, 5), recommendations: [...new Set([...baseline.recommendations, ...ai.recommendations])].slice(0, 5), source: "openai+deterministic-floor", model };
 }
