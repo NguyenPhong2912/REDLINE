@@ -39,7 +39,23 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   }, []);
 
   useEffect(() => { void load(); api.health().then(h => setChain(h.chain)).catch(() => setChain("")); }, [load, refreshKey]);
-  useEffect(() => subscribeFeed("*", () => { void load(); }), [load]);
+  // The feed refreshes the grant rows; the open history has to follow it, or a
+  // panel left open while the agent runs keeps showing the proposals that
+  // existed when it was opened and silently omits every one since.
+  const loadIntents = useCallback(async (grantId: string) => {
+    try {
+      const rows = await api.intents(grantId);
+      setIntents(prev => ({ ...prev, [grantId]: rows }));
+    } catch {
+      // An empty list is the honest thing to show; the panel says so in words.
+      setIntents(prev => ({ ...prev, [grantId]: prev[grantId] ?? [] }));
+    }
+  }, []);
+
+  useEffect(() => subscribeFeed("*", () => {
+    void load();
+    if (openGrant) void loadIntents(openGrant);
+  }), [load, loadIntents, openGrant]);
 
   // Starting a run or forcing an intent makes the executor spend from this
   // grant's vault, so the API asks for a session proving the caller owns it.
@@ -78,14 +94,9 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   async function toggleIntents(grantId: string) {
     if (openGrant === grantId) { setOpenGrant(""); return; }
     setOpenGrant(grantId);
-    if (intents[grantId]) return;
-    try {
-      const rows = await api.intents(grantId);
-      setIntents(prev => ({ ...prev, [grantId]: rows }));
-    } catch {
-      // An empty list is the honest thing to show; the panel says so in words.
-      setIntents(prev => ({ ...prev, [grantId]: [] }));
-    }
+    // Always refetch on open: a cached list from an earlier session of this
+    // page would be missing everything the agent did since.
+    await loadIntents(grantId);
   }
 
   return (

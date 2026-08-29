@@ -36,7 +36,9 @@ export function LiveFeed({ grantId = "*", limit = 12 }: { grantId?: string; limi
     api.audit(grantId === "*" ? undefined : grantId)
       .then(a => { if (!cancelled) { setRows(a.slice(-limit).map(r => ({ id: r.id, at: r.createdAt, eventType: r.eventType, actorType: r.actorType, payload: r.payload, chainSignature: r.chainSignature }))); setStatus("live"); } })
       .catch(() => setStatus("offline"));
-    const off = subscribeFeed(grantId, e => setRows(prev => [...prev, e].slice(-limit)));
+    // Same reconnect overlap as the audit table: drop an event already shown
+    // rather than printing it twice.
+    const off = subscribeFeed(grantId, e => setRows(prev => (prev.some(r => r.id === e.id) ? prev : [...prev, e].slice(-limit))));
     return () => { cancelled = true; off(); };
   }, [grantId, limit]);
 

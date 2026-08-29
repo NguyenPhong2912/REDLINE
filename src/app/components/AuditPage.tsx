@@ -107,7 +107,11 @@ export function AuditPage() {
         chainSignature: e.chainSignature ?? null,
         payload: e.payload,
       };
-      setRows(prev => [...prev, newRow]);
+      // Dedupe by id. The initial load and the stream overlap, and the stream
+      // reconnects whenever the host sleeps — on a page whose whole point is
+      // that the record can be trusted, one event shown twice is the worst
+      // possible cosmetic bug.
+      setRows(prev => (prev.some(r => r.id === newRow.id) ? prev : [...prev, newRow]));
     });
     return () => off();
   }, [load, selectedGrant]);
