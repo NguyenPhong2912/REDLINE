@@ -128,7 +128,27 @@ export function AuditPage() {
   const totalEvents = rows.length;
   const onchainEvents = rows.filter(r => r.chainSignature && !r.chainSignature.startsWith("MOCK")).length;
   const rejects = rows.filter(r => r.eventType === "tx.rejected" || r.eventType === "chain.tx_failed").length;
-  const confirms = rows.filter(r => r.eventType === "tx.confirmed").length;
+
+  // Two independent writers land in this table. The runtime records what it
+  // submitted and what came back; the indexer decodes the program's own logs
+  // and writes its own row, for our transactions and anyone else's. When both
+  // exist for one signature the decision is corroborated — the server's account
+  // of it agrees with the chain's, and neither had to be taken on trust.
+  //
+  // The distinction is the event name, not the actor. The indexer prefixes its
+  // events with "chain."; everything else on the same signature is this side's
+  // account of it, whether the executor wrote it after submitting or the API
+  // wrote it when the owner's wallet did.
+  const corroboration = new Map<string, { chain: boolean; server: boolean }>();
+  for (const r of rows) {
+    const sig = r.chainSignature;
+    if (!sig || sig.startsWith("MOCK")) continue;
+    const seen = corroboration.get(sig) ?? { chain: false, server: false };
+    if (r.eventType.startsWith("chain.")) seen.chain = true;
+    else seen.server = true;
+    corroboration.set(sig, seen);
+  }
+  const corroborated = [...corroboration.values()].filter(v => v.chain && v.server).length;
 
   return (
     <div className="space-y-7">
@@ -140,19 +160,22 @@ export function AuditPage() {
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: "#e2e8f0" }}>Audit <span style={{ color: M }}>Log</span></h1>
         <p className="text-sm mt-1" style={{ ...sans, color: "#475569" }}>Every intent, decision, and on-chain signature — verifiable on Solana Explorer.</p>
+        <p className="text-xs mt-2 max-w-2xl" style={{ ...sans, color: "#475569", lineHeight: 1.7 }}>
+          Two writers fill this table. The runtime records what it submitted; the indexer decodes the program's own logs and writes its own row — for these transactions and anyone else's. Rows marked <span style={{ ...mono, color: C }}>chain log</span> came from the second, so a decision carrying <ShieldCheck size={11} style={{ color: M, display: "inline", verticalAlign: "-1px" }} /> is one where both accounts agree. Nothing here rests on this server being believed.
+        </p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Events", value: totalEvents.toLocaleString(), color: M, icon: Activity },
-          { label: "On-chain Sigs", value: onchainEvents.toLocaleString(), color: C, icon: ExternalLink },
-          { label: "TX Confirmed", value: confirms.toLocaleString(), color: M, icon: CheckCircle2 },
-          { label: "TX Rejected", value: rejects.toLocaleString(), color: rejects > 0 ? R : "#64748b", icon: XCircle },
+          { label: "Total Events", value: totalEvents.toLocaleString(), color: M, icon: Activity, hint: "Every row this system has written." },
+          { label: "On-chain Sigs", value: onchainEvents.toLocaleString(), color: C, icon: ExternalLink, hint: "Rows carrying a real Devnet signature you can open." },
+          { label: "Corroborated", value: corroborated.toLocaleString(), color: corroborated > 0 ? M : "#64748b", icon: ShieldCheck, hint: "Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust." },
+          { label: "TX Rejected", value: rejects.toLocaleString(), color: rejects > 0 ? R : "#64748b", icon: XCircle, hint: "Transfers the program refused. Nothing moved on any of them." },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={`audit-stat-${i}`} className="rounded-2xl p-5 relative overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
+            <div key={`audit-stat-${i}`} title={s.hint} className="rounded-2xl p-5 relative overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
               style={{ ...glass(), boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
               <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${s.color}50, transparent)` }} />
               <div className="flex items-center gap-2 mb-2">
@@ -251,7 +274,7 @@ export function AuditPage() {
           <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Time</span>
           <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Event</span>
           <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Details</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Actor</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: "#334155" }}>Source</span>
           <span className="text-[10px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: "#334155" }}>Signature</span>
         </div>
 
@@ -281,6 +304,9 @@ export function AuditPage() {
           const hasSig = row.chainSignature && !row.chainSignature.startsWith("MOCK");
           const isReject = row.eventType === "tx.rejected" || row.eventType === "chain.tx_failed";
           const isConfirm = row.eventType === "tx.confirmed" || row.eventType === "chain.policy_decision";
+          const fromIndexer = row.eventType.startsWith("chain.");
+          const pair = row.chainSignature ? corroboration.get(row.chainSignature) : undefined;
+          const agreed = Boolean(pair?.chain && pair.server);
           return (
             <div key={row.id}
               className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors group"
@@ -306,10 +332,27 @@ export function AuditPage() {
               {/* Description */}
               <span className="text-[11px] truncate pr-3" style={{ ...sans, color: "#94a3b8" }} title={desc}>{desc}</span>
 
-              {/* Actor */}
-              <span className="text-[10px] px-2 py-0.5 rounded-md truncate w-fit" style={{ ...mono, background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid rgba(255,255,255,0.05)" }}>
-                {row.actorType}
-              </span>
+              {/* Source — who wrote this row, and whether the other writer agrees */}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-md truncate w-fit"
+                  title={fromIndexer
+                    ? "Decoded from the program's own logs by the indexer — not from anything this server remembered."
+                    : `Recorded by the ${row.actorType === "owner" ? "owner's action" : row.actorType} as it happened.`}
+                  style={{
+                    ...mono,
+                    background: fromIndexer ? `${C}12` : "rgba(255,255,255,0.03)",
+                    color: fromIndexer ? C : "#475569",
+                    border: `1px solid ${fromIndexer ? `${C}25` : "rgba(255,255,255,0.05)"}`,
+                  }}>
+                  {fromIndexer ? "chain log" : row.actorType}
+                </span>
+                {agreed && (
+                  <span title="The server's record of this transaction and the program's own logs agree. Two independent writers, one signature.">
+                    <ShieldCheck size={11} style={{ color: M }} />
+                  </span>
+                )}
+              </div>
 
               {/* Signature */}
               <div className="text-right">

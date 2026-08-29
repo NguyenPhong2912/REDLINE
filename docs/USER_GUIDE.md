@@ -128,7 +128,7 @@ Ba nút thao tác (ẩn nếu grant đã bị revoke):
 | **Force `<cap>` USDC (over cap)** | Gửi thẳng một intent vượt hạn mức để xem chương trình từ chối on-chain |
 | **Revoke** | Ký `revoke_grant` bằng ví chủ (hoặc revoke qua backend nếu đang ở chế độ mock); sau khi revoke, mọi lệnh thực thi tiếp theo đều bị từ chối với lỗi `Revoked` |
 
-> Đây là nơi **duy nhất** trong toàn dashboard để khởi động agent — các nút "Deploy/Pause/Activate" ở trang Agents chỉ là mock, không có tác dụng.
+> Đây là nơi **duy nhất** trong toàn dashboard để khởi động agent. Trang Agents chỉ để publish agent version và xem số liệu thật của chúng (số grant, tổng đã chi, số lần chuyển).
 
 ## 7. Theo dõi kết quả
 
@@ -138,9 +138,13 @@ Ba nút thao tác (ẩn nếu grant đã bị revoke):
 
 ### Audit
 Vào mục **Audit** để xem đầy đủ lịch sử (không chỉ 12 dòng gần nhất như Live Feed):
-- 4 thẻ thống kê: Total Events, On-chain Sigs, TX Confirmed, TX Rejected.
+- 4 thẻ thống kê: Total Events, On-chain Sigs, **Corroborated**, TX Rejected.
 - Ô tìm kiếm theo sự kiện/chữ ký/mã lỗi, dropdown lọc theo grant, nút **Refresh**.
-- Bảng chi tiết: Thời gian, Sự kiện, Mô tả, Actor, chữ ký (link Explorer nếu là giao dịch thật).
+- Bảng chi tiết: Thời gian, Sự kiện, Mô tả, **Source**, chữ ký (link Explorer nếu là giao dịch thật).
+
+> **Về cột Source và thẻ Corroborated.** Bảng này có *hai* nguồn ghi độc lập: runtime ghi lại thứ nó gửi đi và kết quả nhận về, còn indexer tự giải mã log của chính program rồi ghi bản của riêng nó — cho cả giao dịch của hệ thống lẫn của bất kỳ ai khác. Dòng gắn nhãn `chain log` đến từ nguồn thứ hai.
+>
+> Khi một chữ ký có đủ cả hai bản ghi, dòng đó mang biểu tượng khiên và được đếm vào **Corroborated**: lời khai của server khớp với log của chuỗi. Đây là điểm mấu chốt — bạn không cần tin server, vì có một bản ghi thứ hai đọc thẳng từ chuỗi để đối chiếu.
 - Nếu backend không kết nối được: banner đỏ **"Backend Unreachable"** kèm hướng dẫn khởi động lại backend.
 
 ## 8. Các mã lỗi khi bị từ chối (theo đúng thứ tự kiểm tra on-chain)
