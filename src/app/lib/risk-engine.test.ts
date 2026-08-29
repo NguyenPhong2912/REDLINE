@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessPolicyLocally, policyDigest, validatePolicy, type AgentPolicyInput } from "./risk-engine";
+import { assessPolicyLocally, validatePolicy, type AgentPolicyInput } from "./risk-engine";
 
 const safePolicy: AgentPolicyInput = {
   agentName: "Treasury Scout",
@@ -35,13 +35,5 @@ describe("REDLINE risk engine", () => {
 
   it("rejects malformed policies", () => {
     expect(validatePolicy({ ...safePolicy, tokens: [], spendCapUsdc: -1 })).toHaveLength(2);
-  });
-
-  it("creates the same digest regardless of token selection order", async () => {
-    const first = await policyDigest(safePolicy);
-    const second = await policyDigest({ ...safePolicy, tokens: [...safePolicy.tokens].reverse() });
-
-    expect(first).toMatch(/^[a-f0-9]{64}$/);
-    expect(second).toBe(first);
   });
 });

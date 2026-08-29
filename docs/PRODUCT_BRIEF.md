@@ -2,11 +2,11 @@
 
 ## One sentence
 
-REDLINE lets users design bounded autonomous DeFi workflows with AI-assisted risk review and verifiable owner-approved policy proofs on Solana.
+REDLINE lets an owner bound what an AI agent may do with their capital on Solana, and puts a program in the way of every transfer so the bound holds whether or not the agent cooperates.
 
 ## Problem
 
-Wallet automation has a permission gap. Manual signing does not scale, but unrestricted agent access creates unacceptable custody, operational, and audit risk. Existing dashboards show what agents did; they rarely prove what agents were allowed to do.
+Wallet automation has a permission gap. Manual signing does not scale, but unrestricted agent access creates unacceptable custody, operational, and audit risk. Existing dashboards show what agents did; they rarely prove what agents were allowed to do — and almost none can stop an agent that tries to exceed it.
 
 ## Primary user
 
@@ -19,17 +19,19 @@ Secondary users are active DeFi traders and agent developers.
 1. Define exactly which assets and amount an agent can touch.
 2. Limit how often and how long the agent may act.
 3. Catch unsafe configurations before signing.
-4. Produce evidence that a policy was approved by the wallet owner.
+4. Produce evidence of both halves: what the owner authorised, and what the chain decided about every attempt.
 5. Revoke authority quickly without replacing the treasury wallet.
 
 ## MVP flow
 
 1. Connect a Solana Wallet Standard wallet on Devnet.
-2. Choose an agent strategy and SPL asset allowlist.
-3. Set spend, transaction, cooldown, and expiry bounds.
-4. Run AI-assisted risk review with deterministic fallback.
-5. Block, require review, or allow the configuration.
-6. Publish the policy digest to Solana and open the Explorer receipt.
+2. Pick the published agent version this grant authorises — the grant records its `agentHash`, so the build cannot be swapped afterwards.
+3. Allowlist the SPL assets and the destination addresses the agent may pay.
+4. Set spend, transaction, cooldown, and expiry bounds.
+5. Run AI-assisted risk review over a deterministic floor. `BLOCK` disables signing; `REVIEW` holds it until the owner accepts the flagged risk, and that acceptance is recorded.
+6. Sign one `create_grant` in the wallet. Funds sit in a program-owned vault the backend cannot sign out of.
+7. Start the agent. It proposes transfers; `execute_transfer` checks seven gates before moving anything, so a rejected proposal is a failed transaction with a named error and zero token movement.
+8. Watch the audit trail, sourced from the program's own events, and revoke or withdraw from the wallet at any time.
 
 ## Why AI is needed
 

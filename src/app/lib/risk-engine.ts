@@ -137,17 +137,3 @@ export async function requestRiskAssessment(input: AgentPolicyInput): Promise<Ri
     window.clearTimeout(timeout);
   }
 }
-
-export async function policyDigest(input: AgentPolicyInput): Promise<string> {
-  const canonical = JSON.stringify({
-    agentName: input.agentName.trim(),
-    strategy: input.strategy.trim(),
-    tokens: [...input.tokens].sort(),
-    spendCapUsdc: input.spendCapUsdc,
-    maxTransactions: input.maxTransactions,
-    durationHours: input.durationHours,
-    cooldownMinutes: input.cooldownMinutes,
-  });
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
-  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
-}

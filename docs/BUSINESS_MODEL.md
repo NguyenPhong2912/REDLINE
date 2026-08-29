@@ -2,7 +2,7 @@
 
 ## Wedge
 
-Start with treasury teams that already use DeFi automation but still rely on broad hot-wallet permissions or manual multisig approvals. REDLINE becomes the policy and evidence layer between a treasury and its agents.
+Start with treasury teams that already use DeFi automation but still rely on broad hot-wallet permissions or manual multisig approvals. REDLINE becomes the enforcement and evidence layer between a treasury and its agents — a limit the agent cannot exceed, not a policy it is asked to respect.
 
 ## Revenue
 
