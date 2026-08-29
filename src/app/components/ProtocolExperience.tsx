@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, Fingerprint, Play, Sparkles } from "lucide-react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
@@ -48,6 +48,10 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
     ["Decision latency", stats?.avgDecisionLatencyMs != null ? `${stats.avgDecisionLatencyMs} ms` : "—"],
   ];
 
+  const chaptersRef = useRef<HTMLElement | null>(null);
+  const scrollToChapters = () =>
+    chaptersRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+
   return (
     <article className="protocol-experience">
       <section className="protocol-hero">
@@ -90,9 +94,12 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
             </button>
           </div>
         </motion.div>
-        <div className="protocol-scroll-cue" aria-hidden="true">
+        {/* It looks like an affordance and reads like an instruction, so it has
+            to behave like one. It was a decorative div that did nothing when
+            clicked. */}
+        <button type="button" className="protocol-scroll-cue" onClick={scrollToChapters}>
           Discover the boundary <ArrowDown size={14} />
-        </div>
+        </button>
       </section>
 
       <div className="protocol-facts" aria-label="Protocol facts">
@@ -105,7 +112,7 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
         {!owner && <div className="protocol-facts-note">Connect a wallet to scope these figures to your policies.</div>}
       </div>
 
-      <section className="protocol-chapter">
+      <section className="protocol-chapter" ref={chaptersRef}>
         <div className="protocol-chapter-heading">
           <span>Chapter 01 / Enforcement</span>
           <h2>A transaction is a journey with seven possible exits.</h2>
