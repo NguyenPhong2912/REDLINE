@@ -4,6 +4,7 @@ import {
   useConnect,
   useConnectedWallet,
   useDisconnect,
+  useSignMessage,
   useWallets,
   useWalletStatus,
 } from "@solana/kit-plugin-wallet/react";
@@ -35,6 +36,7 @@ export function SolanaWalletControl() {
   const connected = useConnectedWallet(client);
   const connect = useConnect(client);
   const disconnect = useDisconnect(client);
+  const signMessage = useSignMessage(client);
   const [open, setOpen] = useState(false);
   // Mirrors the stored session so the button re-renders when it changes;
   // localStorage on its own does not notify React.
@@ -56,7 +58,7 @@ export function SolanaWalletControl() {
               setSigninError("");
               setSigningIn(true);
               try {
-                const s = await signIn(client, owner);
+                const s = await signIn(m => signMessage.dispatchAsync(m), owner);
                 setSessionWallet(s.wallet);
               } catch (e) {
                 setSigninError(e instanceof Error ? e.message : "Sign-in was rejected.");

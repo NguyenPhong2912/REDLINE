@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { useConnectedWallet, useSignMessage } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
 import { api, fmtUsdc, short, subscribeFeed, type Grant } from "../lib/api";
@@ -19,6 +19,7 @@ const sans: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
 export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
+  const signMessage = useSignMessage(client);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [busy, setBusy] = useState<string>("");
   const [error, setError] = useState("");
@@ -43,7 +44,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   // Get one on demand rather than sending the user off to find a button.
   async function withSession(owner: string) {
     if (sessionFor(owner)) return;
-    await signIn(client, owner);
+    await signIn(m => signMessage.dispatchAsync(m), owner);
   }
 
   async function run(label: string, fn: () => Promise<unknown>, owner?: string) {
