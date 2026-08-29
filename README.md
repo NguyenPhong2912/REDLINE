@@ -270,6 +270,7 @@ programs/redline_guardrails   🦀 Anchor program (Rust) — the only thing that
 backend/                      🧠 API, policy engine, agent runtime, indexer, tests — see backend/README.md
 src/                          💻 React dashboard (Vite, @solana/kit, Wallet Standard)
 docs/                         📚 product, business, architecture, security, user guide
+risk-vectors.json             🔒 shared contract both risk-floor implementations must match
 render.yaml                   ☁️ Render blueprint — Postgres, API and dashboard in one file
 ```
 
@@ -292,7 +293,7 @@ Point `VITE_API_URL` at the hosted backend, or run one locally (`cd backend && n
 ## 🧪 Quality Checks
 
 <details>
-<summary><strong>💻 Dashboard (18 tests)</strong></summary>
+<summary><strong>💻 Dashboard (29 tests)</strong></summary>
 
 ```bash
 npm run typecheck && npm test && npm run build
@@ -301,7 +302,7 @@ npm run typecheck && npm test && npm run build
 </details>
 
 <details>
-<summary><strong>🧠 Backend (51 tests)</strong></summary>
+<summary><strong>🧠 Backend (62 tests)</strong></summary>
 
 ```bash
 cd backend && npm run typecheck && npm test

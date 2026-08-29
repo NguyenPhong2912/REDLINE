@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { assessPolicyLocally, validatePolicy, type AgentPolicyInput } from "./risk-engine";
 
@@ -36,4 +38,27 @@ describe("REDLINE risk engine", () => {
   it("rejects malformed policies", () => {
     expect(validatePolicy({ ...safePolicy, tokens: [], spendCapUsdc: -1 })).toHaveLength(2);
   });
+});
+
+// The other half of the contract in backend/test/risk-contract.test.ts. Both
+// suites run the same vectors: this fallback is what decides whether the sign
+// button unlocks when the API cannot be reached, so a verdict it produces that
+// the server would not have is a real divergence, not a cosmetic one.
+describe("deterministic risk floor — shared contract", () => {
+  const vectorsPath = fileURLToPath(new URL("../../../risk-vectors.json", import.meta.url));
+  const { vectors } = JSON.parse(readFileSync(vectorsPath, "utf8")) as {
+    vectors: { name: string; policy: AgentPolicyInput; score: number; level: string; decision: string }[];
+  };
+
+  it("has vectors to check", () => {
+    expect(vectors.length).toBeGreaterThan(0);
+  });
+
+  for (const v of vectors) {
+    it(`browser fallback: ${v.name}`, () => {
+      const got = assessPolicyLocally(v.policy);
+      expect({ score: got.score, level: got.level, decision: got.decision })
+        .toEqual({ score: v.score, level: v.level, decision: v.decision });
+    });
+  }
 });
