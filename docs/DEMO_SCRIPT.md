@@ -4,6 +4,8 @@ Everything below is live on Devnet. Nothing on screen is a fixture.
 
 **Before you present.** The API sleeps after ~15 minutes idle on Render's free tier and takes about a minute to wake, so open `https://redline-api-ku3s.onrender.com/health` a few minutes early and leave the dashboard loaded. Have a Devnet wallet connected with a little SOL for fees. If the vault is empty, Treasury → **Refill 1,000 (devnet)**.
 
+Sign in before you start, unless you want to demonstrate it live: the wallet reconnects on its own but a session never does, and starting the agent will otherwise prompt for a signature mid-beat.
+
 ## 0:00–0:20 — The problem
 
 Automating a treasury forces a bad choice: approve every transaction by hand, or hand a bot broad wallet authority and hope. And afterwards nobody can prove what the agent was *allowed* to do — only what it did.
@@ -26,7 +28,9 @@ Run the risk assessment. Show the score, the verdict, and the `source` label. Ma
 
 ## 1:40–2:20 — The moment that matters
 
-**Start agent (scripted).** The first transfer confirms on-chain within seconds; point at the counters rising on the PDA. Say what happens next: the agent now waits out its cooldown before proposing again, because the runtime paces itself rather than letting the chain reject it for going too fast.
+**Start agent (scripted).** The wallet asks for a signature first — not a transaction, a sign-in. Worth a sentence, because it is a point in your favour: starting a run makes the executor spend from this vault, so the API will not take it on a shared key that ships inside the page. It wants proof you hold the owner's key. Signing costs nothing and moves nothing.
+
+The first transfer then confirms on-chain within seconds; point at the counters rising on the PDA. Say what happens next: the agent waits out its cooldown before proposing again, because the runtime paces itself rather than letting the chain reject it for going too fast.
 
 Do not wait for that. Hit **Force `<cap>` USDC (over cap)** — an intent deliberately larger than the remaining budget. The feed shows:
 

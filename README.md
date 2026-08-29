@@ -325,7 +325,7 @@ cd backend && npm run program:fetch && npm run test:onchain
 | # | Step |
 |:---:|---|
 | 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx, **1-minute cooldown**). |
-| 2️⃣ | ▶️ **Start agent (scripted)**. The first transfer confirms on-chain within seconds and the counters on the PDA move. The agent then waits out the cooldown before proposing again — it paces itself so it never trips gate 7. |
+| 2️⃣ | ▶️ **Start agent (scripted)**. The wallet asks you to sign in first — starting a run spends from the vault, so the API wants proof you hold the owner's key rather than the shared key that ships in the page. Then the first transfer confirms on-chain within seconds and the counters on the PDA move. The agent waits out the cooldown before proposing again — it paces itself so it never trips gate 7. |
 | 3️⃣ | 🛑 Don't wait for it: hit **Force `<cap>` USDC (over cap)**. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved`, with an Explorer link — token balances before and after are identical. The spend cap is gate 6, checked before the cooldown, so this rejection is the same whatever cooldown you picked. |
 | 4️⃣ | 🔒 **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**. |
 
