@@ -17,6 +17,8 @@ export interface Grant {
   id: string; grantPda: string; agentId: string; executorPubkey: string; createSignature: string | null;
   spentUnits: string; transactionCount: number; nextNonce: number; revoked: boolean; createdAt: string; lastExecutionAt: string | null;
   agentVersion: AgentVersion;
+  // Present when this grant runs under a marketplace rental.
+  hire?: { id: string; endsAt: string; status: string } | null;
   policyVersion: { policyHash: string; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: string; allowedMints: string; allowedDests: string };
   owner: { wallet: string };
   onchain?: OnchainGrant | null;
@@ -95,6 +97,9 @@ export const api = {
     // True when the owner was shown a REVIEW verdict and accepted it. The API
     // recomputes the verdict itself; this only records that the human saw it.
     riskAcknowledged?: boolean;
+    // The rental covering this grant, when the agent belongs to someone else.
+    // The API re-checks it against the listing, the wallet and the end date.
+    hireId?: string;
   }) => req<{ grant: Grant; policyHash: string; chain: string }>("/grants", { method: "POST", body: JSON.stringify(b) }),
   revoke: (id: string, signature?: string) => req<{ ok: boolean; signature: string }>(`/grants/${id}/revoke`, { method: "POST", body: JSON.stringify({ signature }) }),
   intents: (grantId: string) => req<IntentRow[]>(`/grants/${grantId}/intents`),

@@ -66,7 +66,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | POST | `/auth/nonce` · `/auth/verify` | wallet sign-in: issue a challenge, exchange a signature for a session |
 | GET | `/auth/me` | the wallet behind the current session |
 | POST | `/agents` · GET `/agents` | publish / list immutable agent versions (`agent_hash`) |
-| POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy) |
+| POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy). An agent someone else published and priced needs a live `hireId` covering it |
 | GET | `/grants`, `/grants/:id` | grants with live on-chain state |
 | POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana) |
 | POST | `/intents/preview` | dry-run the gates; no write, no fee |
@@ -77,7 +77,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/audit?grant=` | append-only audit trail with signatures |
 | GET | `/vaults/:owner` | vault PDA, ATA and live balance |
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
-| GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written |
+| GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written. A grant for a rented agent records which agreement covers it, and is refused once it lapses |
 | GET | `/analytics?owner=` | volume, allowed/blocked counts and decision latency computed from the audit trail |
 | POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |

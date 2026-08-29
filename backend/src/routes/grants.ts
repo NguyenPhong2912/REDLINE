@@ -23,7 +23,42 @@ const CreateGrant = z.object({
   // browser reports this; the server recomputes the deterministic floor below
   // rather than taking the claim at face value.
   riskAcknowledged: z.boolean().optional(),
+  // The rental this grant runs under, when the agent belongs to someone else.
+  hireId: z.string().min(1).optional(),
 });
+
+/**
+ * Decide which hire, if any, authorises this grant.
+ *
+ * A listing that has been claimed and priced is on offer: its publisher rents
+ * it out, and someone else running it is expected to have paid. Recording
+ * which rental covers a grant is what makes the term mean something — without
+ * it a hire is a receipt for nothing, and "rents it for a fixed term" is a
+ * sentence in the README that no row backs up.
+ *
+ * The publisher running their own agent needs no rental, which is also the
+ * path every self-published demo takes.
+ */
+async function resolveHire(agentVersionId: string, ownerWallet: string, hireId?: string): Promise<string | null> {
+  const listing = await prisma.agentListing.findFirst({ where: { agentVersionId } });
+  const forRent = Boolean(listing?.developerWallet) && (listing?.priceLamports ?? 0n) > 0n;
+  if (!forRent || listing?.developerWallet === ownerWallet) return null;
+
+  if (!hireId) {
+    throw Object.assign(new Error("This agent is offered for rent — rent it from the Marketplace before granting it authority"), { statusCode: 402 });
+  }
+  const hire = await prisma.hireAgreement.findUnique({ where: { id: hireId } });
+  if (!hire || hire.listingId !== listing!.id) {
+    throw Object.assign(new Error("That rental is not for this agent"), { statusCode: 400 });
+  }
+  if (hire.ownerWallet !== ownerWallet) {
+    throw Object.assign(new Error("That rental belongs to another wallet"), { statusCode: 403 });
+  }
+  if (hire.endsAt <= new Date()) {
+    throw Object.assign(new Error("That rental has ended — renew it before granting authority"), { statusCode: 402 });
+  }
+  return hire.id;
+}
 
 export async function grantRoutes(app: FastifyInstance) {
   app.post("/grants", async (req, reply) => {
@@ -53,6 +88,10 @@ export async function grantRoutes(app: FastifyInstance) {
       },
     });
 
+    // Before anything is written or signed: if this agent is someone else's
+    // and offered for rent, a live rental has to cover it.
+    const hireId = await resolveHire(agentVersion.id, body.ownerWallet, body.hireId);
+
     const agentId = body.agentId ?? randomBytes(16).toString("hex");
     let grantPda = body.grantPda;
     let createSignature = body.createSignature;
@@ -65,7 +104,7 @@ export async function grantRoutes(app: FastifyInstance) {
     const grant = await prisma.agentGrant.create({
       data: {
         ownerId: owner.id, vaultId: vault.id, agentVersionId: agentVersion.id, policyVersionId: policy.id,
-        grantPda, agentId, executorPubkey: chain.executorPubkey, createSignature,
+        grantPda, agentId, executorPubkey: chain.executorPubkey, createSignature, hireId,
       },
     });
     // The wallet signs create_grant before this call, so the grant already
@@ -97,13 +136,13 @@ export async function grantRoutes(app: FastifyInstance) {
   });
 
   app.get("/grants", async () => {
-    const grants = await prisma.agentGrant.findMany({ include: { agentVersion: true, policyVersion: true, owner: true }, orderBy: { createdAt: "desc" } });
+    const grants = await prisma.agentGrant.findMany({ include: { agentVersion: true, policyVersion: true, owner: true, hire: true }, orderBy: { createdAt: "desc" } });
     return json(grants);
   });
 
   app.get("/grants/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
-    const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { agentVersion: true, policyVersion: true, owner: true, vault: true, runs: { orderBy: { startedAt: "desc" } } } });
+    const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { agentVersion: true, policyVersion: true, owner: true, vault: true, hire: true, runs: { orderBy: { startedAt: "desc" } } } });
     if (!grant) return reply.code(404).send({ error: "grant not found" });
     // The mirrored row is still worth returning when the chain read fails —
     // an RPC hiccup, or a grantPda written by a different CHAIN adapter, must

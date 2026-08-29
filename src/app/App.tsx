@@ -24,7 +24,7 @@ import {
 import { address } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
-import { api, API_URL, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Listing } from "./lib/api";
+import { api, API_URL, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
 import { PROGRAM_ID } from "./solana/redline";
 import { useRealAgents } from "./lib/agents";
 import type { AppClient } from "./solana/client";
@@ -865,6 +865,13 @@ function SessionsPage() {
   const [dests, setDests] = useState<string[]>([DEMO_OPS_DESTINATION].filter(Boolean));
   const [agentVersions, setAgentVersions] = useState<AgentVersion[]>([]);
   const [agentId, setAgentId] = useState("");
+  // Rentals this wallet holds. An agent someone else publishes and prices is
+  // only grantable while a rental covers it — the API checks, this just lets
+  // the wizard say so before the wallet is asked to sign.
+  const [hires, setHires] = useState<Hire[]>([]);
+  const wizardClient = useClient<AppClient>();
+  const wizardWallet = useConnectedWallet(wizardClient);
+  const wallet = wizardWallet ? String(wizardWallet.account.address) : "";
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [assessing, setAssessing] = useState(false);
   const [assessmentError, setAssessmentError] = useState("");
@@ -875,8 +882,9 @@ function SessionsPage() {
     api.agents()
       .then(list => { if (!live) return; setAgentVersions(list); setAgentId(prev => prev || list[0]?.id || ""); })
       .catch(() => { /* none published yet: the sign step publishes one from this policy */ });
+    if (wallet) api.hires(wallet).then(h => { if (live) setHires(h); }).catch(() => { /* no rentals is not an error */ });
     return () => { live = false; };
-  }, [grantsKey]);
+  }, [grantsKey, wallet]);
   const tList = ["SOL", "USDC", "JUP", "JTO", "BONK", "PYTH"];
   const STEPS = ["Scope", "Spend Limits", "Time Bounds", "Review & Sign"];
 
@@ -890,6 +898,9 @@ function SessionsPage() {
   // Which published agent version this grant authorises. The grant records it,
   // so picking the wrong one would put the wrong agentHash in the audit trail.
   const selectedAgent = agentVersions.find(a => a.id === agentId) ?? null;
+  const activeHire = selectedAgent
+    ? hires.find(h => h.listing?.agentVersionId === selectedAgent.id && new Date(h.endsAt) > new Date()) ?? null
+    : null;
   const policy: AgentPolicyInput = {
     agentName: selectedAgent?.name ?? FALLBACK_AGENT.name,
     strategy: selectedAgent?.strategy ?? FALLBACK_AGENT.strategy,
@@ -987,6 +998,11 @@ function SessionsPage() {
                   </p>
                 )}
                 {selectedAgent && <p className="text-[10px]" style={{ ...sans, color: "#64748b", lineHeight: 1.6 }}>{selectedAgent.strategy}</p>}
+                {activeHire && (
+                  <p className="text-[10px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${C}0b`, border: `1px solid ${C}25`, color: C, lineHeight: 1.6 }}>
+                    Running under your rental of this agent — it covers grants until {new Date(activeHire.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}. The grant records which rental authorised it.
+                  </p>
+                )}
               </div>
               <p className="text-xs" style={{ ...sans, color: "#94a3b8", lineHeight: 1.7 }}>Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.</p>
               <div className="flex flex-wrap gap-2">
@@ -1057,7 +1073,7 @@ function SessionsPage() {
             <div className="space-y-4">
               <p className="text-xs" style={{ ...sans, color: "#94a3b8" }}>Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.</p>
               <div>
-              {[["Agent", selectedAgent ? `${selectedAgent.name} ${selectedAgent.version}` : `${FALLBACK_AGENT.name} (new)`, M], ["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || "none", A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
+              {[["Agent", selectedAgent ? `${selectedAgent.name} ${selectedAgent.version}` : `${FALLBACK_AGENT.name} (new)`, M], ["Rental", activeHire ? `until ${new Date(activeHire.endsAt).toLocaleDateString()}` : "not rented — yours to run", C], ["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || "none", A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                   <span className="text-[11px]" style={{ ...sans, color: "#64748b" }}>{k}</span>
                   <span className="text-[11px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
@@ -1075,7 +1091,7 @@ function SessionsPage() {
                   </div>
                   <p className="text-[11px]" style={{ color: "#94a3b8" }}>{assessment.summary}</p>
                   <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[10px] flex gap-2" style={{ color: "#64748b" }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
-                  <GrantSignButton policy={policy} assessment={assessment} destinations={cleanDests} destinationsInvalid={destsInvalid} agentVersionId={selectedAgent?.id ?? null} onCreated={() => setGrantsKey(k => k + 1)} />
+                  <GrantSignButton policy={policy} assessment={assessment} destinations={cleanDests} destinationsInvalid={destsInvalid} agentVersionId={selectedAgent?.id ?? null} hireId={activeHire?.id ?? null} onCreated={() => setGrantsKey(k => k + 1)} />
                 </div>
               )}
               {assessmentError && <p role="alert" className="text-[10px]" style={{ color: "#f87171" }}>{assessmentError}</p>}
