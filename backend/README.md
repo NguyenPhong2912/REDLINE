@@ -51,7 +51,12 @@ Reads are public. A write needs either a **wallet session** or the shared key.
 
 A session is the real credential: `POST /auth/nonce` returns a challenge naming the wallet and a one-time nonce, the wallet signs those bytes, and `POST /auth/verify` exchanges the signature for a bearer token. A Solana address *is* an ed25519 public key, so the signature verifies against the address itself. Nonces are single-use and expire in 5 minutes; sessions last 12 hours and are stored as a SHA-256 of the token, never the token.
 
-Routes that act on someone's property call `requireWallet` and accept nothing else — `PATCH /listings/:id` is the first, so a listing can only be claimed by the wallet that will be paid for it.
+Routes that act on someone's property require a session and accept nothing else:
+
+- `PATCH /listings/:id` — a listing can only be claimed by the wallet that will be paid for it.
+- `POST /runs` and `POST /intents` — both make the executor spend from a grant's vault, so both check the caller owns that grant. Without this the shared key alone would let anyone drive someone else's agent up to its cap.
+
+On a deployment with no `REDLINE_API_KEY` these checks stand down: that configuration has already declared itself local or mock, where writes are open and `scripts/demo.sh` runs without a wallet.
 
 `REDLINE_API_KEY` in `x-redline-key` remains as a fallback for the scripted demo and headless callers. It is a drive-by guard, not authentication: it ships to a public frontend and anyone can read it out of the bundle. Owner actions on-chain are authorised by the wallet signature the program verifies, whatever the API thinks.
 

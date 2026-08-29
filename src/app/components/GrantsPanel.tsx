@@ -3,6 +3,7 @@ import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
 import { api, fmtUsdc, short, subscribeFeed, type Grant } from "../lib/api";
+import { sessionFor, signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
@@ -37,9 +38,23 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   useEffect(() => { void load(); api.health().then(h => setChain(h.chain)).catch(() => setChain("")); }, [load, refreshKey]);
   useEffect(() => subscribeFeed("*", () => { void load(); }), [load]);
 
-  async function run(label: string, fn: () => Promise<unknown>) {
+  // Starting a run or forcing an intent makes the executor spend from this
+  // grant's vault, so the API asks for a session proving the caller owns it.
+  // Get one on demand rather than sending the user off to find a button.
+  async function withSession(owner: string) {
+    if (sessionFor(owner)) return;
+    await signIn(client, owner);
+  }
+
+  async function run(label: string, fn: () => Promise<unknown>, owner?: string) {
     setBusy(label); setError("");
-    try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(""); }
+    try {
+      if (owner) await withSession(owner);
+      await fn();
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setBusy(""); }
   }
 
   async function revoke(g: Grant) {
@@ -104,9 +119,9 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
               <div className="flex flex-wrap gap-2">
                 {isOwner ? (
                   <>
-                    <Btn icon={Play} label={running ? "Agent running…" : "Start agent (scripted)"} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id))} />
+                    <Btn icon={Play} label={running ? "Agent running…" : "Start agent (scripted)"} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id), g.owner.wallet)} />
                     <Btn icon={Zap} label={`Force ${fmtUsdc(cap)} USDC (over cap)`} accent={A} disabled={!!busy} busy={busy === `force-${g.id}`}
-                      onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }))} />
+                      onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }), g.owner.wallet)} />
                     <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                   </>
                 ) : (

@@ -5,6 +5,7 @@ import { nowSeconds } from "../clock.js";
 import { prisma } from "../db/client.js";
 import { evaluateIntent, intentHash, ruleSnapshotHash } from "../policy/engine.js";
 import { processIntent } from "../runtime/executor.js";
+import { requireGrantOwner } from "../auth.js";
 import { json } from "./json.js";
 
 const IntentBody = z.object({
@@ -33,6 +34,8 @@ export async function intentRoutes(app: FastifyInstance) {
   // the "program rejects it on-chain" moment on demand.
   app.post("/intents", async (req, reply) => {
     const body = IntentBody.extend({ submitEvenIfDenied: z.boolean().optional() }).parse(req.body);
+    // Submitting an intent is what actually moves funds, within the policy.
+    await requireGrantOwner(req, body.grantId);
     const result = await processIntent(body.grantId, { mint: body.mint, amountUnits: BigInt(body.amountUnits), destination: body.destination, reason: body.reason, nonce: body.nonce }, { submitEvenIfDenied: body.submitEvenIfDenied });
     return reply.code(201).send(json(result));
   });

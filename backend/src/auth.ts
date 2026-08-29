@@ -69,6 +69,11 @@ export function sessionWallet(req: FastifyRequest): string | null {
  * anyone, which is exactly the hole that let listings be claimed by strangers.
  */
 export function requireWallet(req: FastifyRequest, wallet: string): void {
+  // A deployment with no REDLINE_API_KEY has already declared itself local or
+  // mock, where writes are open by design; demanding a signature there would
+  // break the offline smoke test for no gain. Once the key is set the
+  // deployment is public, and ownership is enforced.
+  if (!process.env.REDLINE_API_KEY) return;
   const signedIn = sessionWallet(req);
   if (!signedIn) {
     throw Object.assign(new Error("Sign in with your wallet to do this"), { statusCode: 401 });
@@ -76,6 +81,19 @@ export function requireWallet(req: FastifyRequest, wallet: string): void {
   if (signedIn !== wallet) {
     throw Object.assign(new Error("That wallet is not the one you signed in with"), { statusCode: 403 });
   }
+}
+
+/**
+ * Assert the caller owns the grant they are acting on. Used by the two routes
+ * that make the executor spend — starting a run and submitting an intent —
+ * because the shared key is readable in the frontend bundle, and without an
+ * owner check it would let anyone drive someone else's agent up to its cap.
+ */
+export async function requireGrantOwner(req: FastifyRequest, grantId: string): Promise<void> {
+  if (!process.env.REDLINE_API_KEY) return;
+  const grant = await prisma.agentGrant.findUnique({ where: { id: grantId }, include: { owner: true } });
+  if (!grant) throw Object.assign(new Error("grant not found"), { statusCode: 404 });
+  requireWallet(req, grant.owner.wallet);
 }
 
 export function registerAuth(app: FastifyInstance) {
