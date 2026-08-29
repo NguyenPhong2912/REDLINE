@@ -1234,7 +1234,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full" style={{ position: "relative", zIndex: 1 }}>
         {/* Topbar */}
         <header className="app-header sticky top-0 z-30 flex items-center gap-3 px-3 sm:px-6 py-3"
-          style={{ background: "rgba(255,255,255,0.78)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
+          style={{ background: "rgba(18,11,36,0.82)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
           <button type="button" onClick={() => navigate(0)} className="flex shrink-0 items-center gap-2.5" aria-label="Open REDLINE protocol experience">
             <span className="grid h-8 w-8 place-items-center rounded-full" style={{ color: M, border: `1px solid ${M}55`, background: `${M}10` }}>
               <ShieldCheck size={14} />
