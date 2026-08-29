@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConnectedWallet, useSignMessage } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
-import { ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
-import { api, fmtUsdc, short, subscribeFeed, type Grant } from "../lib/api";
+import { ChevronRight, ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
+import { api, fmtUsdc, short, subscribeFeed, type Grant, type IntentRow } from "../lib/api";
 import { sessionFor, signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
@@ -24,6 +24,8 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const [busy, setBusy] = useState<string>("");
   const [error, setError] = useState("");
   const [chain, setChain] = useState<"mock" | "solana" | "">("");
+  const [openGrant, setOpenGrant] = useState("");
+  const [intents, setIntents] = useState<Record<string, IntentRow[]>>({});
 
   const load = useCallback(async () => {
     try {
@@ -70,6 +72,22 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const activeRun = (g: Grant) => g.runs?.find(r => r.status === "running");
 
+  // Per-grant proposal history. The API has always returned this; nothing in
+  // the dashboard ever asked for it, so a grant showed aggregate counters and
+  // the reason behind any single decision lived only in a flat feed.
+  async function toggleIntents(grantId: string) {
+    if (openGrant === grantId) { setOpenGrant(""); return; }
+    setOpenGrant(grantId);
+    if (intents[grantId]) return;
+    try {
+      const rows = await api.intents(grantId);
+      setIntents(prev => ({ ...prev, [grantId]: rows }));
+    } catch {
+      // An empty list is the honest thing to show; the panel says so in words.
+      setIntents(prev => ({ ...prev, [grantId]: [] }));
+    }
+  }
+
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(11,17,16,0.6)", border: "1px solid rgba(255,255,255,0.05)" }}>
       <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
@@ -87,7 +105,18 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         const pct = cap ? Math.min(100, (spent / cap) * 100) : 0;
         const revoked = g.revoked || oc?.active === false;
         const running = activeRun(g);
-        const accent = revoked ? R : running ? M : C;
+        // Gate 2 is EXPIRED, and until now nothing on this page said when that
+        // would happen. An agent that stops because its window closed looks
+        // exactly like an agent that broke.
+        const expiresAt = new Date(oc ? oc.expiresAt * 1000 : g.policyVersion.expiresAt);
+        const msLeft = expiresAt.getTime() - Date.now();
+        const expired = msLeft <= 0;
+        const expiry = expired ? "expired"
+          : msLeft < 3_600_000 ? `${Math.max(1, Math.round(msLeft / 60_000))}m left`
+          : msLeft < 86_400_000 ? `${Math.round(msLeft / 3_600_000)}h left`
+          : `${Math.round(msLeft / 86_400_000)}d left`;
+        const expirySoon = !expired && msLeft < 3_600_000;
+        const accent = revoked || expired ? R : running ? M : C;
         const dest = (JSON.parse(g.policyVersion.allowedDests) as string[])[0];
         const mint = (JSON.parse(g.policyVersion.allowedMints) as string[])[0];
         const ownerWallet = connected ? String(connected.account.address) : "";
@@ -106,11 +135,15 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
               </div>
               <div className="hidden sm:block text-right">
                 <div className="text-[11px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(spent)} / {fmtUsdc(cap)} USDC</div>
-                <div className="text-[10px]" style={{ ...mono, color: "#475569" }}>tx {oc?.transactionCount ?? g.transactionCount}/{g.policyVersion.maxTransactions} · nonce {oc?.nextNonce ?? g.nextNonce}</div>
+                <div className="text-[10px]" style={{ ...mono, color: "#475569" }}>
+                  tx {oc?.transactionCount ?? g.transactionCount}/{g.policyVersion.maxTransactions} · nonce {oc?.nextNonce ?? g.nextNonce} ·{" "}
+                  <span title={`Gate 2 refuses every transfer after ${expiresAt.toLocaleString()}`} style={{ color: expired ? R : expirySoon ? A : "#475569" }}>{expiry}</span>
+                  {g.hire && <> · <span title={`Runs under a marketplace rental ending ${new Date(g.hire.endsAt).toLocaleString()}`} style={{ color: C }}>rented</span></>}
+                </div>
               </div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold" style={{ ...mono, background: `${accent}12`, color: accent, border: `1px solid ${accent}25` }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, animation: running ? "redline-pulse 2s infinite" : "none" }} />
-                {revoked ? "REVOKED" : running ? "AGENT RUNNING" : "ACTIVE"}
+                {revoked ? "REVOKED" : expired ? "EXPIRED" : running ? "AGENT RUNNING" : "ACTIVE"}
               </span>
             </div>
             <div className="relative rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height: 3 }}>
@@ -128,6 +161,46 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 ) : (
                   <div className="text-[10px] py-1.5" style={{ ...mono, color: "#64748b" }}>Read-only · Connect owner wallet to manage</div>
                 )}
+              </div>
+            )}
+
+            <button type="button" onClick={() => void toggleIntents(g.id)} aria-expanded={openGrant === g.id}
+              className="flex items-center gap-1.5 text-[10px] pt-0.5" style={{ ...mono, color: "#475569" }}>
+              <ChevronRight size={11} style={{ transform: openGrant === g.id ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+              {openGrant === g.id ? "Hide" : "Show"} every proposal this agent made
+            </button>
+
+            {openGrant === g.id && (
+              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                {!intents[g.id] ? (
+                  <div className="px-3 py-3 text-[10px] flex items-center gap-2" style={{ ...mono, color: "#475569" }}><LoaderCircle size={11} className="animate-spin" /> loading…</div>
+                ) : intents[g.id].length === 0 ? (
+                  <div className="px-3 py-3 text-[10px]" style={{ ...mono, color: "#475569" }}>No proposals yet — start the agent, or force one over the cap.</div>
+                ) : intents[g.id].map(it => {
+                  const d = it.decision;
+                  const tx = d?.chainTx;
+                  // The precheck is advisory; the chain is the authority. Show
+                  // both, because a disagreement between them is the single
+                  // most interesting thing this table could ever display.
+                  const allowed = tx ? tx.result === "success" : d?.allow;
+                  const colour = allowed ? M : R;
+                  return (
+                    <div key={it.id} className="px-3 py-2 border-b last:border-0 flex items-center gap-3" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                      <span className="text-[10px] w-8 shrink-0" style={{ ...mono, color: "#334155" }}>#{it.nonce}</span>
+                      <span className="text-[10px] shrink-0" style={{ ...mono, color: "#94a3b8" }}>{fmtUsdc(it.amountUnits)} USDC</span>
+                      <span className="text-[10px] shrink-0" style={{ ...mono, color: "#475569" }}>→ {short(it.destination, 4)}</span>
+                      <span className="text-[10px] flex-1 truncate" style={{ ...sans, color: "#475569" }} title={it.reason}>{it.reason}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md shrink-0" style={{ ...mono, background: `${colour}12`, color: colour, border: `1px solid ${colour}25` }}>
+                        {tx ? (tx.result === "success" ? "moved" : d?.reasonCode ?? "refused") : d ? (d.allow ? "passed precheck" : d.reasonCode) : "pending"}
+                      </span>
+                      {tx?.signature && !tx.signature.startsWith("MOCK") && (
+                        <a href={explorerTransactionUrl(tx.signature)} target="_blank" rel="noreferrer" className="shrink-0" style={{ color: C }} title="Open this transaction on Solana Explorer">
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

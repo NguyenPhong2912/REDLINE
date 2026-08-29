@@ -118,7 +118,11 @@ Lỗi: dòng đỏ, ví dụ *"Transaction was rejected or could not reach Solan
 
 ## 6. Quản lý Grant & chạy Agent — "Active Policy Accounts"
 
-Vẫn ở trang **Guardrails**, phía trên wizard là danh sách **"Active Policy Accounts"**. Mỗi dòng grant hiển thị tên agent, grant PDA, policy hash, thanh tiến độ chi tiêu (`đã chi/hạn mức`), số giao dịch (`n/max`), nonce, và trạng thái: `ACTIVE` / `AGENT RUNNING` / `REVOKED`.
+Vẫn ở trang **Guardrails**, phía trên wizard là danh sách **"Active Policy Accounts"**. Mỗi dòng grant hiển thị tên agent, grant PDA, policy hash, thanh tiến độ chi tiêu (`đã chi/hạn mức`), số giao dịch (`n/max`), nonce, **thời gian còn lại trước khi hết hạn**, và trạng thái: `ACTIVE` / `AGENT RUNNING` / `EXPIRED` / `REVOKED`.
+
+Thời gian còn lại chuyển vàng khi dưới 1 giờ và đỏ khi đã hết. Đây là cổng 2 (`EXPIRED`): quá hạn thì mọi lệnh chuyển đều bị từ chối, và nếu không hiển thị thì một agent ngừng vì hết hạn trông y hệt một agent bị hỏng. Grant chạy dưới hợp đồng thuê có thêm nhãn `rented`.
+
+Bấm **"Show every proposal this agent made"** ở cuối mỗi dòng để mở lịch sử đầy đủ: từng đề xuất kèm nonce, số tiền, địa chỉ đích, lý do agent đưa ra, và kết quả. Nhãn kết quả phân biệt rõ *precheck* (engine off-chain đoán trước) với *kết quả on-chain thật* — `moved` nghĩa là tiền đã chuyển, còn mã lỗi như `SPEND_CAP_EXCEEDED` nghĩa là chuỗi từ chối. Có link Explorer cho mọi giao dịch thật.
 
 Ba nút thao tác (ẩn nếu grant đã bị revoke):
 
