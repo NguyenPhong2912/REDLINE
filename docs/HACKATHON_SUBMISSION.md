@@ -13,7 +13,9 @@ CSaCLAB — Trần An Kỳ (representative), Nguyễn Thành Phong, Nguyễn Hà
 - Live demo (Devnet, hosted backend): https://redline-dashboard-28t9.onrender.com
 - Repository: https://github.com/NguyenPhong2912/REDLINE
 - Program: `Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4` — https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet
-- A rejected agent transfer, on-chain: https://explorer.solana.com/tx/5wK3Cp6gY3Ayymwwnnjiptbhq8St5MWwKcJ7d3qRtYy12VWHkR5yfm3JkCCrTtwjh71AtuexJWtSRbYYZtaGB5MC?cluster=devnet
+- The same agent, the same grant, the same destination — one allowed, one refused:
+  - Allowed, 100 USDC moved: https://explorer.solana.com/tx/5gjTwZeHxddXzeVXEscu9p1tJzNmhYuGZc9dj4EjYt16ZycNCaBjpGazi3uSqVfeLvCftoNjv4kDKteWZLJxRS9h?cluster=devnet
+  - Refused for exceeding the spend cap, balances unchanged: https://explorer.solana.com/tx/t4Xb9MFdFBrw8ndHGc496a6fGbGHmNbB2apvPwYzxt36M2LqLxE9k11zhpoSPV1TChw9iKq4AuoofBx1aAwu9su?cluster=devnet
 
 ## One sentence
 

@@ -14,7 +14,7 @@ The agent proposes · **the chain decides** · nobody can talk it out of the ans
 
 **🔗 [Live Demo](https://redline-dashboard-28t9.onrender.com)** &nbsp;•&nbsp;
 **⛓️ [Program on Devnet](https://explorer.solana.com/address/Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4WbS4?cluster=devnet)** &nbsp;•&nbsp;
-**🚫 [A Rejected Agent Transfer](https://explorer.solana.com/tx/5wK3Cp6gY3Ayymwwnnjiptbhq8St5MWwKcJ7d3qRtYy12VWHkR5yfm3JkCCrTtwjh71AtuexJWtSRbYYZtaGB5MC?cluster=devnet)**
+**🚫 [A Rejected Agent Transfer](https://explorer.solana.com/tx/t4Xb9MFdFBrw8ndHGc496a6fGbGHmNbB2apvPwYzxt36M2LqLxE9k11zhpoSPV1TChw9iKq4AuoofBx1aAwu9su?cluster=devnet)**
 
 <br>
 
