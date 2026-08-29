@@ -45,6 +45,15 @@ export interface Analytics {
   weeklyVolume: { t: string; date: string; volumeUsdc: number }[];
   topAgentsByVolume: { name: string; volumeUsdc: number; grants: number }[];
 }
+export interface ProtocolOverview {
+  network: { chain: "mock" | "solana"; cluster: string; programId: string; executor: string; observedAt: string };
+  scope: "wallet" | "protocol";
+  gates: { id: number; key: string; label: string; detail: string; reasonCodes: string[]; rejected: number }[];
+  activity: {
+    activeGrants: number; totalGrants: number; transactions: number; spentUnits: string;
+    allowed: number; rejected: number; lastDecisionAt: string | null;
+  };
+}
 
 // Wallet session. Kept in localStorage so a reload does not force another
 // signature, and sent ahead of the shared key: the key says "some caller",
@@ -117,6 +126,7 @@ export const api = {
   hire: (b: { listingId: string; ownerWallet: string; durationHours: number; paymentSignature: string }) =>
     req<Hire>("/hires", { method: "POST", body: JSON.stringify(b) }),
   analytics: (owner?: string) => req<Analytics>(`/analytics${owner ? `?owner=${owner}` : ""}`),
+  protocolOverview: (owner?: string) => req<ProtocolOverview>(`/protocol/overview${owner ? `?owner=${encodeURIComponent(owner)}` : ""}`),
 };
 
 // Server-sent events. grantId "*" streams every grant.

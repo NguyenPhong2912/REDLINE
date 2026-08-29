@@ -8,7 +8,10 @@ import type { GrantState, Intent, ReasonCode, Verdict } from "./types.js";
 // Gate order matches ERD §02 and the Rust `require!` sequence exactly, so a
 // precheck reason code always equals the program error the chain would return.
 
-const MESSAGES: Record<ReasonCode, string> = {
+// Exported as the runtime roll-call of every reason code: the protocol
+// gate map is tested against it, so a new code cannot be added without
+// deciding whether a gate owns it.
+export const MESSAGES: Record<ReasonCode, string> = {
   OK: "All gates passed.",
   REVOKED: "Grant has been revoked by the owner.",
   EXPIRED: "Grant validity window has ended.",

@@ -153,7 +153,7 @@ export function AuditPage() {
   const corroborated = [...corroboration.values()].filter(v => v.chain && v.server).length;
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-audit space-y-8">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-2">
@@ -269,7 +269,7 @@ export function AuditPage() {
       )}
 
       {/* Audit table */}
-      <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+      <div className="audit-ledger rounded-2xl overflow-hidden" style={{ ...glass() }}>
         {/* Table header */}
         <div className="grid items-center px-5 py-3 border-b"
           style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: color.border, background: color.surfaceSubtle }}>

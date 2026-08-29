@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "motion/react";
 import {
   LayoutDashboard, Bot, BarChart3, Globe, Wallet, ScrollText,
-  Layers, Settings, Zap, ChevronRight, Search, ShieldCheck,
+  Layers, Settings, ChevronRight, Search, ShieldCheck,
   Activity, Sparkles,
   Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
-  RefreshCw, Clock, Network, ExternalLink,
+  Clock, Network, ExternalLink,
   Plus, PieChart, Shield,
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -16,6 +17,10 @@ import { VaultPanel } from "./components/VaultPanel";
 import { SolanaWalletControl } from "./components/SolanaWalletControl";
 import { AuditPage } from "./components/AuditPage";
 import { DashboardLiveGrants } from "./components/DashboardLiveGrants";
+import { PageTransition } from "./components/PageTransition";
+import { ProtocolSpine } from "./components/ProtocolSpine";
+import { SpatialBackdrop } from "./components/SpatialBackdrop";
+import { ProtocolExperience } from "./components/ProtocolExperience";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -67,14 +72,14 @@ function ChartTip({ active, payload, accent = M, prefix = "", suffix = "" }: { a
 
 
 const NAV = [
-  { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: Bot, label: "Agents" },
-  { icon: BarChart3, label: "Analytics" },
-  { icon: Globe, label: "Marketplace" },
-  { icon: Wallet, label: "Treasury" },
-  { icon: ScrollText, label: "Audit" },
-  { icon: Layers, label: "Guardrails" },
-  { icon: Settings, label: "Settings" },
+  { icon: LayoutDashboard, label: "Protocol", slug: "protocol" },
+  { icon: Bot, label: "Agents", slug: "agents" },
+  { icon: BarChart3, label: "Analytics", slug: "analytics" },
+  { icon: Globe, label: "Marketplace", slug: "marketplace" },
+  { icon: Wallet, label: "Treasury", slug: "treasury" },
+  { icon: ScrollText, label: "Audit", slug: "audit" },
+  { icon: Layers, label: "Guardrails", slug: "guardrails" },
+  { icon: Settings, label: "Settings", slug: "settings" },
 ];
 
 /* ── reusable components ── */
@@ -136,32 +141,6 @@ function SectionTitle({ icon: Icon, text, accent = M }: { icon: React.ElementTyp
   );
 }
 
-/* ── Particle Canvas ── */
-function ParticleGrid() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext("2d"); if (!ctx) return;
-    c.width = window.innerWidth; c.height = window.innerHeight;
-    const cols = Math.ceil(c.width / 56), rows = Math.ceil(c.height / 56);
-    const pts = Array.from({ length: (cols + 1) * (rows + 1) }, (_, i) => ({
-      x: (i % (cols + 1)) * 56, y: Math.floor(i / (cols + 1)) * 56,
-      p: Math.random() * Math.PI * 2, s: 0.004 + Math.random() * 0.006,
-    }));
-    let raf: number;
-    const draw = () => {
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.strokeStyle = "rgba(0,255,196,0.025)"; ctx.lineWidth = 0.5;
-      for (let i = 0; i <= cols; i++) { ctx.beginPath(); ctx.moveTo(i * 56, 0); ctx.lineTo(i * 56, c.height); ctx.stroke(); }
-      for (let j = 0; j <= rows; j++) { ctx.beginPath(); ctx.moveTo(0, j * 56); ctx.lineTo(c.width, j * 56); ctx.stroke(); }
-      pts.forEach(p => { p.p += p.s; ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2); ctx.fillStyle = `rgba(0,255,196,${0.06 + 0.1 * (0.5 + 0.5 * Math.sin(p.p))})`; ctx.fill(); });
-      raf = requestAnimationFrame(draw);
-    };
-    draw(); return () => cancelAnimationFrame(raf);
-  }, []);
-  return <canvas ref={ref} className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }} />;
-}
-
 /* ════════════════════════════════════════════════════════════
    PAGE COMPONENTS
 ══════════════════════════════════════════════════════════════ */
@@ -208,6 +187,8 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <KpiCard label="Avg. Decision" value={stats?.avgDecisionLatencyMs != null ? `${stats.avgDecisionLatencyMs}ms` : "—"} sub="precheck → decision" icon={Cpu} accent={C} data={flat(stats?.avgDecisionLatencyMs ?? 0)} gradId="kpi-lat" />
         <KpiCard label="Allowed by Policy" value={stats?.successRatePct != null ? `${stats.successRatePct}%` : "—"} sub={stats ? `${stats.totalRejections} blocked` : "no decisions yet"} icon={CheckCircle2} accent={M} data={flat(stats?.successRatePct ?? 0)} gradId="kpi-success" />
       </div>
+
+      <ProtocolSpine owner={owner || undefined} />
 
       {/* Volume chart */}
       <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
@@ -317,7 +298,7 @@ function AgentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="route-page page-agents space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>My Agents</h1>
@@ -355,7 +336,7 @@ function AgentsPage() {
       )}
 
       {!loading && agents.length > 0 && a && (
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+        <div className="agent-composition grid grid-cols-1 lg:grid-cols-[minmax(320px_.72fr)_minmax(0_1.45fr)] gap-7">
           {/* Agent list */}
           <div className="rounded-2xl overflow-hidden flex flex-col" style={{ ...glass() }}>
             {agents.map((ag, i) => (
@@ -392,7 +373,7 @@ function AgentsPage() {
                   <p className="text-[11px] mt-1 max-w-md" style={{ ...sans, color: color.textMuted }}>{a.strategy}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="agent-metrics grid grid-cols-2 sm:grid-cols-4 gap-0">
                 {[
                   { label: "Active Grants", value: String(a.activeGrants), color: M },
                   { label: "Total Grants", value: String(a.totalGrants), color: C },
@@ -465,7 +446,7 @@ function AnalyticsPage() {
   }, [owner]);
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-analytics space-y-7">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Analytics</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Computed from your grants' real audit trail — no price feed, so no P&L or APY</p>
@@ -476,14 +457,14 @@ function AnalyticsPage() {
 
       {owner && data && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="analytics-ledger grid grid-cols-2 sm:grid-cols-4 gap-0">
             {[
               { label: "Active Grants", value: String(data.activeGrants) },
               { label: "Total Volume", value: `${data.totalVolumeUsdc.toLocaleString()} USDC` },
               { label: "Success Rate", value: data.successRatePct === null ? "—" : `${data.successRatePct}%` },
               { label: "Avg Decision Latency", value: data.avgDecisionLatencyMs === null ? "—" : `${data.avgDecisionLatencyMs}ms` },
             ].map((s, i) => (
-              <div key={`an-kpi-${i}`} className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+              <div key={`an-kpi-${i}`} className="analytics-stat p-5" style={{ borderRight: `1px solid ${color.border}` }}>
                 <div className="text-[11px] mb-2" style={{ ...sans, color: color.textDim }}>{s.label}</div>
                 <div className="text-xl font-bold" style={{ ...mono, color: color.text }}>{s.value}</div>
               </div>
@@ -491,7 +472,7 @@ function AnalyticsPage() {
           </div>
 
           {/* Weekly volume */}
-          <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+          <div className="analytics-volume rounded-[28px] p-6" style={{ ...glass() }}>
             <SectionTitle icon={TrendingUp} text="Confirmed Volume — Last 7 Days" />
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -512,7 +493,7 @@ function AnalyticsPage() {
           </div>
 
           {/* Top agents by volume */}
-          <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
+          <div className="analytics-ranking rounded-[28px] overflow-hidden" style={{ ...glass() }}>
             <div className="px-5 py-4 border-b" style={{ borderColor: color.border }}>
               <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Top Agents by Volume</span>
             </div>
@@ -604,7 +585,7 @@ function MarketplacePage() {
   });
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-marketplace space-y-8">
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
@@ -656,7 +637,7 @@ function MarketplacePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="market-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((l, idx) => {
           const accent = AGENT_ACCENTS[idx % AGENT_ACCENTS.length];
           const priced = Number(l.priceLamports) > 0 && !!l.developerWallet;
@@ -786,7 +767,7 @@ function VaultPage() {
   }, [client, owner]);
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-treasury space-y-8">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Treasury</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Solana Devnet · your wallet and the program-owned vault</p>
@@ -948,7 +929,7 @@ function SessionsPage() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-guardrails space-y-8">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Agent Guardrails</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Design bounded Solana policies, run AI risk checks, and publish verifiable proofs</p>
@@ -1135,7 +1116,7 @@ function SettingsPage() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="route-page page-settings space-y-8">
       <div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Settings</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Live configuration of this REDLINE deployment</p>
@@ -1214,17 +1195,30 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [DashboardPage, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage];
+const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage];
 
 export default function App() {
-  const [nav, setNav] = useState(0);
-  const [time, setTime] = useState(new Date());
+  const indexFromHash = () => {
+    const slug = window.location.hash.replace(/^#\/?/, "");
+    const index = NAV.findIndex(item => item.slug === slug);
+    return index < 0 ? 0 : index;
+  };
+  const [nav, setNav] = useState(indexFromHash);
   const Page = PAGES[nav] as React.ComponentType<{ setNav?: (n: number) => void }>;
 
-  useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    const sync = () => setNav(indexFromHash());
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
+  const navigate = (index: number) => {
+    setNav(index);
+    window.location.hash = `/${NAV[index].slug}`;
+  };
 
   return (
-    <div className="min-h-screen w-full flex overflow-hidden" style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
+    <div className={`redline-app ${nav === 0 ? "redline-app-home" : ""} min-h-screen w-full flex flex-col overflow-hidden`} style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         @keyframes redline-shimmer { 0% { left: -60px; } 100% { left: calc(100% + 60px); } }
         @keyframes redline-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
@@ -1234,81 +1228,54 @@ export default function App() {
         input[type=range] { -webkit-appearance: none; appearance: none; }
       `}</style>
 
-      <ParticleGrid />
-
-      {/* ── Sidebar ── */}
-      <aside className="sticky top-0 h-screen flex flex-col z-20 w-16 lg:w-60 shrink-0"
-        style={{ background: color.surface, borderRight: `1px solid ${color.border}` }}>
-        <div className="px-4 py-5 flex items-center gap-3 border-b" style={{ borderColor: color.border }}>
-          <div className="relative w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: `${M}14`, border: `1px solid ${M}30` }}>
-            <Zap size={15} style={{ color: M }} />
-          </div>
-          <div className="hidden lg:block">
-            <div className="text-sm font-bold tracking-widest" style={{ color: color.text, letterSpacing: "0.1em" }}>REDLINE</div>
-            <div className="text-[9px] font-semibold tracking-widest uppercase mt-0.5" style={{ ...mono, color: M, opacity: 0.65 }}>Protocol · Devnet</div>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map((item, i) => {
-            const Icon = item.icon;
-            const on = nav === i;
-            return (
-              <button type="button" key={`nav-${i}`} onClick={() => setNav(i)} aria-current={on ? "page" : undefined}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative"
-                style={{ background: on ? `${M}0d` : "transparent", border: `1px solid ${on ? M + "1e" : "transparent"}` }}>
-                {on && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ background: M }} />}
-                <Icon size={15} style={{ color: on ? M : color.textDim, flexShrink: 0 }} />
-                <span className="hidden lg:block text-xs font-medium flex-1 text-left" style={{ ...sans, color: on ? color.text : color.textDim }}>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="mx-2 mb-3 rounded-xl p-3 hidden lg:block" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: M, animation: "redline-pulse 2s infinite" }} />
-            <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>SOLANA DEVNET</span>
-          </div>
-          {[["Cluster", "Devnet", color.text], ["Policy", "Grant PDA", A], ["Mode", "Guarded", C]].map(([k, v, col], ni) => (
-            <div key={`sidebar-net-${ni}`} className="flex justify-between items-center mb-0.5">
-              <span className="text-[9px]" style={{ ...sans, color: color.textDim }}>{k}</span>
-              <span className="text-[9px] font-semibold" style={{ ...mono, color: col }}>{v}</span>
-            </div>
-          ))}
-        </div>
-      </aside>
+      {nav !== 0 && <SpatialBackdrop />}
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ position: "relative", zIndex: 1 }}>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full" style={{ position: "relative", zIndex: 1 }}>
         {/* Topbar */}
-        <header className="sticky top-0 z-10 flex items-center gap-3 px-6 py-3.5"
-          style={{ background: `${color.surface}f2`, backdropFilter: "blur(8px)", borderBottom: `1px solid ${color.border}` }}>
-          <div className="flex items-center gap-2 text-xs flex-1">
-            <span style={{ ...sans, color: color.textDim }}>REDLINE</span>
-            <ChevronRight size={11} style={{ color: color.border }} />
-            <span style={{ ...sans, color: color.text }}>{NAV[nav].label}</span>
-          </div>
-          <div className="hidden md:flex items-center gap-3 px-3.5 py-2 rounded-xl text-[11px]"
-            style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-            <span style={{ color: color.textDim }}>SOLANA</span>
-            <span style={{ color: M }}>DEVNET</span>
-            <span style={{ color: C }}>RPC CONFIGURED</span>
-            <div className="w-px h-3" style={{ background: color.surfaceInset }} />
-            <Clock size={10} style={{ color: color.textDim }} />
-            <span style={{ color: color.textSecondary }}>{time.toLocaleTimeString("en-US", { hour12: false })}</span>
-          </div>
-          <button type="button" onClick={() => window.location.reload()} aria-label="Refresh dashboard" title="Refresh dashboard" className="p-2 rounded-xl" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}`, color: color.textDim }}>
-            <RefreshCw size={13} />
+        <header className="app-header sticky top-0 z-30 flex items-center gap-3 px-3 sm:px-6 py-3"
+          style={{ background: "rgba(255,255,255,0.78)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
+          <button type="button" onClick={() => navigate(0)} className="flex shrink-0 items-center gap-2.5" aria-label="Open REDLINE protocol experience">
+            <span className="grid h-8 w-8 place-items-center rounded-full" style={{ color: M, border: `1px solid ${M}55`, background: `${M}10` }}>
+              <ShieldCheck size={14} />
+            </span>
+            <span className="hidden sm:block text-[11px] font-bold tracking-[0.2em]" style={{ ...mono, color: color.text }}>REDLINE</span>
           </button>
+
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
+            {NAV.map((item, index) => {
+              const active = nav === index;
+              return (
+                <button
+                  type="button"
+                  key={item.slug}
+                  onClick={() => navigate(index)}
+                  aria-current={active ? "page" : undefined}
+                  className="relative shrink-0 rounded-full px-3 py-2 text-[10px] font-semibold transition-colors"
+                  style={{ ...sans, color: active ? color.primaryText : color.textDim, background: active ? "rgba(75,134,247,0.09)" : "transparent" }}
+                >
+                  {item.label}
+                  {active && <motion.span layoutId="primary-nav-indicator" className="absolute inset-x-3 -bottom-[13px] h-px" style={{ background: M, boxShadow: `0 0 14px ${M}` }} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="hidden xl:flex shrink-0 items-center gap-2 text-[9px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
+            <span className="redline-live-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
+            Solana devnet
+          </div>
           <SolanaWalletControl />
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto px-5 lg:px-8 py-7">
-          <Page setNav={setNav} />
-          <div className="h-8" />
+        <main className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
+          <div className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
+            <PageTransition pageKey={NAV[nav].label}>
+              <Page setNav={navigate} />
+            </PageTransition>
+            <div className="h-8" />
+          </div>
         </main>
       </div>
     </div>

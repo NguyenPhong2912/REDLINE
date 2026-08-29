@@ -2,55 +2,42 @@ import type { CSSProperties } from "react";
 
 // The design language, in one place.
 //
-// REDLINE argues that a limit is enforced rather than promised, and that the
-// record of it can be checked by a stranger. The audience is a treasury
-// operator who has to justify a decision to an auditor. Neon on black reads as
-// crypto-native; this reads as an instrument — light, dense, quiet, closer to
-// a statement than a dashboard.
-//
-// One rule carries the product's message: saturation is rationed. Almost
-// everything is neutral, so the refusals are the only loud thing on screen.
-// When the chain says no, the page says it too, and nothing else competes.
+// Functional screens stay bright and quiet; the cinematic landing page supplies
+// the atmosphere. This keeps operational data calm and easy to scan.
 
 export const color = {
-  // Surfaces — paper, not white, so long reading does not glare.
-  bg: "#f6f7f9",
-  surface: "#ffffff",
-  surfaceSubtle: "#f1f3f6",
-  surfaceInset: "#eceff3",
+  bg: "#f3f7fd",
+  surface: "rgba(255,255,255,0.92)",
+  surfaceSubtle: "#f7faff",
+  surfaceInset: "#edf3fb",
 
-  // Hairlines. Borders do the work that glow used to.
-  border: "#e3e7ed",
-  borderStrong: "#ccd3dd",
+  border: "#dbe5f2",
+  borderStrong: "#b9cbe0",
 
-  // Text, four steps of emphasis. On a dark ground "dimmer" just means darker
-  // and can go as far as it likes; on a light one it means lighter, and there
-  // is a floor. Every step here clears WCAG AA (4.5:1) against the *darkest*
-  // ground below, because almost all of this UI sets type at 10–11px and the
-  // large-text concession does not apply. Lightening any of them past this
-  // point trades legibility for nothing.
-  text: "#0f172a",        // 16.1:1
-  textSecondary: "#4f5258", // 7.1:1
-  textMuted: "#5e6169",   // 5.6:1
-  textDim: "#6a6d75",     // 4.7:1 — the lightest type this theme permits
+  // Every value below clears WCAG AA (4.5:1) against surfaceInset, the darkest
+  // ground here — so it clears on all of them. That bar is not decoration:
+  // these are status colours on 10–11px type, and the reason codes they carry
+  // are the most important words on the screen. The hues are the cool palette
+  // this interface was designed around; only their luminance is constrained.
+  text: "#182033",        // 14.6:1
+  textSecondary: "#44526a", // 7.1:1
+  textMuted: "#4f5f7b",   // 5.8:1
+  textDim: "#5f6e85",     // 4.6:1 — the lightest type this theme permits
 
-  // One primary. Teal keeps a thread to what this was without shouting.
-  primary: "#0f766e",
-  primaryText: "#0b5f58",
+  primary: "#1461f5",
+  primaryText: "#2065e6",
 
   // Reserved meanings.
-  info: "#0369a1",
-  warn: "#8a5406",
-  danger: "#b91c1c",
-  success: "#15803d",
+  info: "#1c778b",
+  warn: "#93641a",
+  danger: "#d12746",
+  success: "#1d7b57",
 
   onAccent: "#ffffff",
 } as const;
 
-// The live feed is the one dark surface left, on purpose: a stream of runtime
-// events reads as a console, and one anchored dark block on a light page is a
-// familiar pattern rather than a leftover. It needs its own accents — the
-// light-ground colours above are far too dark to sit on it.
+// The live feed is intentionally cooler than the surrounding graphite so it
+// still reads as a console inside the control room.
 export const term = {
   bg: "#0d1117",
   head: "#f1f3f6",
@@ -75,11 +62,11 @@ export const tint = (hex: string, alpha = 0.08) => {
 export const mono: CSSProperties = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 export const sans: CSSProperties = { fontFamily: "'Inter', system-ui, sans-serif" };
 
-/** A card. Flat, hairline, one soft shadow — no blur, no gradient, no glow. */
+/** A layered card with restrained depth and no expensive backdrop blur. */
 export const panel = (extra?: CSSProperties): CSSProperties => ({
   background: color.surface,
   border: `1px solid ${color.border}`,
-  boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+  boxShadow: "0 18px 48px rgba(76, 104, 148, 0.10)",
   ...extra,
 });
 

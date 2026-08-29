@@ -70,6 +70,8 @@ TypeScript throughout, sharing one canonical policy hash with the frontend.
 
 React 19 + Vite + `@solana/kit` 8 + Wallet Standard. The wizard builds the policy, runs the AI risk copilot (deterministic floor the model cannot lower), then the wallet signs `create_grant`; the API only records `grantPda` + signature. Active Policy Accounts reads counters from the PDA; the Treasury page shows the live vault balance with owner-signed `withdraw`. The Marketplace publishes and rents agents for real SOL, with the payment checked against the chain before the agreement is written; Analytics is computed from the audit trail. P&L, APY, win-rate and uptime cards were removed rather than simulated — nothing in the system measures them.
 
+The dashboard's spatial transaction spine is a projection of `GET /protocol/overview`, not a second policy implementation. The API owns the ordered gate catalog and rejection rollup; the browser only maps that domain response into motion. The canvas background and page transitions honor `prefers-reduced-motion`, and the core workflow remains usable without WebGL.
+
 ## Trust boundaries
 
 ```text

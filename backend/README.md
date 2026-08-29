@@ -79,6 +79,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
 | GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written. A grant for a rented agent records which agreement covers it, and is refused once it lapses |
 | GET | `/analytics?owner=` | volume, allowed/blocked counts and decision latency computed from the audit trail |
+| GET | `/protocol/overview?owner=` | ordered seven-gate catalog, network state and decision/rejection rollup for the live policy visualization |
 | POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |
 
@@ -100,7 +101,7 @@ A subscription only delivers what happens while it is open, so on every connect 
 ## Tests
 
 ```bash
-npm test                 # 62 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in
+npm test                 # 66 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in, protocol gates
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```
