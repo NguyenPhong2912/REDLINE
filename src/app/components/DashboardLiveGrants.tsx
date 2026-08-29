@@ -40,7 +40,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Live Grants</div>
-          <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textDim }}>Connect the backend to see on-chain grants here.</div>
+          <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>Connect the backend to see on-chain grants here.</div>
         </div>
       </div>
     );
@@ -60,14 +60,14 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
             <Key size={12} style={{ color: M }} />
           </div>
           <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Live Grants</span>
-          <span className="text-[10px] font-bold tracking-widest" style={{ ...mono, color: M }}>ON-CHAIN</span>
+          <span className="text-[12px] font-bold tracking-widest" style={{ ...mono, color: M }}>ON-CHAIN</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
+          <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
             {active.length} active
           </span>
           {revoked.length > 0 && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${R}14`, color: R, border: `1px solid ${R}25` }}>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${R}14`, color: R, border: `1px solid ${R}25` }}>
               {revoked.length} revoked
             </span>
           )}
@@ -77,8 +77,8 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
       {/* Overall progress */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px]" style={{ ...sans, color: color.textSecondary }}>Total spend across all grants</span>
-          <span className="text-[11px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(totalSpent)} / {fmtUsdc(totalCap)} USDC</span>
+          <span className="text-[13px]" style={{ ...sans, color: color.textSecondary }}>Total spend across all grants</span>
+          <span className="text-[13px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(totalSpent)} / {fmtUsdc(totalCap)} USDC</span>
         </div>
         <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 4 }}>
           <div className="absolute left-0 top-0 h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: A }} />
@@ -97,10 +97,10 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
               {g.revoked ? <ShieldOff size={11} style={{ color: accent }} /> : <ShieldCheck size={11} style={{ color: accent }} />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold truncate" style={{ ...sans, color: color.text }}>{g.agentVersion.name}</div>
+              <div className="text-[13px] font-semibold truncate" style={{ ...sans, color: color.text }}>{g.agentVersion.name}</div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>{fmtUsdc(spent)}/{fmtUsdc(cap)} USDC</span>
-                <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>tx {g.transactionCount}/{g.policyVersion.maxTransactions}</span>
+                <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{fmtUsdc(spent)}/{fmtUsdc(cap)} USDC</span>
+                <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>tx {g.transactionCount}/{g.policyVersion.maxTransactions}</span>
               </div>
             </div>
             <div className="w-16">
@@ -120,7 +120,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
       {/* Footer */}
       {onNavigate && (
         <button type="button" onClick={onNavigate}
-          className="w-full px-5 py-3 text-center text-[11px] font-semibold border-t transition-all hover:bg-white/[0.03]"
+          className="w-full px-5 py-3 text-center text-[13px] font-semibold border-t transition-all hover:bg-white/[0.03]"
           style={{ ...sans, color: C, borderColor: color.border }}>
           Go to Guardrails →
         </button>

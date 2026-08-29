@@ -24,7 +24,7 @@ function WalletBalance({ owner }: { owner: string }) {
   const sol = data ? Number(data.value) / 1_000_000_000 : null;
 
   return (
-    <span className="hidden xl:inline text-[10px]" style={{ color: color.textMuted }}>
+    <span className="hidden xl:inline text-[12px]" style={{ color: color.textMuted }}>
       {status === "fetching" ? "syncing…" : sol === null ? "balance unavailable" : `${sol.toFixed(3)} SOL`}
     </span>
   );
@@ -68,7 +68,7 @@ export function SolanaWalletControl() {
               }
             }}
             disabled={signingIn}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-60"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-60"
             style={{ background: "#38bdf80e", border: "1px solid #38bdf835", color: color.info }}
             title="Prove you hold this wallet. Signs a message only — no transfer, no funds moved."
           >
@@ -76,7 +76,7 @@ export function SolanaWalletControl() {
             {signingIn ? "Check your wallet…" : "Sign in"}
           </button>
         )}
-        {signinError && <span role="alert" className="hidden lg:inline text-[10px]" style={{ color: color.danger }}>{signinError}</span>}
+        {signinError && <span role="alert" className="hidden lg:inline text-[12px]" style={{ color: color.danger }}>{signinError}</span>}
         <button
           type="button"
           onClick={() => { signOut(); setSessionWallet(null); disconnect.dispatch(); }}
@@ -114,7 +114,7 @@ export function SolanaWalletControl() {
           className="absolute right-0 top-[calc(100%+8px)] w-64 rounded-xl p-2 z-50 shadow-2xl"
           style={{ background: color.surface, border: `1px solid ${color.border}` }}
         >
-          <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.14em]" style={{ color: color.textMuted }}>
+          <div className="px-2 py-1.5 text-[12px] uppercase tracking-[0.14em]" style={{ color: color.textMuted }}>
             Solana Wallet Standard · Devnet
           </div>
           {wallets.length === 0 ? (
@@ -139,7 +139,7 @@ export function SolanaWalletControl() {
             ))
           )}
           {Boolean(connect.error) && (
-            <div className="px-2 py-2 text-[10px]" role="alert" style={{ color: color.danger }}>
+            <div className="px-2 py-2 text-[12px]" role="alert" style={{ color: color.danger }}>
               Wallet connection was rejected or unavailable.
             </div>
           )}

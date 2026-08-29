@@ -64,7 +64,7 @@ const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
 function ChartTip({ active, payload, accent = M, prefix = "", suffix = "" }: { active?: boolean; payload?: { value: number }[]; accent?: string; prefix?: string; suffix?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-2.5 py-1.5 rounded-lg text-[11px]" style={{ ...mono, background: color.surface, border: `1px solid ${accent}28`, color: accent }}>
+    <div className="px-2.5 py-1.5 rounded-lg text-[13px]" style={{ ...mono, background: color.surface, border: `1px solid ${accent}28`, color: accent }}>
       {prefix}{Number(payload[0].value).toLocaleString()}{suffix}
     </div>
   );
@@ -86,7 +86,7 @@ const NAV = [
 function Badge({ status }: { status: string }) {
   const col = status === "ACTIVE" ? M : status === "PAUSED" ? A : color.textMuted;
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold"
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold"
       style={{ ...mono, background: `${col}12`, color: col, border: `1px solid ${col}25` }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: col, animation: status === "ACTIVE" ? "redline-pulse 2s infinite" : "none" }} />
       {status}
@@ -108,7 +108,7 @@ function KpiCard({ label, value, sub, accent, icon: Icon, data, gradId }: { labe
           </div>
           <span className="text-xs font-medium" style={{ ...sans, color: color.textSecondary }}>{label}</span>
         </div>
-        <span className="text-[11px] text-right" style={{ ...mono, color: color.textDim }}>{sub}</span>
+        <span className="text-[13px] text-right" style={{ ...mono, color: color.textDim }}>{sub}</span>
       </div>
       <div className="text-3xl font-bold tracking-tighter" style={{ ...mono, color: color.text }}>{value}</div>
       <div className="h-14 -mx-2">
@@ -135,7 +135,7 @@ function SectionTitle({ icon: Icon, text, accent = M }: { icon: React.ElementTyp
       <div className="p-1.5 rounded-lg" style={{ background: `${accent}14`, border: `1px solid ${accent}20` }}>
         <Icon size={13} style={{ color: accent }} />
       </div>
-      <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ ...sans, color: color.textSecondary }}>{text}</span>
+      <span className="text-[13px] font-bold tracking-[0.18em] uppercase" style={{ ...sans, color: color.textSecondary }}>{text}</span>
       <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${color.border}, transparent)` }} />
     </div>
   );
@@ -174,11 +174,11 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>REDLINE Overview</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>REDLINE Overview</span>
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Autonomous finance. <span style={{ color: M }}>Hard limits.</span></h1>
         <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>Design agent permissions, assess operational risk, and anchor policy proofs on Solana.</p>
-        {!owner && <span className="inline-flex mt-3 text-[9px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>CONNECT A WALLET TO SEE YOUR NUMBERS</span>}
+        {!owner && <span className="inline-flex mt-3 text-[11px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>CONNECT A WALLET TO SEE YOUR NUMBERS</span>}
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
@@ -195,7 +195,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Weekly Execution Volume</div>
-            <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textDim }}>USDC confirmed on-chain · your grants</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>USDC confirmed on-chain · your grants</div>
           </div>
         </div>
         <div className="h-44">
@@ -228,7 +228,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
           <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
             <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>My Agents</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} active</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} active</span>
           </div>
           {agents.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No agents published yet.</div>}
           {agents.slice(0, 6).map((a, i) => (
@@ -239,7 +239,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold truncate" style={{ ...sans, color: color.text }}>{a.name}</div>
-                <div className="text-[10px]" style={{ ...sans, color: color.textDim }}>{a.version}</div>
+                <div className="text-[12px]" style={{ ...sans, color: color.textDim }}>{a.version}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs font-bold" style={{ ...mono, color: M }}>{a.totalSpentUsdc.toLocaleString()} USDC</div>
@@ -256,9 +256,9 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
           <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><AlertTriangle size={14} style={{ color: A }} /></div>
           <div className="flex-1">
             <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Policy Review Recommended</div>
-            <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{expiringSoon.name} policy expires {new Date(expiringSoon.latestExpiresAt!).toLocaleTimeString()}. Review before extending agent permissions.</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{expiringSoon.name} policy expires {new Date(expiringSoon.latestExpiresAt!).toLocaleTimeString()}. Review before extending agent permissions.</div>
           </div>
-          {setNav && <button type="button" onClick={() => setNav(6)} className="px-4 py-2 rounded-xl text-[11px] font-semibold" style={{ ...sans, background: `${A}14`, border: `1px solid ${A}30`, color: A }}>Open Guardrails</button>}
+          {setNav && <button type="button" onClick={() => setNav(6)} className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${A}14`, border: `1px solid ${A}30`, color: A }}>Open Guardrails</button>}
         </div>
       )}
     </div>
@@ -321,9 +321,9 @@ function AgentsPage() {
             <button type="button" disabled={busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
               {busy ? "Publishing…" : "Publish"}
             </button>
-            {deployError && <span className="text-[11px]" style={{ ...mono, color: color.danger }}>{deployError}</span>}
+            {deployError && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{deployError}</span>}
           </div>
-          <p className="text-[10px]" style={{ ...sans, color: color.textDim }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
+          <p className="text-[12px]" style={{ ...sans, color: color.textDim }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
         </div>
       )}
 
@@ -348,7 +348,7 @@ function AgentsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold truncate" style={{ ...sans, color: color.text }}>{ag.name}</div>
-                  <div className="text-[10px] mt-0.5" style={{ ...sans, color: color.textDim }}>{ag.version}</div>
+                  <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>{ag.version}</div>
                 </div>
                 <Badge status={ag.status} />
               </button>
@@ -370,7 +370,7 @@ function AgentsPage() {
                     <Badge status={a.status} />
                   </div>
                   <div className="text-xs mt-1" style={{ ...mono, color: C }}>{short(a.agentHash, 8)}</div>
-                  <p className="text-[11px] mt-1 max-w-md" style={{ ...sans, color: color.textMuted }}>{a.strategy}</p>
+                  <p className="text-[13px] mt-1 max-w-md" style={{ ...sans, color: color.textMuted }}>{a.strategy}</p>
                 </div>
               </div>
               <div className="agent-metrics grid grid-cols-2 sm:grid-cols-4 gap-0">
@@ -381,7 +381,7 @@ function AgentsPage() {
                   { label: "Total Transfers", value: String(a.totalTx), color: M },
                 ].map((s, i) => (
                   <div key={`det-stat-${i}`} className="rounded-xl p-3" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-                    <div className="text-[10px] mb-1" style={{ ...sans, color: color.textDim }}>{s.label}</div>
+                    <div className="text-[12px] mb-1" style={{ ...sans, color: color.textDim }}>{s.label}</div>
                     <div className="text-base font-bold" style={{ ...mono, color: s.color }}>{s.value}</div>
                   </div>
                 ))}
@@ -392,14 +392,14 @@ function AgentsPage() {
             <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
               <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
                 <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Grants</span>
-                <span className="text-[10px]" style={{ ...sans, color: color.textDim }}>{a.grants.length} total</span>
+                <span className="text-[12px]" style={{ ...sans, color: color.textDim }}>{a.grants.length} total</span>
               </div>
               {a.grants.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No grants yet for this agent.</div>}
               {a.grants.map(g => (
                 <div key={g.id} className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: color.border }}>
-                  <span className="text-[11px] flex-1" style={{ ...mono, color: C }}>{short(g.grantPda)}</span>
-                  <span className="text-[11px]" style={{ ...mono, color: color.textSecondary }}>{fmtUsdc(g.spentUnits)}/{fmtUsdc(g.policyVersion.spendCapUnits)} USDC</span>
-                  <span className="text-[11px]" style={{ ...mono, color: color.textDim }}>{g.transactionCount}/{g.policyVersion.maxTransactions} tx</span>
+                  <span className="text-[13px] flex-1" style={{ ...mono, color: C }}>{short(g.grantPda)}</span>
+                  <span className="text-[13px]" style={{ ...mono, color: color.textSecondary }}>{fmtUsdc(g.spentUnits)}/{fmtUsdc(g.policyVersion.spendCapUnits)} USDC</span>
+                  <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>{g.transactionCount}/{g.policyVersion.maxTransactions} tx</span>
                   <Badge status={g.revoked ? "REVOKED" : "ACTIVE"} />
                 </div>
               ))}
@@ -414,11 +414,11 @@ function AgentsPage() {
                 <div className="flex-1">
                   <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Latest grant policy</div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[11px]" style={{ ...mono, color: color.textDim }}>Expires:</span>
-                    <span className="text-[11px] font-bold" style={{ ...mono, color: M }}>{new Date(a.latestExpiresAt).toLocaleString()}</span>
+                    <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>Expires:</span>
+                    <span className="text-[13px] font-bold" style={{ ...mono, color: M }}>{new Date(a.latestExpiresAt).toLocaleString()}</span>
                   </div>
                 </div>
-                {a.lastActiveAt && <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>last active {new Date(a.lastActiveAt).toLocaleString()}</span>}
+                {a.lastActiveAt && <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>last active {new Date(a.lastActiveAt).toLocaleString()}</span>}
               </div>
             )}
           </div>
@@ -465,7 +465,7 @@ function AnalyticsPage() {
               { label: "Avg Decision Latency", value: data.avgDecisionLatencyMs === null ? "—" : `${data.avgDecisionLatencyMs}ms` },
             ].map((s, i) => (
               <div key={`an-kpi-${i}`} className="analytics-stat p-5" style={{ borderRight: `1px solid ${color.border}` }}>
-                <div className="text-[11px] mb-2" style={{ ...sans, color: color.textDim }}>{s.label}</div>
+                <div className="text-[13px] mb-2" style={{ ...sans, color: color.textDim }}>{s.label}</div>
                 <div className="text-xl font-bold" style={{ ...mono, color: color.text }}>{s.value}</div>
               </div>
             ))}
@@ -505,13 +505,13 @@ function AnalyticsPage() {
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${M}12`, border: `1px solid ${M}20` }}><Bot size={11} style={{ color: M }} /></div>
                   <span className="text-xs font-medium" style={{ ...sans, color: color.text }}>{a.name}</span>
                 </div>
-                <span className="text-[11px] font-bold" style={{ ...mono, color: M }}>{a.volumeUsdc.toLocaleString()} USDC</span>
-                <span className="text-[11px]" style={{ ...mono, color: color.textDim }}>{a.grants} grant{a.grants === 1 ? "" : "s"}</span>
+                <span className="text-[13px] font-bold" style={{ ...mono, color: M }}>{a.volumeUsdc.toLocaleString()} USDC</span>
+                <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>{a.grants} grant{a.grants === 1 ? "" : "s"}</span>
               </div>
             ))}
           </div>
 
-          <div className="text-[11px]" style={{ ...sans, color: color.textDim }}>
+          <div className="text-[13px]" style={{ ...sans, color: color.textDim }}>
             {data.totalTransactions} confirmed · {data.totalRejections} rejected by the on-chain gates across {data.totalGrants} grant{data.totalGrants === 1 ? "" : "s"}.
           </div>
         </>
@@ -589,7 +589,7 @@ function MarketplacePage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Agent Marketplace · Devnet</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Agent Marketplace · Devnet</span>
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Published <span style={{ color: M }}>Agent Versions</span></h1>
         <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: color.textDim, lineHeight: 1.7 }}>
@@ -616,8 +616,8 @@ function MarketplacePage() {
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-xs" style={{ ...sans, color: color.textDim }}>Showing <span style={{ color: color.text }}>{filtered.length}</span> listing{filtered.length === 1 ? "" : "s"}</span>
-        {error && <span className="text-[11px]" style={{ ...mono, color: color.danger }}>{error}</span>}
-        {notice && <span className="text-[11px]" style={{ ...mono, color: M }}>{notice}</span>}
+        {error && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{error}</span>}
+        {notice && <span className="text-[13px]" style={{ ...mono, color: M }}>{notice}</span>}
       </div>
 
       {/* A failed load must not read as "there is nothing here": telling
@@ -628,8 +628,8 @@ function MarketplacePage() {
           {loadFailed ? (
             <>
               <p className="text-sm" style={{ ...sans, color: color.text }}>Could not load listings from the API.</p>
-              <p className="text-[11px] mt-1" style={{ ...mono, color: color.textMuted }}>{API_URL} · {error}</p>
-              <p className="text-[11px] mt-2" style={{ ...sans, color: color.textDim }}>If this says “Not Found”, the API is running a build without the marketplace routes.</p>
+              <p className="text-[13px] mt-1" style={{ ...mono, color: color.textMuted }}>{API_URL} · {error}</p>
+              <p className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>If this says “Not Found”, the API is running a build without the marketplace routes.</p>
             </>
           ) : (
             <p className="text-sm" style={{ ...sans, color: color.textMuted }}>No listings yet — publish an agent from the Agents page and it appears here.</p>
@@ -655,42 +655,42 @@ function MarketplacePage() {
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-bold" style={{ ...sans, color: color.text }}>{l.agentVersion.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px]" style={{ ...mono, color: accent, opacity: 0.7 }}>{l.agentVersion.version}</span>
-                      {l.activeHires > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} active hire{l.activeHires === 1 ? "" : "s"}</span>}
+                      <span className="text-[12px]" style={{ ...mono, color: accent, opacity: 0.7 }}>{l.agentVersion.version}</span>
+                      {l.activeHires > 0 && <span className="text-[12px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} active hire{l.activeHires === 1 ? "" : "s"}</span>}
                     </div>
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed" style={{ ...sans, color: color.textMuted, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.agentVersion.strategy}</p>
                 <div className="rounded-xl px-3.5 py-3 space-y-1.5" style={{ background: color.bg, border: `1px solid ${color.border}` }}>
-                  <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Agent hash</span><span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Publisher</span></div>
+                  <div className="flex items-center justify-between"><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Agent hash</span><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Publisher</span></div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px]" style={{ ...mono, color: C }}>{short(l.agentVersion.agentHash, 6)}</span>
-                    <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>{l.developerWallet ? short(l.developerWallet) : "unclaimed"}</span>
+                    <span className="text-[12px]" style={{ ...mono, color: C }}>{short(l.agentVersion.agentHash, 6)}</span>
+                    <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{l.developerWallet ? short(l.developerWallet) : "unclaimed"}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={10} style={{ color: color.textDim }} />
-                  <span className="text-[10px]" style={{ ...mono, color: color.textDim }}>published {new Date(l.createdAt).toLocaleDateString()}</span>
+                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>published {new Date(l.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
               <div className="px-6 py-4 border-t flex flex-col gap-3" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[10px]" style={{ ...sans, color: color.textDim }}>{priced ? `${fmtSol(l.priceLamports)} SOL per 24h` : "Rate"}</div>
+                    <div className="text-[12px]" style={{ ...sans, color: color.textDim }}>{priced ? `${fmtSol(l.priceLamports)} SOL per 24h` : "Rate"}</div>
                     <div className="text-base font-bold" style={{ ...mono, color: priced ? color.text : color.textDim }}>
                       {priced ? `${fmtSol(String(BigInt(l.priceLamports) * BigInt(periodsFor(l.id))))} SOL` : "no price set"}
                     </div>
                     {priced
-                      ? <div className="text-[10px] mt-0.5" style={{ ...sans, color: color.textDim }}>total for {hoursFor(l.id)}h</div>
-                      : <div className="text-[10px] mt-0.5" style={{ ...sans, color: color.textDim }}>Claim it to set a price and start renting</div>}
+                      ? <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>total for {hoursFor(l.id)}h</div>
+                      : <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>Claim it to set a price and start renting</div>}
                   </div>
                   {priced && (
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-[9px] uppercase tracking-widest" style={{ ...sans, color: color.textDim }}>Duration</span>
+                      <span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.textDim }}>Duration</span>
                       <div className="flex gap-1">
                         {[24, 72, 168].map(h => (
                           <button type="button" key={`${l.id}-h${h}`} onClick={() => setHours(v => ({ ...v, [l.id]: h }))} aria-pressed={hoursFor(l.id) === h}
-                            className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                            className="px-2 py-1 rounded-lg text-[12px] font-semibold transition-all"
                             style={{ ...mono, background: hoursFor(l.id) === h ? `${accent}18` : color.border, border: `1px solid ${hoursFor(l.id) === h ? accent + "35" : color.border}`, color: hoursFor(l.id) === h ? accent : color.textDim }}>
                             {h === 168 ? "7d" : h === 72 ? "3d" : "1d"}
                           </button>
@@ -699,21 +699,21 @@ function MarketplacePage() {
                     </div>
                   )}
                 </div>
-                {mine && <div className="text-[10px]" style={{ ...sans, color: A }}>You publish this agent — you cannot rent it from yourself.</div>}
+                {mine && <div className="text-[12px]" style={{ ...sans, color: A }}>You publish this agent — you cannot rent it from yourself.</div>}
                 {editing === l.id ? (
                   <div className="flex items-center gap-2">
                     <input value={priceSol} onChange={e => setPriceSol(e.target.value.replace(/[^\d.]/g, ""))} aria-label="Rental price in SOL"
                       className="w-24 px-3 py-2 rounded-xl text-xs text-right" style={{ ...mono, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
-                    <button type="button" disabled={busy === l.id} onClick={() => savePrice(l)} className="flex-1 px-3 py-2 rounded-xl text-[11px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}14`, border: `1px solid ${M}30`, color: M }}>
+                    <button type="button" disabled={busy === l.id} onClick={() => savePrice(l)} className="flex-1 px-3 py-2 rounded-xl text-[13px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}14`, border: `1px solid ${M}30`, color: M }}>
                       {busy === l.id ? "Saving…" : "Save price"}
                     </button>
-                    <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl text-[11px]" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textDim }}>Cancel</button>
+                    <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl text-[13px]" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textDim }}>Cancel</button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <button type="button" disabled={!connected?.signer || !priced || busy === l.id || mine} onClick={() => rent(l)}
                       title={mine ? "You publish this agent" : !priced ? "The publisher has not set a price" : !connected?.signer ? "Connect a wallet to rent" : ""}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-40"
+                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
                       style={{ ...sans, background: `${C}14`, border: `1px solid ${C}30`, color: C }}>
                       {busy === l.id ? "Paying…" : `Rent ${hoursFor(l.id)}h`}
                     </button>
@@ -725,7 +725,7 @@ function MarketplacePage() {
                       <button type="button" disabled={!wallet}
                         title={wallet ? "" : "Connect a wallet — it receives the rental payments"}
                         onClick={() => { setEditing(l.id); setPriceSol(priced ? String(Number(l.priceLamports) / LAMPORTS_PER_SOL) : "0.05"); }}
-                        className="px-3 py-2.5 rounded-xl text-[11px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}28`, color: accent }}>
+                        className="px-3 py-2.5 rounded-xl text-[13px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}28`, color: accent }}>
                         {mine ? "Edit price" : "Claim"}
                       </button>
                     )}
@@ -790,7 +790,7 @@ function VaultPage() {
               <div>
                 <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ ...mono, color: color.textDim }}>Wallet SOL Balance</div>
                 <div className="text-4xl font-bold" style={{ ...mono, color: color.text }}>{sol === null ? "—" : `${sol.toFixed(4)} SOL`}</div>
-                <div className="text-[11px] mt-2" style={{ ...sans, color: color.textDim }}>Devnet SOL · pays transaction fees</div>
+                <div className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>Devnet SOL · pays transaction fees</div>
               </div>
               <div className="text-right">
                 <div className="text-xs mb-1" style={{ ...sans, color: color.textDim }}>Owner wallet</div>
@@ -798,7 +798,7 @@ function VaultPage() {
                   <span className="text-sm font-semibold" style={{ ...mono, color: C }}>{short(owner)}</span>
                   <a href={explorerAddressUrl(owner)} target="_blank" rel="noreferrer" aria-label="Open wallet in Solana Explorer" className="p-1 rounded-md" style={{ background: color.surfaceInset, color: C }}><ExternalLink size={11} /></a>
                 </div>
-                <div className="text-[10px] mt-1" style={{ ...sans, color: color.textDim }}>Solana Devnet</div>
+                <div className="text-[12px] mt-1" style={{ ...sans, color: color.textDim }}>Solana Devnet</div>
               </div>
             </div>
           </div>
@@ -812,11 +812,11 @@ function VaultPage() {
             {events.map(e => (
               <div key={e.id} className="px-5 py-3.5 border-b" style={{ borderColor: color.border }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ ...mono, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>{e.eventType}</span>
-                  <span className="text-[10px]" style={{ ...sans, color: color.textDim }}>{new Date(e.createdAt).toLocaleString()}</span>
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-md" style={{ ...mono, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>{e.eventType}</span>
+                  <span className="text-[12px]" style={{ ...sans, color: color.textDim }}>{new Date(e.createdAt).toLocaleString()}</span>
                 </div>
                 {e.chainSignature && (
-                  <a href={explorerTransactionUrl(e.chainSignature)} target="_blank" rel="noreferrer" className="text-[10px]" style={{ ...mono, color: color.textDim }}>
+                  <a href={explorerTransactionUrl(e.chainSignature)} target="_blank" rel="noreferrer" className="text-[12px]" style={{ ...mono, color: color.textDim }}>
                     {short(e.chainSignature, 8)} ↗
                   </a>
                 )}
@@ -944,13 +944,13 @@ function SessionsPage() {
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Key size={12} style={{ color: M }} /></div>
             <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Create Agent Policy</span>
-            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>SOLANA DEVNET</span>
+            <span className="ml-auto text-[12px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>SOLANA DEVNET</span>
           </div>
           <div className="flex gap-2">
             {STEPS.map((s, i) => (
               <button type="button" key={`wiz-step-${i}`} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined} aria-label={`Step ${i + 1}: ${s}`} className="flex-1 flex flex-col items-center gap-1.5">
                 <div className="w-full h-0.5 rounded-full transition-all" style={{ background: i <= step ? (i === step ? M : `${M}50`) : color.border }} />
-                <span className="text-[9px] font-semibold hidden sm:block" style={{ ...mono, color: i === step ? M : i < step ? `${M}60` : "rgba(148,163,184,0.35)" }}>
+                <span className="text-[11px] font-semibold hidden sm:block" style={{ ...mono, color: i === step ? M : i < step ? `${M}60` : "rgba(148,163,184,0.35)" }}>
                   {String(i + 1).padStart(2, "0")} {s}
                 </span>
               </button>
@@ -964,20 +964,20 @@ function SessionsPage() {
                 <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>Which published agent version does this grant authorise? The grant records its <code>agentHash</code>, so this is the build the policy is bound to.</p>
                 {agentVersions.length > 0 ? (
                   <select value={agentId} onChange={e => setAgentId(e.target.value)} aria-label="Agent version this grant authorises"
-                    className="w-full px-3 py-2 rounded-xl text-[11px] outline-none"
+                    className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
                     style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${color.border}`, color: color.text }}>
                     {agentVersions.map(a => (
                       <option key={a.id} value={a.id} style={{ background: color.surface }}>{a.name} {a.version} · {a.agentHash.slice(0, 8)}…</option>
                     ))}
                   </select>
                 ) : (
-                  <p className="text-[11px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${A}0b`, border: `1px solid ${A}25`, color: color.warn }}>
+                  <p className="text-[13px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${A}0b`, border: `1px solid ${A}25`, color: color.warn }}>
                     No agent published yet — signing this grant publishes “{FALLBACK_AGENT.name}” and binds the grant to it. Publish from the Agents page first to name your own.
                   </p>
                 )}
-                {selectedAgent && <p className="text-[10px]" style={{ ...sans, color: color.textMuted, lineHeight: 1.6 }}>{selectedAgent.strategy}</p>}
+                {selectedAgent && <p className="text-[12px]" style={{ ...sans, color: color.textMuted, lineHeight: 1.6 }}>{selectedAgent.strategy}</p>}
                 {activeHire && (
-                  <p className="text-[10px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${C}0b`, border: `1px solid ${C}25`, color: C, lineHeight: 1.6 }}>
+                  <p className="text-[12px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${C}0b`, border: `1px solid ${C}25`, color: C, lineHeight: 1.6 }}>
                     Running under your rental of this agent — it covers grants until {new Date(activeHire.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}. The grant records which rental authorised it.
                   </p>
                 )}
@@ -986,7 +986,7 @@ function SessionsPage() {
               <div className="flex flex-wrap gap-2">
                 {tList.map((t, ti) => { const on = tokens.includes(t); return (
                   <button type="button" key={`wiz-tok-${ti}`} onClick={() => setTokens(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])} aria-pressed={on}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+                    className="px-3 py-1.5 rounded-xl text-[13px] font-bold transition-all"
                     style={{ ...mono, background: on ? `${M}14` : color.surfaceSubtle, border: `1px solid ${on ? M + "40" : color.border}`, color: on ? M : color.textMuted }}>
                     {t}
                   </button>
@@ -998,23 +998,23 @@ function SessionsPage() {
                   <div key={`dest-${di}`} className="flex gap-2">
                     <input value={d} onChange={e => setDests(p => p.map((x, i) => i === di ? e.target.value.trim() : x))}
                       placeholder="Recipient address (base58)" aria-label={`Allowed destination ${di + 1}`} spellCheck={false}
-                      className="flex-1 px-3 py-2 rounded-xl text-[11px] outline-none"
+                      className="flex-1 px-3 py-2 rounded-xl text-[13px] outline-none"
                       style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${d && !isAddressLike(d) ? "#ef444455" : color.border}`, color: color.text }} />
                     {dests.length > 1 && (
                       <button type="button" onClick={() => setDests(p => p.filter((_, i) => i !== di))} aria-label={`Remove destination ${di + 1}`}
-                        className="px-3 rounded-xl text-[11px]" style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${color.border}`, color: color.textMuted }}>×</button>
+                        className="px-3 rounded-xl text-[13px]" style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${color.border}`, color: color.textMuted }}>×</button>
                     )}
                   </div>
                 ))}
                 {dests.length < MAX_DESTS && (
                   <button type="button" onClick={() => setDests(p => [...p, ""])}
-                    className="text-[11px] px-3 py-1.5 rounded-xl" style={{ ...mono, background: `${C}10`, border: `1px solid ${C}25`, color: C }}>+ Add destination</button>
+                    className="text-[13px] px-3 py-1.5 rounded-xl" style={{ ...mono, background: `${C}10`, border: `1px solid ${C}25`, color: C }}>+ Add destination</button>
                 )}
-                {destError && <p role="alert" className="text-[10px]" style={{ ...sans, color: color.danger }}>{destError}</p>}
+                {destError && <p role="alert" className="text-[12px]" style={{ ...sans, color: color.danger }}>{destError}</p>}
               </div>
               <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
                 <Lock size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-                <p className="text-[11px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
+                <p className="text-[13px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
               </div>
             </div>
           )}
@@ -1026,7 +1026,7 @@ function SessionsPage() {
               <div className="grid grid-cols-3 gap-2">
                 {[{ label: "Avg/Tx", value: `$${(cap / txn).toFixed(2)}`, color: A }, { label: "Risk", value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW", color: cap > 5000 ? color.danger : cap > 1000 ? A : M }, { label: "Tokens", value: String(tokens.length), color: C }].map((row, ri) => (
                   <div key={`wiz-row-${ri}`} className="rounded-xl p-3 text-center" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-                    <div className="text-[10px] mb-1" style={{ ...sans, color: color.textMuted }}>{row.label}</div>
+                    <div className="text-[12px] mb-1" style={{ ...sans, color: color.textMuted }}>{row.label}</div>
                     <div className="text-sm font-bold" style={{ ...mono, color: row.color }}>{row.value}</div>
                   </div>
                 ))}
@@ -1041,8 +1041,8 @@ function SessionsPage() {
               <div className="rounded-xl p-3.5 flex items-center gap-3" style={{ background: `${M}09`, border: `1px solid ${M}18` }}>
                 <Timer size={14} style={{ color: M, flexShrink: 0 }} />
                 <div>
-                  <div className="text-[11px] font-semibold" style={{ ...mono, color: M }}>Expires {new Date(Date.now() + dur * 3600000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                  <div className="text-[10px] mt-0.5" style={{ ...sans, color: color.textMuted }}>≤ {Math.floor((dur * 60) / cool)} executions · {cool}m cooldown</div>
+                  <div className="text-[13px] font-semibold" style={{ ...mono, color: M }}>Expires {new Date(Date.now() + dur * 3600000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                  <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textMuted }}>≤ {Math.floor((dur * 60) / cool)} executions · {cool}m cooldown</div>
                 </div>
               </div>
             </div>
@@ -1053,8 +1053,8 @@ function SessionsPage() {
               <div>
               {[["Agent", selectedAgent ? `${selectedAgent.name} ${selectedAgent.version}` : `${FALLBACK_AGENT.name} (new)`, M], ["Rental", activeHire ? `until ${new Date(activeHire.endsAt).toLocaleDateString()}` : "not rented — yours to run", C], ["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || "none", A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: color.border }}>
-                  <span className="text-[11px]" style={{ ...sans, color: color.textMuted }}>{k}</span>
-                  <span className="text-[11px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
+                  <span className="text-[13px]" style={{ ...sans, color: color.textMuted }}>{k}</span>
+                  <span className="text-[13px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
                 </div>
               ))}
               </div>
@@ -1063,16 +1063,16 @@ function SessionsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-semibold" style={{ color: color.text }}>Risk copilot verdict</div>
-                      <div className="text-[10px] mt-0.5" style={{ color: color.textMuted }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : assessment.source === "openai+deterministic-floor" ? `OpenAI + deterministic safety floor · ${assessment.model}` : "Deterministic safety fallback"}</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: color.textMuted }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : assessment.source === "openai+deterministic-floor" ? `OpenAI + deterministic safety floor · ${assessment.model}` : "Deterministic safety fallback"}</div>
                     </div>
-                    <div className="text-right"><div className="text-xl font-bold" style={{ ...mono, color: assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : color.danger }}>{assessment.score}/100</div><div className="text-[10px]" style={{ ...mono, color: color.textSecondary }}>{assessment.decision}</div></div>
+                    <div className="text-right"><div className="text-xl font-bold" style={{ ...mono, color: assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : color.danger }}>{assessment.score}/100</div><div className="text-[12px]" style={{ ...mono, color: color.textSecondary }}>{assessment.decision}</div></div>
                   </div>
-                  <p className="text-[11px]" style={{ color: color.textSecondary }}>{assessment.summary}</p>
-                  <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[10px] flex gap-2" style={{ color: color.textMuted }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
+                  <p className="text-[13px]" style={{ color: color.textSecondary }}>{assessment.summary}</p>
+                  <ul className="space-y-1">{assessment.findings.slice(0, 3).map((finding, index) => <li key={`finding-${index}`} className="text-[12px] flex gap-2" style={{ color: color.textMuted }}><span style={{ color: C }}>•</span>{finding}</li>)}</ul>
                   <GrantSignButton policy={policy} assessment={assessment} destinations={cleanDests} destinationsInvalid={destsInvalid} agentVersionId={selectedAgent?.id ?? null} hireId={activeHire?.id ?? null} onCreated={() => setGrantsKey(k => k + 1)} />
                 </div>
               )}
-              {assessmentError && <p role="alert" className="text-[10px]" style={{ color: color.danger }}>{assessmentError}</p>}
+              {assessmentError && <p role="alert" className="text-[12px]" style={{ color: color.danger }}>{assessmentError}</p>}
             </div>
           )}
         </div>
@@ -1130,13 +1130,13 @@ function SettingsPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold" style={{ ...sans, color: color.text }}>{wallet ? "Connected wallet" : "No wallet connected"}</div>
-          <div className="text-[11px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || "Connect a Wallet Standard account to sign grants"}</div>
+          <div className="text-[13px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || "Connect a Wallet Standard account to sign grants"}</div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
           </div>
         </div>
-        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[11px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>View on Explorer</a>}
+        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>View on Explorer</a>}
       </div>
 
       {/* Tab bar */}
@@ -1171,7 +1171,7 @@ function SettingsPage() {
         {activeTab === 1 && (
           <div className="rounded-2xl p-5 col-span-full" style={{ ...glass() }}>
             <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.text }}>Environment</div>
-            <p className="text-[11px] mb-4" style={{ ...sans, color: color.textDim }}>Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.</p>
+            <p className="text-[13px] mb-4" style={{ ...sans, color: color.textDim }}>Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.</p>
             <Row label="API URL" value={API_URL} accent={C} />
             <Row label="Program ID (frontend)" value={short(PROGRAM_ID, 8)} accent={C} />
             <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? short(String(import.meta.env.VITE_DEMO_USDC_MINT), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? M : A} />
@@ -1239,7 +1239,7 @@ export default function App() {
             <span className="grid h-8 w-8 place-items-center rounded-full" style={{ color: M, border: `1px solid ${M}55`, background: `${M}10` }}>
               <ShieldCheck size={14} />
             </span>
-            <span className="hidden sm:block text-[11px] font-bold tracking-[0.2em]" style={{ ...mono, color: color.text }}>REDLINE</span>
+            <span className="hidden sm:block text-[13px] font-bold tracking-[0.2em]" style={{ ...mono, color: color.text }}>REDLINE</span>
           </button>
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
@@ -1251,7 +1251,7 @@ export default function App() {
                   key={item.slug}
                   onClick={() => navigate(index)}
                   aria-current={active ? "page" : undefined}
-                  className="relative shrink-0 rounded-full px-3 py-2 text-[10px] font-semibold transition-colors"
+                  className="relative shrink-0 rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
                   style={{ ...sans, color: active ? color.primaryText : color.textDim, background: active ? "rgba(75,134,247,0.09)" : "transparent" }}
                 >
                   {item.label}
@@ -1261,7 +1261,7 @@ export default function App() {
             })}
           </nav>
 
-          <div className="hidden xl:flex shrink-0 items-center gap-2 text-[9px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
+          <div className="hidden xl:flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
             <span className="redline-live-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
             Solana devnet
           </div>

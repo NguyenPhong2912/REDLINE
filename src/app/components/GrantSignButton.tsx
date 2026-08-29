@@ -106,10 +106,10 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
         <div className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold" style={{ color: ACCENT, background: `${ACCENT}12`, border: `1px solid ${ACCENT}30` }}>
           <CheckCircle2 size={13} /> Grant live on Devnet · id {grantId.slice(-6)}
         </div>
-        <a className="flex items-center justify-center gap-1 text-[10px]" style={{ color: CYAN }} href={explorerTransactionUrl(signature)} target="_blank" rel="noreferrer">
+        <a className="flex items-center justify-center gap-1 text-[12px]" style={{ color: CYAN }} href={explorerTransactionUrl(signature)} target="_blank" rel="noreferrer">
           View create_grant on Solana Explorer <ExternalLink size={10} />
         </a>
-        <p className="text-[10px] text-center" style={{ color: color.textDim }}>Open Agent Guardrails → Active Policy Accounts to start the agent.</p>
+        <p className="text-[12px] text-center" style={{ color: color.textDim }}>Open Agent Guardrails → Active Policy Accounts to start the agent.</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
       {needsAcceptance && (
         <label className="flex items-start gap-2 p-3 rounded-xl cursor-pointer" style={{ background: "#f59e0b0b", border: "1px solid #f59e0b30" }}>
           <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 accent-amber-500" />
-          <span className="text-[10px] leading-relaxed" style={{ color: color.warn }}>
+          <span className="text-[12px] leading-relaxed" style={{ color: color.warn }}>
             This policy was rated <strong>REVIEW</strong>: the risk engine wants a person to approve it before it is signed. I have read the findings above and accept this risk. Your acceptance is recorded in the audit trail against this grant.
           </span>
         </label>
@@ -138,10 +138,10 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
         {busy ? <LoaderCircle size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
         {label}
       </button>
-      <p className="text-[10px] text-center" style={{ color: color.textDim }}>
+      <p className="text-[12px] text-center" style={{ color: color.textDim }}>
         {health ? `Program ${health.programId.slice(0, 6)}… · executor ${health.executor.slice(0, 6)}… · ${health.chain}` : apiError ? `API: ${apiError}` : "Connecting to REDLINE API…"}
       </p>
-      {error && <p role="alert" className="text-[10px] text-center" style={{ color: color.danger }}>{error}</p>}
+      {error && <p role="alert" className="text-[12px] text-center" style={{ color: color.danger }}>{error}</p>}
     </div>
   );
 }

@@ -52,12 +52,12 @@ export function VaultPanel() {
       <div className="flex items-start gap-4 flex-wrap">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Vault size={18} style={{ color: M }} /></div>
         <div className="flex-1 min-w-[220px]">
-          <div className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: M }}>Program vault · live from Devnet</div>
+          <div className="text-[12px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: M }}>Program vault · live from Devnet</div>
           {!owner && <div className="text-sm mt-1" style={{ ...sans, color: color.textMuted }}>Connect a wallet to see its vault.</div>}
           {owner && (
             <>
               <div className="text-3xl font-bold tracking-tight mt-1" style={{ ...mono, color: color.text }}>{balance} <span className="text-base" style={{ color: color.textMuted }}>dUSDC</span></div>
-              <div className="text-[10px] mt-1 flex gap-3 flex-wrap" style={{ ...mono, color: color.textDim }}>
+              <div className="text-[12px] mt-1 flex gap-3 flex-wrap" style={{ ...mono, color: color.textDim }}>
                 {view && <a href={explorerAddressUrl(view.vaultPda)} target="_blank" rel="noreferrer" style={{ color: C }}>vault {short(view.vaultPda)} <ExternalLink size={9} className="inline" /></a>}
                 {view && <span>ata {short(view.vaultAta)}</span>}
                 {view && !view.exists && <span style={{ color: A }}>vault not initialised — sign a grant first</span>}
@@ -73,8 +73,8 @@ export function VaultPanel() {
           </div>
         )}
       </div>
-      {lastSig && <a className="block mt-3 text-[10px]" style={{ ...mono, color: C }} href={explorerTransactionUrl(lastSig)} target="_blank" rel="noreferrer">last tx {short(lastSig, 6)} ↗</a>}
-      {error && <p role="alert" className="mt-3 text-[11px]" style={{ ...mono, color: R }}>{error}</p>}
+      {lastSig && <a className="block mt-3 text-[12px]" style={{ ...mono, color: C }} href={explorerTransactionUrl(lastSig)} target="_blank" rel="noreferrer">last tx {short(lastSig, 6)} ↗</a>}
+      {error && <p role="alert" className="mt-3 text-[13px]" style={{ ...mono, color: R }}>{error}</p>}
     </div>
   );
 }
@@ -82,7 +82,7 @@ export function VaultPanel() {
 function Btn({ icon: Icon, label, accent, onClick, disabled, busy }: { icon: React.ElementType; label: string; accent: string; onClick: () => void; disabled?: boolean; busy?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all disabled:opacity-40"
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
       style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}30`, color: accent }}>
       {busy ? <LoaderCircle size={11} className="animate-spin" /> : <Icon size={11} />}{label}
     </button>

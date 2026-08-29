@@ -158,7 +158,7 @@ export function AuditPage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><ScrollText size={12} style={{ color: M }} /></div>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Verifiable Audit Trail</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Verifiable Audit Trail</span>
         </div>
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Audit <span style={{ color: M }}>Log</span></h1>
         <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>Every intent, decision, and on-chain signature — verifiable on Solana Explorer.</p>
@@ -184,7 +184,7 @@ export function AuditPage() {
                 <div className="p-1.5 rounded-lg" style={{ background: `${s.color}14`, border: `1px solid ${s.color}20` }}>
                   <Icon size={11} style={{ color: s.color }} />
                 </div>
-                <span className="text-[11px]" style={{ ...sans, color: color.textSecondary }}>{s.label}</span>
+                <span className="text-[13px]" style={{ ...sans, color: color.textSecondary }}>{s.label}</span>
               </div>
               <div className="text-xl font-bold" style={{ ...mono, color: color.text }}>{s.value}</div>
             </div>
@@ -229,7 +229,7 @@ export function AuditPage() {
                     <span>{g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span></span>
                     <span style={{ ...mono, color: g.revoked ? R : C, fontSize: 10 }}>{g.revoked ? "REVOKED" : "ACTIVE"}</span>
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ ...mono, color: color.textDim }}>grant {short(g.grantPda)} · {short(g.id)}</div>
+                  <div className="text-[12px] mt-0.5" style={{ ...mono, color: color.textDim }}>grant {short(g.grantPda)} · {short(g.id)}</div>
                 </button>
               ))}
             </div>
@@ -253,7 +253,7 @@ export function AuditPage() {
         </span>
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: error ? R : M, animation: error ? "none" : "redline-pulse 2s infinite" }} />
-          <span className="text-[10px] font-bold" style={{ ...mono, color: error ? R : M }}>{error ? "OFFLINE" : "LIVE"}</span>
+          <span className="text-[12px] font-bold" style={{ ...mono, color: error ? R : M }}>{error ? "OFFLINE" : "LIVE"}</span>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export function AuditPage() {
           <div className="p-2 rounded-xl" style={{ background: `${R}14`, border: `1px solid ${R}25` }}><AlertTriangle size={14} style={{ color: R }} /></div>
           <div className="flex-1">
             <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Backend Unreachable</div>
-            <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{error}. Start the backend with <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{error}. Start the backend with <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
           </div>
         </div>
       )}
@@ -273,11 +273,11 @@ export function AuditPage() {
         {/* Table header */}
         <div className="grid items-center px-5 py-3 border-b"
           style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: color.border, background: color.surfaceSubtle }}>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Time</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Event</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Details</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Source</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: color.textDim }}>Signature</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Time</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Event</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Details</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Source</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: color.textDim }}>Signature</span>
         </div>
 
         {/* Empty state */}
@@ -319,7 +319,7 @@ export function AuditPage() {
                 animation: idx === filtered.length - 1 ? "fadeIn 0.3s ease-out" : undefined,
               }}>
               {/* Time */}
-              <span className="text-[11px]" style={{ ...mono, color: "rgba(148,163,184,0.5)" }}>
+              <span className="text-[13px]" style={{ ...mono, color: "rgba(148,163,184,0.5)" }}>
                 {new Date(row.createdAt).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </span>
 
@@ -328,16 +328,16 @@ export function AuditPage() {
                 <div className="p-1 rounded-md" style={{ background: `${meta.color}12`, border: `1px solid ${meta.color}20` }}>
                   <Icon size={10} style={{ color: meta.color }} />
                 </div>
-                <span className="text-[10px] font-semibold truncate" style={{ ...mono, color: meta.color }}>{meta.label}</span>
+                <span className="text-[12px] font-semibold truncate" style={{ ...mono, color: meta.color }}>{meta.label}</span>
               </div>
 
               {/* Description */}
-              <span className="text-[11px] truncate pr-3" style={{ ...sans, color: color.textSecondary }} title={desc}>{desc}</span>
+              <span className="text-[13px] truncate pr-3" style={{ ...sans, color: color.textSecondary }} title={desc}>{desc}</span>
 
               {/* Source — who wrote this row, and whether the other writer agrees */}
               <div className="flex items-center gap-1.5">
                 <span
-                  className="text-[10px] px-2 py-0.5 rounded-md truncate w-fit"
+                  className="text-[12px] px-2 py-0.5 rounded-md truncate w-fit"
                   title={fromIndexer
                     ? "Decoded from the program's own logs by the indexer — not from anything this server remembered."
                     : `Recorded by the ${row.actorType === "owner" ? "owner's action" : row.actorType} as it happened.`}
@@ -360,7 +360,7 @@ export function AuditPage() {
               <div className="text-right">
                 {hasSig ? (
                   <a href={explorerTransactionUrl(row.chainSignature!)} target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] font-semibold transition-colors"
+                    className="inline-flex items-center gap-1 text-[12px] font-semibold transition-colors"
                     style={{ ...mono, color: C }}
                     onMouseEnter={e => (e.currentTarget.style.color = M)}
                     onMouseLeave={e => (e.currentTarget.style.color = C)}>
@@ -368,7 +368,7 @@ export function AuditPage() {
                     <ExternalLink size={9} />
                   </a>
                 ) : (
-                  <span className="text-[10px]" style={{ ...mono, color: color.border }}>—</span>
+                  <span className="text-[12px]" style={{ ...mono, color: color.border }}>—</span>
                 )}
               </div>
             </div>
@@ -379,7 +379,7 @@ export function AuditPage() {
       {/* Footer note */}
       <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
         <ScrollText size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-        <p className="text-[11px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>
+        <p className="text-[13px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>
           This audit trail is append-only. Every event with a chain signature can be independently verified on{" "}
           <a href="https://explorer.solana.com/?cluster=devnet" target="_blank" rel="noreferrer" style={{ color: C }}>Solana Explorer (Devnet)</a>.
           The indexer reads program logs directly — dashboard numbers come from the chain, not the server.

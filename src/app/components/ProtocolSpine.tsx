@@ -49,7 +49,7 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
       <div className="relative z-10 flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em]" style={{ ...mono, color: color.primary }}>
+            <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ ...mono, color: color.primary }}>
               <Activity size={12} /> Live policy backbone
             </div>
             <h2 className="mt-2 text-xl font-semibold tracking-tight" style={{ ...sans, color: color.text }}>Every transaction crosses seven hard limits.</h2>
@@ -59,7 +59,7 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
           </div>
           <div className="flex items-center gap-2 self-start rounded-full px-3 py-1.5" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
             <span className={`h-1.5 w-1.5 rounded-full ${offline ? "" : "redline-live-dot"}`} style={{ background: offline ? color.warn : color.primary }} />
-            <span className="text-[10px] uppercase tracking-[0.16em]" style={{ ...mono, color: offline ? color.warn : color.textSecondary }}>
+            <span className="text-[12px] uppercase tracking-[0.16em]" style={{ ...mono, color: offline ? color.warn : color.textSecondary }}>
               {offline ? "Preview mode" : `${data?.network.cluster ?? "connecting"} · ${data ? short(data.network.programId, 5) : "syncing"}`}
             </span>
           </div>
@@ -112,8 +112,8 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
               <div key={item.label} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                 <Icon size={13} style={{ color: color.primary }} />
                 <div>
-                  <div className="text-[9px] uppercase tracking-[0.12em]" style={{ ...sans, color: color.textDim }}>{item.label}</div>
-                  <div className="mt-0.5 text-[11px] font-semibold" style={{ ...mono, color: color.text }}>{item.value}</div>
+                  <div className="text-[11px] uppercase tracking-[0.12em]" style={{ ...sans, color: color.textDim }}>{item.label}</div>
+                  <div className="mt-0.5 text-[13px] font-semibold" style={{ ...mono, color: color.text }}>{item.value}</div>
                 </div>
               </div>
             );
