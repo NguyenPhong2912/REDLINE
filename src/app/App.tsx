@@ -97,7 +97,7 @@ function Badge({ status }: { status: string }) {
 function KpiCard({ label, value, sub, accent, icon: Icon, data, gradId }: { label: string; value: string; sub: string; accent: string; icon: React.ElementType; data: { t: string; v: number }[]; gradId: string }) {
   return (
     <div className="relative rounded-2xl p-5 flex flex-col gap-3 overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
-      style={{ ...glass(), boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>
+      style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
       <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }} />
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
         style={{ background: `radial-gradient(ellipse at 20% 0%, ${accent}10 0%, transparent 60%)` }} />
@@ -191,7 +191,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
       <ProtocolSpine owner={owner || undefined} />
 
       {/* Volume chart */}
-      <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+      <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Weekly Execution Volume</div>
@@ -225,7 +225,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <LiveFeed />
 
         {/* Quick agents */}
-        <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+        <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
           <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
             <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>My Agents</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} active</span>
@@ -357,7 +357,7 @@ function AgentsPage() {
 
           {/* Agent detail */}
           <div className="space-y-4">
-            <div className="rounded-2xl p-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+            <div className="rounded-2xl p-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent(sel)}60, transparent)` }} />
               <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 0% 0%, ${accent(sel)}08, transparent 60%)` }} />
               <div className="flex items-start gap-4 mb-6">
@@ -645,7 +645,7 @@ function MarketplacePage() {
           return (
             <div key={`mkt-card-${l.id}`}
               className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1"
-              style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+              style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}70, transparent)` }} />
               <div className="p-6 flex flex-col gap-4 flex-1">
                 <div className="flex items-start gap-3">
@@ -784,7 +784,7 @@ function VaultPage() {
 
       {owner && (
         <>
-          <div className="rounded-2xl p-7 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+          <div className="rounded-2xl p-7 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
             <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
@@ -922,7 +922,7 @@ function SessionsPage() {
           <div className="absolute left-0 h-1.5 rounded-full pointer-events-none" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}60, ${accent})` }} />
           <input type="range" aria-label={label} min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
           <div className="absolute w-3.5 h-3.5 rounded-full border-2 transition-all pointer-events-none"
-            style={{ left: `calc(${pct}% - 7px)`, background: color.surface, borderColor: accent, boxShadow: "0 1px 3px rgba(15,23,42,0.22)" }} />
+            style={{ left: `calc(${pct}% - 7px)`, background: color.surface, borderColor: accent, boxShadow: "0 2px 8px rgba(4, 2, 12, 0.7)" }} />
         </div>
       </div>
     );
@@ -939,7 +939,7 @@ function SessionsPage() {
       <GrantsPanel refreshKey={grantsKey} />
 
       {/* New session wizard */}
-      <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+      <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
         <div className="px-6 py-4 border-b" style={{ borderColor: color.border, background: `${M}04` }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Key size={12} style={{ color: M }} /></div>
@@ -1082,7 +1082,7 @@ function SessionsPage() {
             style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textSecondary }}>Back</button>
           <button type="button" onClick={() => step < STEPS.length - 1 ? setStep(s => s + 1) : void assessPolicy()} disabled={assessing}
             className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
-            style={{ ...sans, background: step === STEPS.length - 1 ? color.primary : `${M}12`, border: `1px solid ${step === STEPS.length - 1 ? color.primary : M + "35"}`, color: step === STEPS.length - 1 ? color.onAccent : M, boxShadow: step === STEPS.length - 1 ? "0 1px 2px rgba(15,23,42,0.12)" : "none" }}>
+            style={{ ...sans, background: step === STEPS.length - 1 ? color.primary : `${M}12`, border: `1px solid ${step === STEPS.length - 1 ? color.primary : M + "35"}`, color: step === STEPS.length - 1 ? color.onAccent : M, boxShadow: step === STEPS.length - 1 ? "0 6px 18px rgba(167,139,250,0.28)" : "none" }}>
             {step === STEPS.length - 1 ? <><Shield size={12} />{assessing ? "Assessing policy…" : assessment ? "Re-run risk assessment" : "Run AI risk assessment"}</> : <>Continue <ChevronRight size={12} /></>}
           </button>
         </div>

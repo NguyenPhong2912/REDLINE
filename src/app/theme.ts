@@ -2,59 +2,67 @@ import type { CSSProperties } from "react";
 
 // The design language, in one place.
 //
-// Functional screens stay bright and quiet; the cinematic landing page supplies
-// the atmosphere. This keeps operational data calm and easy to scan.
+// One language, not two. The landing page is built in src/styles/index.css
+// around a violet-and-cyan night palette; the functional screens used to be
+// light blue, and the two fought each other on every route change. These
+// tokens are that same night palette, so a page built from inline styles and
+// a page built from the stylesheet now belong to the same product.
+//
+// Saturation is still rationed. Almost everything is a neutral drawn from the
+// violet family, so a refusal is the only loud thing on screen.
+//
+// Every value is checked against the most raised surface (surfaceInset); it
+// therefore clears WCAG AA on the darker grounds too. That bar is not
+// decoration — these are status colours on 10-11px type, and the reason codes
+// they carry are the most important words here.
 
 export const color = {
-  bg: "#f3f7fd",
-  surface: "rgba(255,255,255,0.92)",
-  surfaceSubtle: "#f7faff",
-  surfaceInset: "#edf3fb",
+  // Grounds, deepest first. bg is what index.css paints on html/body.
+  bg: "#07060d",
+  surface: "#120b24",
+  surfaceSubtle: "#19122b",
+  surfaceInset: "#29233e",
 
-  border: "#dbe5f2",
-  borderStrong: "#b9cbe0",
+  // Hairlines. On a dark ground a border is a lightening, not a darkening.
+  border: "#29233e",
+  borderStrong: "#3b3357",
 
-  // Every value below clears WCAG AA (4.5:1) against surfaceInset, the darkest
-  // ground here — so it clears on all of them. That bar is not decoration:
-  // these are status colours on 10–11px type, and the reason codes they carry
-  // are the most important words on the screen. The hues are the cool palette
-  // this interface was designed around; only their luminance is constrained.
-  text: "#182033",        // 14.6:1
-  textSecondary: "#44526a", // 7.1:1
-  textMuted: "#4f5f7b",   // 5.8:1
-  textDim: "#5f6e85",     // 4.6:1 — the lightest type this theme permits
+  // Text, four steps of emphasis.
+  text: "#f7f4ff",          // 13.8:1
+  textSecondary: "#c4b5fd", // 8.1:1
+  textMuted: "#aaa2c4",     // 6.2:1
+  textDim: "#928baa",       // 4.6:1 — the dimmest type this theme permits
 
-  primary: "#1461f5",
-  primaryText: "#2065e6",
+  // Violet leads; it is the colour the landing page opens with.
+  primary: "#a78bfa",       // 5.5:1
+  primaryText: "#c4b5fd",
 
   // Reserved meanings.
-  info: "#1c778b",
-  warn: "#93641a",
-  danger: "#d12746",
-  success: "#1d7b57",
+  info: "#22d3ee",          // 8.3:1
+  warn: "#d9952a",          // 5.9:1
+  danger: "#e77f92",        // 5.6:1
+  success: "#5eead4",       // 10.1:1
 
-  onAccent: "#ffffff",
+  // Type that sits on a filled accent, not on a ground.
+  onAccent: "#120b24",
 } as const;
 
-// The live feed is intentionally cooler than the surrounding graphite so it
-// still reads as a console inside the control room.
+// The live feed keeps its own slightly cooler ground so it still reads as a
+// console rather than another panel.
 export const term = {
-  bg: "#0d1117",
-  head: "#f1f3f6",
-  text: "#c9d1d9",
-  // Lifted to clear AA against term.bg. The timestamp column and the quieter
-  // event lines are still type someone has to read, and a console is exactly
-  // where "atmospheric" grey usually stops being legible.
-  dim: "#8b96a5",
-  faint: "#7c8797",
-  success: "#3fb950",
-  info: "#58a6ff",
-  warn: "#d29922",
-  danger: "#f85149",
+  bg: "#0d0b16",
+  head: "#19122b",
+  text: "#e6e1f5",
+  dim: "#a09ab8",
+  faint: "#8d86a6",
+  success: "#5eead4",
+  info: "#22d3ee",
+  warn: "#f0b755",
+  danger: "#f28ba0",
 } as const;
 
 /** Accent tint for a fill — small alpha, enough to read as a state. */
-export const tint = (hex: string, alpha = 0.08) => {
+export const tint = (hex: string, alpha = 0.14) => {
   const a = Math.round(alpha * 255).toString(16).padStart(2, "0");
   return `${hex}${a}`;
 };
@@ -62,15 +70,15 @@ export const tint = (hex: string, alpha = 0.08) => {
 export const mono: CSSProperties = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 export const sans: CSSProperties = { fontFamily: "'Inter', system-ui, sans-serif" };
 
-/** A layered card with restrained depth and no expensive backdrop blur. */
+/** A card: a lift out of the page, a hairline, and depth from shadow. */
 export const panel = (extra?: CSSProperties): CSSProperties => ({
   background: color.surface,
   border: `1px solid ${color.border}`,
-  boxShadow: "0 18px 48px rgba(76, 104, 148, 0.10)",
+  boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)",
   ...extra,
 });
 
-/** A nested region inside a card: a step down, never another shadow. */
+/** A nested region inside a card: a step up, never another shadow. */
 export const inset = (extra?: CSSProperties): CSSProperties => ({
   background: color.surfaceSubtle,
   border: `1px solid ${color.border}`,
@@ -79,7 +87,7 @@ export const inset = (extra?: CSSProperties): CSSProperties => ({
 
 /** A status chip in one of the reserved meanings. */
 export const chip = (c: string): CSSProperties => ({
-  background: tint(c, 0.09),
+  background: tint(c, 0.16),
   color: c,
-  border: `1px solid ${tint(c, 0.22)}`,
+  border: `1px solid ${tint(c, 0.34)}`,
 });

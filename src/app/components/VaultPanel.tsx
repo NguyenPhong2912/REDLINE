@@ -47,7 +47,7 @@ export function VaultPanel() {
 
   const balance = view?.balanceUnits ? fmtUsdc(view.balanceUnits) : "—";
   return (
-    <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+    <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
       <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
       <div className="flex items-start gap-4 flex-wrap">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Vault size={18} style={{ color: M }} /></div>

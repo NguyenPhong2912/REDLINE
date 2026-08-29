@@ -50,7 +50,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
 
   return (
     <div className="rounded-2xl overflow-hidden relative"
-      style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+      style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
       <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}50, transparent)` }} />
 
       {/* Header */}

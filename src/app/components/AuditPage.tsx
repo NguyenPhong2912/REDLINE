@@ -12,7 +12,7 @@ import { color, mono, sans } from "../theme";
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
   background: color.surface,
-  boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+  boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)",
   border: `1px solid ${color.border}`,
   ...extra,
 });
@@ -178,7 +178,7 @@ export function AuditPage() {
           const Icon = s.icon;
           return (
             <div key={`audit-stat-${i}`} title={s.hint} className="rounded-2xl p-5 relative overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
-              style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+              style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${s.color}50, transparent)` }} />
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 rounded-lg" style={{ background: `${s.color}14`, border: `1px solid ${s.color}20` }}>
@@ -215,7 +215,7 @@ export function AuditPage() {
           </button>
           {dropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-50"
-              style={{ ...glass(), boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+              style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <button type="button" onClick={() => { setSelectedGrant(""); setDropdownOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs hover:bg-white/[0.04] transition-colors"
                 style={{ ...sans, color: !selectedGrant ? M : color.textSecondary, background: !selectedGrant ? `${M}08` : "transparent" }}>
