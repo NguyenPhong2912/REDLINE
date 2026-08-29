@@ -91,7 +91,13 @@ export async function riskRoutes(app: FastifyInstance) {
         text: { format: { type: "json_schema", name: "redline_agent_risk_assessment", strict: true, schema } },
       });
       return mergeAssessments(baseline, JSON.parse(result.output_text) as Assessment, model);
-    } catch {
+    } catch (err) {
+      // Falling back is right — the deterministic floor is the safe answer and
+      // the caller still gets a verdict. Staying silent about it was not: a
+      // rejected key, a model name that does not exist and no key at all all
+      // produced the same reply, so a misconfigured copilot looked exactly
+      // like a copilot that was never switched on.
+      req.log.warn({ err: err instanceof Error ? err.message : String(err), model: process.env.OPENAI_MODEL || "gpt-5.4-mini" }, "risk copilot call failed; answering from the deterministic floor");
       return baseline;
     }
   });
