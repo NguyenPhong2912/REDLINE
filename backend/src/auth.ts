@@ -105,6 +105,11 @@ export function registerAuth(app: FastifyInstance) {
     if (row.usedAt) return reply.code(400).send({ error: "that challenge was already used" });
     if (row.expiresAt < new Date()) return reply.code(400).send({ error: "that challenge has expired" });
 
+    // Predates the stored-message column: there is nothing to check the
+    // signature against, and an empty string is not a substitute — signing one
+    // is trivial. Refuse and let the caller ask for a fresh challenge.
+    if (!row.message) return reply.code(400).send({ error: "that challenge is no longer valid — request a new one" });
+
     // The stored text, byte for byte — not a rebuild that could differ.
     if (!(await verifySignature(body.wallet, row.message, body.signature))) {
       return reply.code(401).send({ error: "signature does not match that wallet" });

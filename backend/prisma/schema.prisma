@@ -198,7 +198,11 @@ model AuthNonce {
   // verification: the issued-at stamp in the text comes from the API process
   // while `createdAt` comes from the database clock, so a reconstruction is
   // never quite the string that was signed.
-  message   String
+  //
+  // Nullable only so the column could be added to a live table. Every row this
+  // code writes sets it; a row without one is a challenge from before the
+  // column existed and is refused rather than verified against a guess.
+  message   String?
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
