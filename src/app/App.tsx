@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from "react";
 import { motion } from "motion/react";
 import {
   LayoutDashboard, Bot, BarChart3, Globe, Wallet, ScrollText,
@@ -7,7 +7,7 @@ import {
   Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
   Clock, Network, ExternalLink,
-  Plus, PieChart, Shield,
+  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3,
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
@@ -21,6 +21,8 @@ import { PageTransition } from "./components/PageTransition";
 import { ProtocolSpine } from "./components/ProtocolSpine";
 import { SpatialBackdrop } from "./components/SpatialBackdrop";
 import { ProtocolExperience } from "./components/ProtocolExperience";
+import { CommandPalette, type CommandItem } from "./components/CommandPalette";
+import { RouteScene } from "./components/RouteScene";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -81,6 +83,10 @@ const NAV = [
   { icon: Layers, label: "Guardrails", slug: "guardrails" },
   { icon: Settings, label: "Settings", slug: "settings" },
 ];
+
+// Product journey, separate from the stable page indexes used by existing
+// actions and hashes: discover → configure → fund → verify → understand.
+const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7] as const;
 
 /* ── reusable components ── */
 function Badge({ status }: { status: string }) {
@@ -1204,6 +1210,12 @@ export default function App() {
     return index < 0 ? 0 : index;
   };
   const [nav, setNav] = useState(indexFromHash);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [density, setDensity] = useState<"comfortable" | "compact">(() => {
+    try { return localStorage.getItem("redline.density") === "compact" ? "compact" : "comfortable"; }
+    catch { return "comfortable"; }
+  });
   const Page = PAGES[nav] as React.ComponentType<{ setNav?: (n: number) => void }>;
 
   useEffect(() => {
@@ -1212,13 +1224,62 @@ export default function App() {
     return () => window.removeEventListener("hashchange", sync);
   }, []);
 
+  useLayoutEffect(() => {
+    // Each route is a separate reading/task surface. Carrying the previous
+    // route's internal scroll position makes a freshly opened page appear
+    // cropped or incorrectly scaled beneath the fixed header.
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [nav]);
+
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(open => !open);
+      }
+      if (event.key === "Escape") setCommandOpen(false);
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
+
   const navigate = (index: number) => {
     setNav(index);
     window.location.hash = `/${NAV[index].slug}`;
   };
+  const toggleDensity = () => {
+    setDensity(current => {
+      const next = current === "comfortable" ? "compact" : "comfortable";
+      try { localStorage.setItem("redline.density", next); } catch { /* density still works for this session */ }
+      return next;
+    });
+  };
+  const commandDescriptions: Record<string, string> = {
+    protocol: "Protocol story, live backbone and evidence",
+    marketplace: "Discover and rent published agent versions",
+    agents: "Inspect agents, grants and active versions",
+    guardrails: "Create bounded policies and signed permissions",
+    treasury: "Review vault balances and recent transactions",
+    audit: "Verify every intent, decision and signature",
+    analytics: "Understand execution volume and policy outcomes",
+    settings: "Inspect network and deployment configuration",
+  };
+  const commandItems: CommandItem[] = FLOW_ORDER.map((pageIndex, position) => {
+    const item = NAV[pageIndex];
+    return {
+      label: item.label,
+      description: commandDescriptions[item.slug],
+      shortcut: position === 0 ? "HOME" : `0${position}`,
+      icon: item.icon,
+      onSelect: () => navigate(pageIndex),
+    };
+  });
+  const flowPosition = FLOW_ORDER.indexOf(nav as (typeof FLOW_ORDER)[number]);
+  const previousPage = flowPosition > 0 ? FLOW_ORDER[flowPosition - 1] : null;
+  const nextPage = flowPosition >= 0 && flowPosition < FLOW_ORDER.length - 1 ? FLOW_ORDER[flowPosition + 1] : null;
 
   return (
-    <div className={`redline-app ${nav === 0 ? "redline-app-home" : ""} min-h-screen w-full flex flex-col overflow-hidden`} style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
+    <div data-density={density} className={`redline-app ${nav === 0 ? "redline-app-home" : ""} min-h-screen w-full flex flex-col overflow-hidden`} style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         @keyframes redline-shimmer { 0% { left: -60px; } 100% { left: calc(100% + 60px); } }
         @keyframes redline-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
@@ -1233,8 +1294,8 @@ export default function App() {
       {/* ── Main ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full" style={{ position: "relative", zIndex: 1 }}>
         {/* Topbar */}
-        <header className="app-header sticky top-0 z-30 flex items-center gap-3 px-3 sm:px-6 py-3"
-          style={{ background: "rgba(18,11,36,0.82)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
+        <header className="app-header fixed inset-x-0 top-0 z-50 flex items-center gap-3 px-3 sm:px-6 py-3"
+          style={{ background: "rgba(238,243,249,0.90)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
           <button type="button" onClick={() => navigate(0)} className="flex shrink-0 items-center gap-2.5" aria-label="Open REDLINE protocol experience">
             <span className="grid h-8 w-8 place-items-center rounded-full" style={{ color: M, border: `1px solid ${M}55`, background: `${M}10` }}>
               <ShieldCheck size={14} />
@@ -1243,7 +1304,8 @@ export default function App() {
           </button>
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
-            {NAV.map((item, index) => {
+            {FLOW_ORDER.map(index => {
+              const item = NAV[index];
               const active = nav === index;
               return (
                 <button
@@ -1261,6 +1323,13 @@ export default function App() {
             })}
           </nav>
 
+          <button type="button" className="header-tool header-command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open command palette">
+            <Search size={13} /><span>Find</span><kbd>⌘K</kbd>
+          </button>
+          <button type="button" className="header-tool header-density-trigger" onClick={toggleDensity} aria-label={`Use ${density === "comfortable" ? "compact" : "comfortable"} density`}>
+            <Rows3 size={13} /><span>{density === "comfortable" ? "Comfort" : "Compact"}</span>
+          </button>
+
           <div className="hidden xl:flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
             <span className="redline-live-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
             Solana devnet
@@ -1269,8 +1338,44 @@ export default function App() {
         </header>
 
         {/* Page content */}
-        <main className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
-          <div className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
+        <main ref={mainRef} className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
+          <div data-route={NAV[nav].slug} className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
+            {nav !== 0 && <RouteScene icon={NAV[nav].icon} label={NAV[nav].label} scene={NAV[nav].slug} />}
+            {nav !== 0 && (
+              <div className="route-flow-bar" aria-label="Product journey navigation">
+                <button type="button" className="route-flow-home" onClick={() => navigate(0)}>
+                  <ArrowLeft size={14} />
+                  <span>Protocol</span>
+                </button>
+                <div className="route-flow-track">
+                  {FLOW_ORDER.slice(1, -1).map((pageIndex, position) => (
+                    <button
+                      type="button"
+                      key={NAV[pageIndex].slug}
+                      className={nav === pageIndex ? "is-active" : ""}
+                      onClick={() => navigate(pageIndex)}
+                      aria-current={nav === pageIndex ? "step" : undefined}
+                      title={NAV[pageIndex].label}
+                    >
+                      <span>{position + 1}</span>
+                      <em>{NAV[pageIndex].label}</em>
+                    </button>
+                  ))}
+                </div>
+                <div className="route-flow-pager">
+                  {previousPage !== null && previousPage !== 0 && (
+                    <button type="button" onClick={() => navigate(previousPage)} aria-label={`Previous: ${NAV[previousPage].label}`}>
+                      <ArrowLeft size={13} />
+                    </button>
+                  )}
+                  {nextPage !== null && (
+                    <button type="button" onClick={() => navigate(nextPage)} aria-label={`Next: ${NAV[nextPage].label}`}>
+                      <span>{NAV[nextPage].label}</span><ArrowRight size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <PageTransition pageKey={NAV[nav].label}>
               <Page setNav={navigate} />
             </PageTransition>
@@ -1278,6 +1383,7 @@ export default function App() {
           </div>
         </main>
       </div>
+      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} items={commandItems} />
     </div>
   );
 }

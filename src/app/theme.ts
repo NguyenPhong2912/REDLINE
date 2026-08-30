@@ -17,48 +17,42 @@ import type { CSSProperties } from "react";
 // they carry are the most important words here.
 
 export const color = {
-  // Grounds, deepest first. bg is what index.css paints on html/body.
-  bg: "#07060d",
-  surface: "#120b24",
-  surfaceSubtle: "#19122b",
-  surfaceInset: "#29233e",
+  bg: "#cbd5df",
+  surface: "#e2e8ee",
+  surfaceSubtle: "#d8e0e8",
+  surfaceInset: "#cbd6e0",
 
-  // Hairlines. On a dark ground a border is a lightening, not a darkening.
-  border: "#29233e",
-  borderStrong: "#3b3357",
+  border: "#aebdcb",
+  borderStrong: "#8799ab",
 
-  // Text, four steps of emphasis.
-  text: "#f7f4ff",          // 13.8:1
-  textSecondary: "#c4b5fd", // 8.1:1
-  textMuted: "#aaa2c4",     // 6.2:1
-  textDim: "#928baa",       // 4.6:1 — the dimmest type this theme permits
+  text: "#172330",
+  textSecondary: "#34475a",
+  textMuted: "#3f4e5e",
+  textDim: "#4e5c69",
 
-  // Violet leads; it is the colour the landing page opens with.
-  primary: "#a78bfa",       // 5.5:1
-  primaryText: "#c4b5fd",
+  primary: "#365f84",
+  primaryText: "#294f73",
 
-  // Reserved meanings.
-  info: "#22d3ee",          // 8.3:1
-  warn: "#d9952a",          // 5.9:1
-  danger: "#e77f92",        // 5.6:1
-  success: "#5eead4",       // 10.1:1
+  info: "#356166",
+  warn: "#7d500d",
+  danger: "#a92640",
+  success: "#186649",
 
-  // Type that sits on a filled accent, not on a ground.
-  onAccent: "#120b24",
+  onAccent: "#ffffff",
 } as const;
 
 // The live feed keeps its own slightly cooler ground so it still reads as a
 // console rather than another panel.
 export const term = {
-  bg: "#0d0b16",
-  head: "#19122b",
-  text: "#e6e1f5",
-  dim: "#a09ab8",
-  faint: "#8d86a6",
-  success: "#5eead4",
-  info: "#22d3ee",
-  warn: "#f0b755",
-  danger: "#f28ba0",
+  bg: "#d6dee6",
+  head: "#c9d4de",
+  text: "#223244",
+  dim: "#465668",
+  faint: "#546371",
+  success: "#186649",
+  info: "#24649b",
+  warn: "#865710",
+  danger: "#b0324c",
 } as const;
 
 /** Accent tint for a fill — small alpha, enough to read as a state. */
@@ -74,7 +68,7 @@ export const sans: CSSProperties = { fontFamily: "'Inter', system-ui, sans-serif
 export const panel = (extra?: CSSProperties): CSSProperties => ({
   background: color.surface,
   border: `1px solid ${color.border}`,
-  boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)",
+  boxShadow: "0 18px 48px rgba(62, 101, 155, 0.10)",
   ...extra,
 });
 

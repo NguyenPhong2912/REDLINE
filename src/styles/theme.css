@@ -179,3 +179,43 @@
     line-height: 1.5;
   }
 }
+
+/* Style Chain light tokens. Kept last so an inherited `.dark` class from a
+   wallet or host shell cannot split the application into two visual systems. */
+:root,
+.dark {
+  --background: #cbd5df;
+  --foreground: #172330;
+  --card: #e2e8ee;
+  --card-foreground: #172330;
+  --popover: #e2e8ee;
+  --popover-foreground: #172330;
+  --primary: #365f84;
+  --primary-foreground: #ffffff;
+  --secondary: #d8e0e8;
+  --secondary-foreground: #172330;
+  --muted: #cbd6e0;
+  --muted-foreground: #506377;
+  --accent: #3f737a;
+  --accent-foreground: #ffffff;
+  --destructive: #d74c68;
+  --destructive-foreground: #ffffff;
+  --border: #aebdcb;
+  --input: #aebdcb;
+  --input-background: #d8e0e8;
+  --switch-background: #8799ab;
+  --ring: #365f84;
+  --chart-1: #365f84;
+  --chart-2: #3f737a;
+  --chart-3: #b87513;
+  --chart-4: #d74c68;
+  --chart-5: #218e65;
+  --sidebar: #e2e8ee;
+  --sidebar-foreground: #172330;
+  --sidebar-primary: #365f84;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d8e0e8;
+  --sidebar-accent-foreground: #172330;
+  --sidebar-border: #aebdcb;
+  --sidebar-ring: #365f84;
+}
