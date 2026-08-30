@@ -2,19 +2,19 @@ import type { CSSProperties } from "react";
 
 // The design language, in one place.
 //
-// One language, not two. The landing page is built in src/styles/index.css
-// around a violet-and-cyan night palette; the functional screens used to be
-// light blue, and the two fought each other on every route change. These
-// tokens are that same night palette, so a page built from inline styles and
-// a page built from the stylesheet now belong to the same product.
+// One language, not two. These tokens and src/styles/index.css describe the
+// same cool blue-grey daylight palette, so a screen drawn from inline styles
+// and one drawn from the stylesheet belong to the same product. They have
+// disagreed twice; when they do, every route change looks like a different
+// application.
 //
-// Saturation is still rationed. Almost everything is a neutral drawn from the
-// violet family, so a refusal is the only loud thing on screen.
+// Saturation is rationed. Almost everything is a near-neutral, so a refusal is
+// the only loud thing on screen.
 //
-// Every value is checked against the most raised surface (surfaceInset); it
-// therefore clears WCAG AA on the darker grounds too. That bar is not
-// decoration — these are status colours on 10-11px type, and the reason codes
-// they carry are the most important words here.
+// Every value is checked against `bg`, the darkest ground here, and therefore
+// clears WCAG AA on the lighter ones too. That bar is not decoration — these
+// are status colours on 11-13px type, and the reason codes they carry are the
+// most important words on the page.
 
 export const color = {
   bg: "#cbd5df",
@@ -42,10 +42,10 @@ export const color = {
 } as const;
 
 // The live feed keeps its own slightly cooler ground so it still reads as a
-// console rather than another panel.
+// console rather than another panel. Its accents sit on `bg`; the header bar
+// takes color.surfaceSubtle from the panel around it.
 export const term = {
   bg: "#d6dee6",
-  head: "#c9d4de",
   text: "#223244",
   dim: "#465668",
   faint: "#546371",
