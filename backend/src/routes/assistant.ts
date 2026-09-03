@@ -118,6 +118,18 @@ const isVietnamese = (question: string) =>
   /[ăâđêôơưàáạảãèéẹẻẽìíịỉĩòóọỏõùúụủũỳýỵỷỹ]/i.test(question)
   || hasAny(question.toLowerCase(), [" vì ", " sao ", " của tôi", " bị ", " không ", " nên ", " thế nào"]);
 
+/** Questions with an exact answer in the ledger should never be handed to a model. */
+export function isOperationalQuestion(question: string, g: Grounding): boolean {
+  const q = ` ${question.toLowerCase().normalize("NFC")} `;
+  const mentionsReasonCode = Object.keys(g.reasonCodes).some(reason => question.toUpperCase().includes(reason));
+  return mentionsReasonCode || hasAny(q, [
+    "agent", "grant", "policy", "gate", "block", "stuck", "refus", "reject", "failed", "failure",
+    "budget", "spend", "cap", "usdc", "expire", "expiry", "lapse", "active", "status", "fix", "should",
+    "agent", "grant", "chính sách", "gate", "bị chặn", "từ chối", "không chạy", "thất bại", "lỗi",
+    "ngân sách", "chi tiêu", "hạn mức", "số dư", "hết hạn", "thời hạn", "hoạt động", "trạng thái", "nên", "sửa", "làm gì",
+  ]);
+}
+
 function gateAdvice(gateId: number, vi: boolean): Suggestion {
   const advice: Record<number, [string, string, string, string]> = {
     1: ["Restore an active grant", "The grant is revoked or inactive. Review the owner intent and sign a new grant if the agent should run again.", "Khôi phục grant đang hoạt động", "Grant đã bị thu hồi hoặc không còn hoạt động. Hãy kiểm tra ý định của chủ ví và ký grant mới nếu agent cần chạy lại."],
@@ -196,29 +208,36 @@ export async function assistantRoutes(app: FastifyInstance) {
     const body = Body.parse(req.body);
     const grounding = await gather(body.owner);
     const floor = withoutModel(grounding, body.question);
-    if (!isConfigured()) return json({ ...floor, source: "rules", model: "redline-rules-v1", grounding });
+    // Ledger questions have deterministic answers. Keeping them out of the
+    // model prevents refusal counts from being relabelled as grant counts and
+    // prevents impossible advice such as restoring an immutable revoked grant.
+    if (!isConfigured() || isOperationalQuestion(body.question, grounding)) {
+      return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
+    }
 
     try {
       const answered = await askForJson<{ answer: string; suggestions: { title: string; detail: string }[] }>({
         system: [
           "You are the REDLINE operations assistant for an on-chain agent guardrail system on Solana.",
           "The user's brief below is the ONLY source of fact available to you. Every number you state must appear in it.",
+          "The verified baseline is computed directly from the ledger. Do not contradict it, relabel its counts, or invent a limit from an unrelated number.",
           "If the brief does not contain what was asked, say so plainly and describe what would be needed — never estimate, and never recall figures from elsewhere.",
           "Gates are checked in order and the first failure stops the transfer; a refusal means nothing moved.",
+          "A grant and its limits are immutable after signing. A revoked or expired grant cannot be restored or edited; the owner must review and sign a new grant.",
           "Answer in the same language as the user's question, including Vietnamese.",
           "Infer the user's intent from natural language, answer it directly, and give up to three concrete next actions.",
           "Prefer naming the gate, reason code, and policy field that would change the outcome over general advice.",
         ].join(" "),
-        input: { question: body.question, brief: grounding },
+        input: { question: body.question, brief: grounding, verifiedBaseline: floor },
         schemaName: "redline_assistant_reply",
         schema,
         maxTokens: 700,
       });
-      if (!answered) return json({ ...floor, source: "rules", model: "redline-rules-v1", grounding });
+      if (!answered) return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
       return json({ ...answered, source: "model", model: modelName(), grounding });
     } catch (err) {
       req.log.warn({ err: err instanceof Error ? err.message : String(err), model: modelName() }, "assistant call failed; answering from recorded figures");
-      return json({ ...floor, source: "rules", model: "redline-rules-v1", grounding });
+      return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
     }
   });
 }

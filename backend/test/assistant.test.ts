@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withoutModel, type Grounding } from "../src/routes/assistant.js";
+import { isOperationalQuestion, withoutModel, type Grounding } from "../src/routes/assistant.js";
 
 // The assistant answers from a brief assembled out of the database. This is the
 // half that runs when no model is configured, or when the provider is down —
@@ -74,5 +74,17 @@ describe("assistant without a model", () => {
     for (const n of quoted.match(/\d+/g) ?? []) {
       expect(allowed, `figure ${n} is not in the brief`).toContain(n);
     }
+  });
+});
+
+describe("assistant routing", () => {
+  it("keeps ledger questions on the deterministic path", () => {
+    expect(isOperationalQuestion("Vì sao agent của tôi bị chặn và nên làm gì?", base)).toBe(true);
+    expect(isOperationalQuestion("How much budget has this grant spent?", base)).toBe(true);
+    expect(isOperationalQuestion("Explain SPEND_CAP_EXCEEDED", { ...base, reasonCodes: { SPEND_CAP_EXCEEDED: "cap" } })).toBe(true);
+  });
+
+  it("allows open-ended questions to use the configured model", () => {
+    expect(isOperationalQuestion("Give me a short tour of REDLINE", base)).toBe(false);
   });
 });
