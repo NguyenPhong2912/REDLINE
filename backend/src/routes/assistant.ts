@@ -111,35 +111,84 @@ const schema = {
   required: ["answer", "suggestions"],
 };
 
-/** What the rules alone can say — the answer when no model is configured. */
-export function withoutModel(g: Grounding, question: string): { answer: string; suggestions: { title: string; detail: string }[] } {
-  const busiest = [...g.gates].sort((a, b) => b.refusals - a.refusals)[0];
-  const parts = [
-    `${g.scope === "wallet" ? "This wallet" : "The protocol"} holds ${g.grants.active} active ${g.grants.active === 1 ? "grant" : "grants"} of ${g.grants.total}.`,
-    `${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused.`,
-  ];
-  if (busiest?.refusals) parts.push(`Most refusals came from gate ${busiest.id}, ${busiest.label.toLowerCase()}.`);
+type Suggestion = { title: string; detail: string };
 
-  const suggestions: { title: string; detail: string }[] = [];
-  if (g.grants.expiringWithinHours !== null && g.grants.expiringWithinHours < 24) {
-    suggestions.push({
-      title: "A grant expires soon",
-      detail: `The next one lapses in about ${g.grants.expiringWithinHours}h. Past that, gate 2 refuses every transfer and the agent stops without an error.`,
-    });
-  }
-  if (busiest?.refusals && busiest.id === 6) {
-    suggestions.push({
-      title: "The budget envelope is where work is stopping",
-      detail: `Gate 6 refused ${busiest.refusals} ${busiest.refusals === 1 ? "transfer" : "transfers"}. Either the cap is tighter than the task needs, or the agent is asking for more than it was meant to.`,
-    });
-  }
-  if (!g.grants.active && g.grants.total) {
-    suggestions.push({ title: "No grant is live", detail: "Every grant here is revoked or expired, so nothing can move until a new one is signed." });
-  }
-  return {
-    answer: `${parts.join(" ")} (Answered from recorded figures — no model is configured, so this is a summary rather than a reading of your question: "${question.slice(0, 80)}".)`,
-    suggestions,
+const hasAny = (value: string, terms: string[]) => terms.some(term => value.includes(term));
+const isVietnamese = (question: string) =>
+  /[ăâđêôơưàáạảãèéẹẻẽìíịỉĩòóọỏõùúụủũỳýỵỷỹ]/i.test(question)
+  || hasAny(question.toLowerCase(), [" vì ", " sao ", " của tôi", " bị ", " không ", " nên ", " thế nào"]);
+
+function gateAdvice(gateId: number, vi: boolean): Suggestion {
+  const advice: Record<number, [string, string, string, string]> = {
+    1: ["Restore an active grant", "The grant is revoked or inactive. Review the owner intent and sign a new grant if the agent should run again.", "Khôi phục grant đang hoạt động", "Grant đã bị thu hồi hoặc không còn hoạt động. Hãy kiểm tra ý định của chủ ví và ký grant mới nếu agent cần chạy lại."],
+    2: ["Renew the time window", "The grant has expired. Create a new grant with an expiry that covers the intended task window.", "Gia hạn thời gian", "Grant đã hết hạn. Hãy tạo grant mới với thời hạn đủ cho tác vụ dự kiến."],
+    3: ["Use an allowed token", "The requested mint is outside the grant allowlist. Choose an allowed mint or review and sign a new policy.", "Dùng token được cho phép", "Mint được yêu cầu không nằm trong allowlist. Hãy chọn mint hợp lệ hoặc rà soát và ký policy mới."],
+    4: ["Use an allowed destination", "The recipient is outside the destination allowlist. Correct the address or review a new policy before signing it.", "Dùng địa chỉ được cho phép", "Địa chỉ nhận không nằm trong allowlist. Hãy sửa địa chỉ hoặc rà soát policy mới trước khi ký."],
+    5: ["Refresh the transaction state", "The nonce is stale or out of order. Reload the latest grant state before submitting the next transfer.", "Làm mới trạng thái giao dịch", "Nonce đã cũ hoặc sai thứ tự. Hãy tải lại trạng thái grant mới nhất trước khi gửi giao dịch tiếp theo."],
+    6: ["The budget envelope is where work is stopping", "Reduce the requested amount, split the task into valid transfers, or sign a reviewed grant with a suitable cap.", "Hạn mức ngân sách đang chặn tác vụ", "Hãy giảm số tiền, chia tác vụ thành các giao dịch hợp lệ, hoặc ký grant mới với hạn mức đã được rà soát."],
+    7: ["Respect the cooldown", "Wait for the cooldown to finish or reduce transfer frequency. The agent should not retry continuously.", "Tuân thủ thời gian chờ", "Hãy chờ cooldown kết thúc hoặc giảm tần suất chuyển. Agent không nên thử lại liên tục."],
   };
+  const item = advice[gateId] ?? ["Review the failed policy gate", "Inspect the refusal reason and update only the policy field responsible for it.", "Kiểm tra policy gate bị lỗi", "Hãy xem lý do từ chối và chỉ cập nhật trường policy gây ra lỗi."];
+  return vi ? { title: item[2], detail: item[3] } : { title: item[0], detail: item[1] };
+}
+
+/** Intent-aware fallback used when no model is configured or the provider is unavailable. */
+export function withoutModel(g: Grounding, question: string): { answer: string; suggestions: Suggestion[] } {
+  const q = ` ${question.toLowerCase().normalize("NFC")} `;
+  const vi = isVietnamese(q);
+  const busiest = [...g.gates].sort((a, b) => b.refusals - a.refusals)[0];
+  const asksBlocked = hasAny(q, ["block", "stuck", "refus", "reject", "failed", "failure", "bị chặn", "từ chối", "không chạy", "thất bại", "lỗi"]);
+  const asksBudget = hasAny(q, ["budget", "spend", "cap", "usdc", "ngân sách", "chi tiêu", "hạn mức", "số dư"]);
+  const asksExpiry = hasAny(q, ["expire", "expiry", "lapse", "hết hạn", "thời hạn", "bao lâu"]);
+  const asksGrant = hasAny(q, ["grant", "policy", "agent", "active", "status", "quyền", "chính sách", "hoạt động", "trạng thái"]);
+  const code = Object.keys(g.reasonCodes).find(reason => question.toUpperCase().includes(reason));
+  const codeGate = code ? POLICY_GATES.find(gate => (gate.reasonCodes as readonly string[]).includes(code)) : undefined;
+  let answer: string;
+
+  if (code) {
+    answer = vi
+      ? `${code} thuộc gate ${codeGate?.id ?? "?"}${codeGate ? ` (${codeGate.label})` : ""}: ${g.reasonCodes[code]}`
+      : `${code} belongs to gate ${codeGate?.id ?? "?"}${codeGate ? ` (${codeGate.label})` : ""}: ${g.reasonCodes[code]}`;
+  } else if (asksBlocked) {
+    answer = busiest?.refusals
+      ? (vi
+          ? `Agent bị chặn nhiều nhất tại gate ${busiest.id} (${busiest.label}): ${busiest.refusals} lần từ chối. Tổng cộng có ${g.decisions.allowed} giao dịch được phép và ${g.decisions.refused} giao dịch bị từ chối.`
+          : `The agent is blocked most often at gate ${busiest.id}, ${busiest.label.toLowerCase()}: ${busiest.refusals} refusals. In total, ${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused.`)
+      : (vi ? "Chưa có giao dịch bị từ chối trong dữ liệu hiện tại." : "No refused transfer is recorded in the current data.");
+  } else if (asksBudget) {
+    answer = vi
+      ? `Đã chi ${g.spend.spentUsdc.toLocaleString("vi-VN")} trên tổng hạn mức ${g.spend.capUsdc.toLocaleString("vi-VN")} USDC qua ${g.spend.transactions} giao dịch. Gate 6 sẽ chặn giao dịch làm tổng chi vượt hạn mức.`
+      : `${g.spend.spentUsdc.toLocaleString("en-US")} of ${g.spend.capUsdc.toLocaleString("en-US")} USDC has been spent across ${g.spend.transactions} transfers. Gate 6 blocks a transfer that would exceed the total cap.`;
+  } else if (asksExpiry) {
+    answer = g.grants.expiringWithinHours === null
+      ? (vi ? "Không có grant đang hoạt động với thời hạn sắp tới trong dữ liệu hiện tại." : "No active grant with a future expiry is present in the current data.")
+      : (vi ? `Grant gần nhất sẽ hết hạn sau khoảng ${g.grants.expiringWithinHours} giờ. Sau thời điểm đó, gate 2 sẽ từ chối mọi giao dịch.` : `The nearest grant expires in about ${g.grants.expiringWithinHours}h. After that, gate 2 refuses every transfer.`);
+  } else if (asksGrant) {
+    answer = vi
+      ? `${g.scope === "wallet" ? "Ví này" : "Giao thức"} có ${g.grants.active} grant đang hoạt động trong tổng số ${g.grants.total}; ${g.grants.revoked} grant đã bị thu hồi. Có ${g.decisions.allowed} giao dịch được phép và ${g.decisions.refused} giao dịch bị từ chối.`
+      : `${g.scope === "wallet" ? "This wallet" : "The protocol"} holds ${g.grants.active} active ${g.grants.active === 1 ? "grant" : "grants"} of ${g.grants.total}; ${g.grants.revoked} are revoked. ${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused.`;
+  } else {
+    answer = vi
+      ? `${g.scope === "wallet" ? "Ví này" : "Giao thức"} có ${g.grants.active}/${g.grants.total} grant đang hoạt động. ${g.decisions.allowed} giao dịch được phép, ${g.decisions.refused} giao dịch bị từ chối${busiest?.refusals ? `; phần lớn dừng ở gate ${busiest.id} (${busiest.label})` : ""}.`
+      : `${g.scope === "wallet" ? "This wallet" : "The protocol"} holds ${g.grants.active} active ${g.grants.active === 1 ? "grant" : "grants"} of ${g.grants.total}. ${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused${busiest?.refusals ? `; most stopped at gate ${busiest.id}, ${busiest.label.toLowerCase()}` : ""}.`;
+  }
+
+  const suggestions: Suggestion[] = [];
+  if (!g.grants.active && g.grants.total) {
+    suggestions.push(vi
+      ? { title: "Không có grant đang hoạt động", detail: "Mọi grant đều đã bị thu hồi hoặc hết hạn. Cần ký grant mới trước khi agent có thể chuyển tiền." }
+      : { title: "No grant is live", detail: "Every grant here is revoked or expired, so nothing can move until a new one is signed." });
+  }
+  if (g.grants.expiringWithinHours !== null && g.grants.expiringWithinHours < 24) {
+    suggestions.push(vi
+      ? { title: "Một grant sắp hết hạn", detail: `Grant gần nhất hết hạn sau khoảng ${g.grants.expiringWithinHours} giờ. Hãy rà soát và tạo grant thay thế nếu tác vụ cần tiếp tục.` }
+      : { title: "A grant expires soon", detail: `The next one lapses in about ${g.grants.expiringWithinHours}h. Review and replace it if the task must continue.` });
+  }
+  if (busiest?.refusals) {
+    const action = gateAdvice(busiest.id, vi);
+    suggestions.push({ ...action, detail: `${vi ? `Gate ${busiest.id} đã từ chối ${busiest.refusals} lần. ` : `Gate ${busiest.id} refused ${busiest.refusals} ${busiest.refusals === 1 ? "transfer" : "transfers"}. `}${action.detail}` });
+  }
+  return { answer, suggestions: suggestions.slice(0, 3) };
 }
 
 export async function assistantRoutes(app: FastifyInstance) {
@@ -156,7 +205,9 @@ export async function assistantRoutes(app: FastifyInstance) {
           "The user's brief below is the ONLY source of fact available to you. Every number you state must appear in it.",
           "If the brief does not contain what was asked, say so plainly and describe what would be needed — never estimate, and never recall figures from elsewhere.",
           "Gates are checked in order and the first failure stops the transfer; a refusal means nothing moved.",
-          "Be concise and concrete. Prefer naming the gate and what would change its outcome over general advice.",
+          "Answer in the same language as the user's question, including Vietnamese.",
+          "Infer the user's intent from natural language, answer it directly, and give up to three concrete next actions.",
+          "Prefer naming the gate, reason code, and policy field that would change the outcome over general advice.",
         ].join(" "),
         input: { question: body.question, brief: grounding },
         schemaName: "redline_assistant_reply",

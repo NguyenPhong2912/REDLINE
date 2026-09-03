@@ -31,6 +31,26 @@ describe("assistant without a model", () => {
     expect(withoutModel(base, "why is my agent stuck?").answer).toContain("budget envelope");
   });
 
+  it("understands a Vietnamese blocking question and answers in Vietnamese", () => {
+    const reply = withoutModel(base, "Vì sao agent của tôi bị chặn và nên làm gì?");
+    expect(reply.answer).toContain("bị chặn nhiều nhất tại gate 6");
+    expect(reply.suggestions.some(s => s.title === "Hạn mức ngân sách đang chặn tác vụ")).toBe(true);
+  });
+
+  it("answers a budget question with the relevant recorded figures", () => {
+    const { answer } = withoutModel(base, "How much of the budget did we spend?");
+    expect(answer).toContain("200 of 1,500 USDC");
+    expect(answer).toContain("9 transfers");
+    expect(answer).toContain("Gate 6");
+  });
+
+  it("explains a named reason code directly", () => {
+    const grounded = { ...base, reasonCodes: { SPEND_CAP_EXCEEDED: "The spend cap would be exceeded" } };
+    const { answer } = withoutModel(grounded, "What does SPEND_CAP_EXCEEDED mean?");
+    expect(answer).toContain("belongs to gate 6");
+    expect(answer).toContain("The spend cap would be exceeded");
+  });
+
   it("warns before a grant lapses, not after", () => {
     const soon = { ...base, grants: { ...base.grants, expiringWithinHours: 3 } };
     const titles = withoutModel(soon, "anything I should know?").suggestions.map(s => s.title);

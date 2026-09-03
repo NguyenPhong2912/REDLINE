@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerDownLeft, TerminalSquare } from "lucide-react";
+import { CornerDownLeft, Sparkles, TerminalSquare } from "lucide-react";
 import { api, fmtUsdc, short } from "../lib/api";
 import { mono, sans, term } from "../theme";
 import { useT } from "../i18n/LanguageContext";
@@ -10,6 +10,7 @@ const VI: Record<string, string> = {
   "REDLINE console — every answer below is read from recorded state.":
     "Console REDLINE — mọi câu trả lời dưới đây đều được đọc từ trạng thái đã ghi nhận.",
   "Type `help` for what this can tell you.": "Gõ `help` để xem console này có thể cho bạn biết những gì.",
+  "Ask naturally — commands are optional.": "Hãy hỏi tự nhiên — không bắt buộc dùng câu lệnh.",
 
   "the seven checks, and how often each has refused a transfer": "bảy vòng kiểm tra, và tần suất mỗi vòng đã từ chối một lệnh chuyển",
   "policy accounts, what they have spent, when they lapse": "các tài khoản policy, số đã chi, khi nào hết hạn",
@@ -36,6 +37,7 @@ const VI: Record<string, string> = {
   "answered by": "trả lời bởi",
   ", grounded in recorded state": ", dựa trên trạng thái đã ghi nhận",
   "answered from recorded figures — no model configured": "trả lời từ số liệu đã ghi nhận — chưa cấu hình model",
+  "smart rules + live data": "luật thông minh + dữ liệu trực tiếp",
 
   "unknown command:": "lệnh không xác định:",
   " — try `help`": " — thử `help`",
@@ -44,6 +46,10 @@ const VI: Record<string, string> = {
   "console": "console",
   "Console command": "Lệnh console",
   "Run command": "Chạy lệnh",
+  "Ask about grants, spending, refusals, or expiry…": "Hỏi về grant, chi tiêu, từ chối hoặc thời hạn…",
+  "Why was my agent blocked?": "Vì sao agent của tôi bị chặn?",
+  "What should I fix first?": "Tôi nên sửa gì trước?",
+  "Which grants are still active?": "Grant nào vẫn đang hoạt động?",
 
   "Answers come from this deployment's own records. Where a figure is unknown the console says so instead of estimating one.":
     "Câu trả lời đến từ chính dữ liệu ghi nhận của deployment này. Khi một số liệu chưa xác định, console sẽ nói rõ thay vì ước tính.",
@@ -68,6 +74,12 @@ const HELP: [string, string][] = [
   ["clear           ", "empty the console"],
 ];
 
+const STARTERS = [
+  "Why was my agent blocked?",
+  "What should I fix first?",
+  "Which grants are still active?",
+];
+
 let seq = 0;
 const line = (kind: Line["kind"], text: string): Line => ({ id: (seq += 1), kind, text });
 
@@ -75,7 +87,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
   const tr = useT(VI);
   const [lines, setLines] = useState<Line[]>([
     line("dim", tr("REDLINE console — every answer below is read from recorded state.")),
-    line("dim", tr("Type `help` for what this can tell you.")),
+    line("dim", tr("Ask naturally — commands are optional.")),
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,6 +101,17 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [lines]);
+
+  async function answerQuestion(question: string) {
+    const reply = await api.ask(question, owner);
+    push(line("out", reply.answer));
+    for (const s of reply.suggestions) {
+      push(line("warn", `→ ${s.title}`), line("out", `  ${s.detail}`));
+    }
+    push(line("dim", reply.source === "model"
+      ? `${tr("answered by")} ${reply.model}${tr(", grounded in recorded state")}`
+      : tr("smart rules + live data")));
+  }
 
   async function runCommand(raw: string) {
     const cmd = raw.trim();
@@ -164,19 +187,12 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
 
         case "ask": {
           if (!arg) { push(line("warn", tr("ask what? try `ask why is my agent being blocked`"))); break; }
-          const reply = await api.ask(arg, owner);
-          push(line("out", reply.answer));
-          for (const s of reply.suggestions) {
-            push(line("warn", `→ ${s.title}`), line("out", `  ${s.detail}`));
-          }
-          push(line("dim", reply.source === "model"
-            ? `${tr("answered by")} ${reply.model}${tr(", grounded in recorded state")}`
-            : tr("answered from recorded figures — no model configured")));
+          await answerQuestion(arg);
           break;
         }
 
         default:
-          push(line("warn", `${tr("unknown command:")} ${verb}${tr(" — try `help`")}`));
+          await answerQuestion(cmd);
       }
     } catch (e) {
       push(line("warn", e instanceof Error ? e.message : tr("the API did not answer")));
@@ -190,7 +206,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
       <header className="redline-console-bar">
         <TerminalSquare size={12} />
         <span>{tr("console")}</span>
-        <span className="redline-console-hint">{owner ? short(owner, 4) : tr("protocol-wide")}</span>
+        <span className="redline-console-hint"><Sparkles size={11} /> {owner ? short(owner, 4) : tr("protocol-wide")}</span>
       </header>
 
       <div className="redline-console-body" ref={scrollRef}>
@@ -201,6 +217,12 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
           </p>
         ))}
         {busy && <p className="redline-console-line redline-console-dim" style={mono}>…</p>}
+      </div>
+
+      <div className="redline-console-prompts" aria-label="Suggested questions">
+        {STARTERS.map(prompt => (
+          <button type="button" key={prompt} disabled={busy} onClick={() => void runCommand(tr(prompt))}>{tr(prompt)}</button>
+        ))}
       </div>
 
       <form
@@ -223,7 +245,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
               setHistoryAt(next); setInput(next < 0 ? "" : history[next]);
             }
           }}
-          placeholder={tr("ask why is my agent being blocked")}
+          placeholder={tr("Ask about grants, spending, refusals, or expiry…")}
           aria-label={tr("Console command")}
           spellCheck={false}
           autoComplete="off"
