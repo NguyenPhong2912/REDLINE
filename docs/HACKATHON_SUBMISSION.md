@@ -51,7 +51,7 @@ AI × Web3 · DeFi & Digital Assets.
 
 ## Current progress
 
-Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, on-chain rejection of an over-cap transfer, owner revoke and withdraw, live audit feed. Backend, Postgres and dashboard all deployed on Render from one blueprint, against the public Devnet endpoint. Marketplace rentals settle in real SOL and the payment is verified against the chain — signer, payee and amount — before an agreement is recorded; analytics are computed from the audit trail. P&L, APY, win-rate and uptime panels were removed rather than faked: the system holds no price feed, so no honest number could be put there.
+Working on Devnet with real transactions: wallet-signed vault and grant creation, agent runtime executing bounded transfers, owner revoke and withdraw, and a live audit feed. The dashboard now previews owner-triggered transfers and submits only valid proposals; rejection cases run in Policy Lab without fees, while the repository retains an earlier Devnet rejection proof for the program's gate enforcement. Backend, Postgres and dashboard are deployed on Render against the public Devnet endpoint. Marketplace rentals settle in real SOL and the payment is verified against the chain — signer, payee and amount — before an agreement is recorded; analytics are computed from the audit trail. P&L, APY, win-rate and uptime panels were removed rather than faked: the system holds no price feed, so no honest number could be put there.
 
 ## Biggest challenge
 

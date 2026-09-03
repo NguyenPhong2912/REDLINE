@@ -6,6 +6,7 @@
   "description": "REDLINE off-chain services: API, policy engine, agent runtime, indexer.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:lab": "tsx watch src/lab-server.ts",
     "start": "prisma db push --accept-data-loss --skip-generate && node dist/server.js",
     "build": "prisma generate && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

@@ -7,12 +7,13 @@ import { evaluateIntent, intentHash, ruleSnapshotHash } from "../policy/engine.j
 import { processIntent } from "../runtime/executor.js";
 import { requireGrantOwner } from "../auth.js";
 import { json } from "./json.js";
+import { PositiveU64StringSchema, SolanaAddressSchema } from "../validation.js";
 
-const IntentBody = z.object({
+export const IntentBody = z.object({
   grantId: z.string().min(1),
-  mint: z.string().min(32).max(44),
-  amountUnits: z.string().regex(/^\d+$/),
-  destination: z.string().min(32).max(44),
+  mint: SolanaAddressSchema,
+  amountUnits: PositiveU64StringSchema,
+  destination: SolanaAddressSchema,
   reason: z.string().max(200).optional(),
   nonce: z.number().int().min(0).optional(),
 });
@@ -30,13 +31,13 @@ export async function intentRoutes(app: FastifyInstance) {
     return json({ verdict, intentHash: intentHash(intent), ruleSnapshotHash: ruleSnapshotHash(state), nonce: intent.nonce });
   });
 
-  // Manual submission (owner or demo driver). submitEvenIfDenied=true reproduces
-  // the "program rejects it on-chain" moment on demand.
+  // Manual submission is safe by construction: the executor records every
+  // proposal, but sends it to Solana only when the current policy allows it.
   app.post("/intents", async (req, reply) => {
-    const body = IntentBody.extend({ submitEvenIfDenied: z.boolean().optional() }).parse(req.body);
+    const body = IntentBody.parse(req.body);
     // Submitting an intent is what actually moves funds, within the policy.
     await requireGrantOwner(req, body.grantId);
-    const result = await processIntent(body.grantId, { mint: body.mint, amountUnits: BigInt(body.amountUnits), destination: body.destination, reason: body.reason, nonce: body.nonce }, { submitEvenIfDenied: body.submitEvenIfDenied });
+    const result = await processIntent(body.grantId, { mint: body.mint, amountUnits: BigInt(body.amountUnits), destination: body.destination, reason: body.reason, nonce: body.nonce });
     return reply.code(201).send(json(result));
   });
 

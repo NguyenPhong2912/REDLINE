@@ -28,23 +28,23 @@ Run the risk assessment. Show the score, the verdict, and the `source` label. Ma
 
 **Sign & create on-chain grant.** The wallet signs `create_grant`; the backend only records the resulting PDA and signature. Say plainly: the owner's key never leaves the browser, and the server has no authority to widen this policy afterwards.
 
-## 1:40–2:20 — The moment that matters
+## 1:40–2:20 — Validate before moving funds
 
-**Start agent (scripted).** The wallet asks for a signature first — not a transaction, a sign-in. Worth a sentence, because it is a point in your favour: starting a run makes the executor spend from this vault, so the API will not take it on a shared key that ships inside the page. It wants proof you hold the owner's key. Signing costs nothing and moves nothing.
+**Run safe sequence.** The wallet asks for a signature first — not a transaction, a sign-in. Starting a run makes the executor spend from this vault, so the API requires proof that the caller holds the owner's key. Signing costs nothing and moves nothing.
 
 The first transfer then confirms on-chain within seconds; point at the counters rising on the PDA. Say what happens next: the agent waits out its cooldown before proposing again, because the runtime paces itself rather than letting the chain reject it for going too fast.
 
-Do not wait for that. Hit **Force `<cap>` USDC (over cap)** — an intent deliberately larger than the remaining budget. The feed shows:
+Use **Send safely** for a single transfer. The interface previews all seven gates, pins the approved nonce and submits only if the verdict is `OK`. The live feed then shows:
 
 ```
-on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved
+on-chain ALLOW · transfer confirmed
 ```
 
-Open the Explorer link. The transaction is *on-chain and failed* — `custom program error: 0x177b` (6011) — and the token balances before and after are identical. That is the whole product in one screen: the agent asked, the chain refused, and the refusal is public.
+Open the Explorer link to verify the confirmed transfer. Then return to Protocol → Policy Lab, choose an over-budget proposal and show the `SPEND_CAP_EXCEEDED` trace. That comparison demonstrates both paths without charging a fee for a transaction known to fail.
 
-The spend cap is gate 6 and the cooldown is gate 7, so this rejection lands on the cap no matter how the cooldown is set. It is the one beat that cannot go wrong on timing.
+The spend cap is gate 6 and the cooldown is gate 7, so the simulator reports the cap first under the same ordered rules as execution.
 
-Reference, if the live run is slow: [the transfer that was allowed](https://explorer.solana.com/tx/5gjTwZeHxddXzeVXEscu9p1tJzNmhYuGZc9dj4EjYt16ZycNCaBjpGazi3uSqVfeLvCftoNjv4kDKteWZLJxRS9h?cluster=devnet) and [the one that was not](https://explorer.solana.com/tx/t4Xb9MFdFBrw8ndHGc496a6fGbGHmNbB2apvPwYzxt36M2LqLxE9k11zhpoSPV1TChw9iKq4AuoofBx1aAwu9su?cluster=devnet) — same agent, same grant, same destination.
+Reference, if the live run is slow: [a transfer that was allowed](https://explorer.solana.com/tx/5gjTwZeHxddXzeVXEscu9p1tJzNmhYuGZc9dj4EjYt16ZycNCaBjpGazi3uSqVfeLvCftoNjv4kDKteWZLJxRS9h?cluster=devnet). The repository also retains [an earlier on-chain rejection proof](https://explorer.solana.com/tx/t4Xb9MFdFBrw8ndHGc496a6fGbGHmNbB2apvPwYzxt36M2LqLxE9k11zhpoSPV1TChw9iKq4AuoofBx1aAwu9su?cluster=devnet) to verify that the program enforces gate 6.
 
 ## 2:20–2:40 — The owner stays in control
 

@@ -1,0 +1,213 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDLINE — Per-route visual identity layer
+   ───────────────────────────────────────────────────────────────────────────
+   Borrows one idea from Hoyoverse title sites: every destination carries its
+   own accent, so you know where you are before you read the heading.
+   This layer only TINTS the existing design system — it never restructures it.
+   Sizing stays owned by layout.css; surfaces stay owned by index.css.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Route accent tokens ───────────────────────────────────────────────────
+   Set on [data-route], inherited by everything inside the page. Anything
+   outside that element (header, scrollbar) uses fixed colours instead.       */
+:root                     { --pg: 56,119,248; }
+[data-route="protocol"]   { --pg: 196,150,58; }
+[data-route="agents"]     { --pg: 14,145,205; }
+[data-route="analytics"]  { --pg: 124,92,231; }
+[data-route="marketplace"]{ --pg: 214,64,142; }
+[data-route="treasury"]   { --pg: 13,155,116; }
+[data-route="audit"]      { --pg: 196,124,14; }
+[data-route="guardrails"] { --pg: 214,68,96; }
+[data-route="settings"]   { --pg: 96,116,142; }
+
+/* ─── Ambient ground ──────────────────────────────────────────────────────── */
+.redline-app {
+  background:
+    radial-gradient(ellipse 80% 50% at 88% -5%, rgba(89,135,214,.15), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 2% 92%, rgba(160,125,207,.09), transparent 58%),
+    #080d19 !important;
+}
+
+/* ─── Header: transparent at rest, frosted once the page moves ───────────── */
+.app-header {
+  transition: background .32s ease, box-shadow .32s ease, border-color .32s ease;
+}
+.app-header:not(.header-scrolled) {
+  background: rgba(8,13,25,.76) !important;
+  box-shadow: none !important;
+  border-bottom-color: rgba(92,112,143,.30) !important;
+}
+.app-header.header-scrolled {
+  background: rgba(8,13,25,.94) !important;
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-bottom-color: rgba(92,112,143,.55) !important;
+  box-shadow: 0 9px 32px rgba(0,0,0,.26) !important;
+}
+
+/* Emblem picks up a warm ring on hover — the one gold note in the chrome. */
+.app-header > button:first-of-type > span:first-of-type {
+  transition: box-shadow .3s ease, transform .3s ease;
+}
+.app-header > button:first-of-type:hover > span:first-of-type {
+  box-shadow: 0 0 0 3px rgba(196,150,58,.16), 0 0 18px rgba(196,150,58,.28);
+  transform: scale(1.05);
+}
+
+/* ─── Page aura ─────────────────────────────────────────────────────────────
+   Recolours the aura index.css already draws. No new pseudo-element, so no
+   element can push the body sideways.                                        */
+.route-page::before {
+  background: radial-gradient(circle,
+    rgba(var(--pg), .16),
+    rgba(var(--pg), .04) 46%,
+    transparent 72%) !important;
+}
+
+/* ─── Route banner ──────────────────────────────────────────────────────────
+   Height stays exactly as layout.css set it — the brief asked for desktop
+   fit, and a taller banner is the fastest way to lose it.                    */
+.route-scene-art {
+  object-position: center 32%;
+  filter: brightness(.72) saturate(.94);
+  animation: hv-drift 26s ease-in-out infinite alternate;
+}
+@keyframes hv-drift {
+  from { transform: scale(1);    }
+  to   { transform: scale(1.05); }
+}
+
+/* Copy sits left, so the wash is heaviest there and clears to the right. */
+.route-scene-art-wash {
+  background: linear-gradient(102deg,
+    rgba(10,16,30,.90) 0%,
+    rgba(10,16,30,.66) 38%,
+    rgba(10,16,30,.24) 70%,
+    rgba(10,16,30,.06) 100%) !important;
+}
+
+/* A single hairline in the route's colour — the identity cue, nothing more. */
+.route-scene-has-art { position: relative; }
+.route-page-stage > .route-scene-has-art { position: absolute; }
+.route-scene-has-art > .route-scene-label { z-index: 6; }
+
+.route-scene-orbit { border-color: rgba(var(--pg), .34) !important; }
+.route-scene-core {
+  color: rgb(var(--pg)) !important;
+  border-color: rgba(var(--pg), .5) !important;
+  box-shadow: 0 0 22px rgba(var(--pg), .26), inset 0 1px rgba(255,255,255,.16) !important;
+}
+.route-scene-cube { border-color: rgba(var(--pg), .26) !important; }
+
+/* ─── Headings ──────────────────────────────────────────────────────────────
+   Keeps Inter. A display serif was tried and pulled: the faces that suit this
+   subject have no Vietnamese diacritics, and the fallback broke mid-word.    */
+.route-page > :first-child h1 span {
+  color: rgb(var(--pg)) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* ─── Journey bar ───────────────────────────────────────────────────────────*/
+.route-flow-home:hover,
+.route-flow-pager button:not(:disabled):hover,
+.route-flow-track button[aria-current="page"] {
+  color: rgb(var(--pg)) !important;
+  background: rgba(var(--pg), .09) !important;
+}
+
+/* ─── Cards ─────────────────────────────────────────────────────────────────
+   Hover only. No corner ornament: an accent rail stamped on every card
+   flattens the hierarchy it is supposed to create, and `overflow:hidden`
+   here clips every dropdown and popover the cards contain.                   */
+.route-page .rounded-2xl:hover {
+  border-color: rgba(var(--pg), .40) !important;
+  box-shadow: 0 16px 44px rgba(var(--pg), .10),
+              0 4px 14px rgba(46,82,140,.07) !important;
+}
+
+/* ─── Inputs ────────────────────────────────────────────────────────────────*/
+.route-page input:focus,
+.route-page select:focus,
+.route-page textarea:focus {
+  border-color: rgba(var(--pg), .62) !important;
+  box-shadow: 0 0 0 3px rgba(var(--pg), .13) !important;
+}
+
+/* Keyboard focus must stay visible everywhere, not just on inputs. */
+.route-page button:focus-visible,
+.app-header button:focus-visible {
+  outline: 2px solid rgba(var(--pg), .8);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ─── Route change streak ───────────────────────────────────────────────────*/
+.page-transition-streak {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent,
+    rgba(var(--pg), .95) 26%, rgba(var(--pg), .6) 74%, transparent) !important;
+  box-shadow: 0 0 18px rgba(var(--pg), .45) !important;
+}
+
+/* ─── Shared UI rhythm ──────────────────────────────────────────────────────
+   The dashboard is dense, but every action remains readable and touchable. */
+.route-page { font-size: 16px; line-height: 1.55; }
+.route-page button,
+.route-page input,
+.route-page select,
+.route-page textarea { font-size: max(14px, 1em); }
+.route-page button:not(.recharts-layer),
+.header-tool,
+.mobile-nav-toggle { min-height: 38px; }
+.route-page .rounded-2xl {
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.route-page .rounded-2xl:focus-within {
+  border-color: rgba(var(--pg), .44) !important;
+  box-shadow: 0 18px 46px rgba(var(--pg), .10) !important;
+}
+.route-page a:focus-visible,
+.route-flow-bar button:focus-visible,
+.header-tool:focus-visible,
+.mobile-nav-toggle:focus-visible {
+  outline: 2px solid rgb(var(--pg));
+  outline-offset: 3px;
+}
+.header-sound-trigger[aria-pressed="true"] {
+  color: #f0d69d;
+  border-color: rgba(223,195,140,.45);
+  background: rgba(223,195,140,.10);
+}
+
+@media (hover: hover) {
+  .route-page button:not(:disabled):hover { transform: translateY(-1px); }
+}
+
+/* ─── Motion contract ───────────────────────────────────────────────────────*/
+@media (prefers-reduced-motion: reduce) {
+  .route-scene-art { animation: none; }
+  .app-header      { transition: none; }
+  .route-page .rounded-2xl, .route-page button { transition: none; }
+}
+
+@media (max-width: 920px) {
+  .header-sound-trigger span { display: none; }
+  .header-sound-trigger { width: 38px; justify-content: center; padding-inline: 0; }
+}
+
+@media (max-width: 520px) {
+  .route-page { font-size: 15px; }
+  .route-page .flex.items-center.gap-4 { gap: 10px; }
+}
+
+/* ─── Wide desktop: use the extra width, don't inflate the type ─────────────*/
+@media (min-width: 1800px) {
+  .app-main:not(.app-main-home) > div[data-route] { max-width: 1760px !important; }
+}

@@ -11,6 +11,14 @@ export const API_URL = !configuredApi
 const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 export interface Health { ok: boolean; chain: "mock" | "solana"; programId: string; executor: string; clockSpeed: number }
+export interface SimulationPolicy { spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; durationSeconds: number }
+export interface SimulationInput { policy: SimulationPolicy; proposal: { amountUnits: string; attempts: number; intervalSeconds: number; destinationAllowed: boolean; mintAllowed: boolean; active: boolean; replayNonce: boolean } }
+export interface PolicyPreset { id: string; name: string; description: string; policy: SimulationPolicy; proposal: { amountUnits: string; attempts: number; intervalSeconds: number } }
+export interface SimulationResult {
+  mode: "simulation"; notice: string; input: SimulationInput;
+  summary: { allowed: number; blocked: number; spentUnits: string; remainingUnits: string; nextNonce: number };
+  steps: { attempt: number; elapsedSeconds: number; nonce: number; verdict: { allow: boolean; reasonCode: string; gate: number; message: string }; gates: { id: number; status: "passed" | "blocked" | "skipped" }[]; spentUnits: string; remainingUnits: string }[];
+}
 export interface AgentVersion { id: string; name: string; version: string; strategy: string; agentHash: string }
 export interface OnchainGrant { active: boolean; spentUnits: string; transactionCount: number; nextNonce: number; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: number; allowedMints: string[]; allowedDestinations: string[] }
 export interface Grant {
@@ -27,6 +35,12 @@ export interface Grant {
 export interface IntentRow {
   id: string; nonce: number; amountUnits: string; destination: string; reason: string; intentHash: string; createdAt: string;
   decision: null | { allow: boolean; reasonCode: string; stage: string; chainTx: null | { signature: string; result: string; error: string | null; slot: string | null } };
+}
+export interface IntentPreview {
+  verdict: { allow: boolean; reasonCode: string; gate: number; message: string };
+  intentHash: string;
+  ruleSnapshotHash: string;
+  nonce: number;
 }
 export interface AuditRow { id: string; createdAt: string; actorType: string; eventType: string; subjectType: string; subjectId: string; chainSignature: string | null; payload: Record<string, unknown> }
 export interface VaultView { owner: string; vaultPda: string; vaultAta: string; mint: string; balanceUnits: string | null; exists: boolean }
@@ -86,9 +100,9 @@ export function storeSession(session: WalletSession | null): void {
   } catch { /* a session we cannot persist still works for this page */ }
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const session = loadSession();
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-redline-key": API_KEY } : {}), ...(session ? { Authorization: `Bearer ${session.token}` } : {}), ...(init?.headers ?? {}) } });
+async function req<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
+  const session = authenticated ? loadSession() : null;
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(authenticated && API_KEY ? { "x-redline-key": API_KEY } : {}), ...(session ? { Authorization: `Bearer ${session.token}` } : {}), ...(init?.headers ?? {}) } });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try { const body = await res.json() as { error?: string; details?: unknown }; if (body.error) msg = body.error; } catch { /* keep status text */ }
@@ -99,6 +113,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => req<Health>("/health"),
+  policyPresets: () => req<{ version: number; presets: PolicyPreset[] }>("/policy/presets", { signal: AbortSignal.timeout(15_000) }, false),
+  simulatePolicy: (input: SimulationInput) => req<SimulationResult>("/policy/simulate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(15_000) }, false),
   authNonce: (wallet: string) => req<{ nonce: string; message: string; expiresAt: string }>("/auth/nonce", { method: "POST", body: JSON.stringify({ wallet }) }),
   authVerify: (b: { wallet: string; nonce: string; signature: string }) => req<WalletSession>("/auth/verify", { method: "POST", body: JSON.stringify(b) }),
   agents: () => req<AgentVersion[]>("/agents"),
@@ -118,7 +134,9 @@ export const api = {
   }) => req<{ grant: Grant; policyHash: string; chain: string }>("/grants", { method: "POST", body: JSON.stringify(b) }),
   revoke: (id: string, signature?: string) => req<{ ok: boolean; signature: string }>(`/grants/${id}/revoke`, { method: "POST", body: JSON.stringify({ signature }) }),
   intents: (grantId: string) => req<IntentRow[]>(`/grants/${grantId}/intents`),
-  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; submitEvenIfDenied?: boolean }) =>
+  previewIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
+    req<IntentPreview>("/intents/preview", { method: "POST", body: JSON.stringify(b) }),
+  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
     req<{ intentId: string; precheck: { reasonCode: string; message: string }; submitted: boolean; signature?: string; onchainSuccess?: boolean; onchainReason?: string }>("/intents", { method: "POST", body: JSON.stringify(b) }),
   startRun: (grantId: string, mode: "scripted" | "llm" = "scripted") => req<{ id: string }>("/runs", { method: "POST", body: JSON.stringify({ grantId, mode }) }),
   stopRun: (runId: string) => req<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST" }),

@@ -1,4 +1,4 @@
-import { createClient } from "@solana/kit";
+import { address, createClient } from "@solana/kit";
 import { solanaRpc } from "@solana/kit-plugin-rpc";
 import { walletSigner } from "@solana/kit-plugin-wallet";
 
@@ -21,11 +21,10 @@ export function explorerTransactionUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=${SOLANA_CLUSTER}`;
 }
 
-// Shape check only — base58 (no 0, O, I, l) at the length a 32-byte key
-// encodes to. It catches an obviously wrong paste before the wallet is asked
-// to sign. It does not prove the address exists, and because valid addresses
-// run 32–44 characters it cannot tell a real one from itself minus a couple
-// of characters. The wallet and the program are the real check.
+// Decode the full public key before asking the wallet to sign. This proves the
+// text is a canonical 32-byte Solana address; account existence is checked by
+// the relevant RPC/program operation.
 export function isAddressLike(value: string): boolean {
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
+  try { address(value); return true; }
+  catch { return false; }
 }

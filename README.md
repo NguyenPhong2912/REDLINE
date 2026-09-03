@@ -138,6 +138,14 @@ Crucially, renting a stranger's agent does not mean trusting it: it still runs i
 
 ## ✨ Features
 
+### Astral interface & Policy Lab
+
+Giao diện 3D mới lấy cảm hứng từ cách trình bày thế giới của HoYoverse: nền xanh đêm, ánh vàng, lõi tinh thể và điều hướng responsive. **Policy Lab** cho phép thử chuỗi đề xuất qua bảy điều kiện, xem lý do chặn và tải báo cáo JSON mà không cần ví hay giao dịch thật.
+
+- [Hướng dẫn Policy Lab và API](docs/POLICY_LAB.md)
+- [Mô tả thiết kế Astral](docs/ASTRAL_DESIGN.md)
+- Preview riêng không cần Postgres: `cd backend && npm run dev:lab` (cổng 8788), rồi chạy frontend với `VITE_API_URL=http://127.0.0.1:8788`. Các chức năng live cần backend đầy đủ.
+
 <table>
 <tr>
 <td width="33%" valign="top">
@@ -302,7 +310,7 @@ npm run typecheck && npm test && npm run build
 </details>
 
 <details>
-<summary><strong>🧠 Backend (71 tests)</strong></summary>
+<summary><strong>🧠 Backend (83 tests)</strong></summary>
 
 ```bash
 cd backend && npm run typecheck && npm test
@@ -326,8 +334,8 @@ cd backend && npm run program:fetch && npm run test:onchain
 | # | Step |
 |:---:|---|
 | 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx, **1-minute cooldown**). |
-| 2️⃣ | ▶️ **Start agent (scripted)**. The wallet asks you to sign in first — starting a run spends from the vault, so the API wants proof you hold the owner's key rather than the shared key that ships in the page. Then the first transfer confirms on-chain within seconds and the counters on the PDA move. The agent waits out the cooldown before proposing again — it paces itself so it never trips gate 7. |
-| 3️⃣ | 🛑 Don't wait for it: hit **Force `<cap>` USDC (over cap)**. The feed shows `on-chain REJECT · SPEND_CAP_EXCEEDED · nothing moved`, with an Explorer link — token balances before and after are identical. The spend cap is gate 6, checked before the cooldown, so this rejection is the same whatever cooldown you picked. |
+| 2️⃣ | ▶️ **Run safe sequence**. The wallet asks you to sign in first — starting a run spends from the vault, so the API wants proof you hold the owner's key rather than the shared key that ships in the page. The runtime performs three paced transfers, each at 20% of the cap. |
+| 3️⃣ | ✅ Use **Send safely** for a single owner-triggered transfer. The UI calls `/intents/preview`, pins the returned nonce, and submits only an allowed proposal. Use Policy Lab to inspect over-cap, wrong-recipient, replay, expiry, and revocation scenarios without a fee or failed transaction. |
 | 4️⃣ | 🔒 **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**. |
 
 📖 Step-by-step walkthrough: [docs/USER_GUIDE.md](docs/USER_GUIDE.md) · Design: [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) · Threat model: [docs/SECURITY.md](docs/SECURITY.md)

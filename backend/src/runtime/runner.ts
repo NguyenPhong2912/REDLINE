@@ -45,7 +45,7 @@ export async function startRun(grantId: string, mode: "scripted" | "llm", tickMs
       const plan = mode === "scripted" ? scriptedPlan(fresh, step) : await llmPlan(fresh, grant.id);
       if (!plan) return finish("stopped", "script complete");
       step += 1;
-      const res = await processIntent(grantId, plan, { runId: run.id, submitEvenIfDenied: plan.submitEvenIfDenied });
+      const res = await processIntent(grantId, plan, { runId: run.id });
       // A revoked grant ends the run; any other rejection lets the loop go on
       // so the owner can watch the agent keep getting denied.
       if (res.precheck.reasonCode === "REVOKED" || res.onchainReason === "REVOKED") return finish("stopped", "grant revoked");

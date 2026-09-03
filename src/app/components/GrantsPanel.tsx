@@ -8,12 +8,13 @@ import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
+import { playSound } from "../lib/soundscape";
 
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 
-// Real grants from the API with the three demo controls:
-//   Start agent  → POST /runs (scripted: 3 compliant transfers + 1 over cap)
-//   Force over-cap → POST /intents submitEvenIfDenied (program rejects on-chain)
+// Real grants from the API with three owner controls:
+//   Safe run → three paced, compliant transfers
+//   Safe transfer → preview the next transfer, then submit only if allowed
 //   Revoke → owner signs revoke_grant in the wallet, API records the signature
 export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const client = useClient<AppClient>();
@@ -70,8 +71,10 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
       if (owner) await withSession(owner);
       await fn();
       await load();
+      playSound("success");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      playSound("error");
     } finally { setBusy(""); }
   }
 
@@ -83,6 +86,25 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     } else {
       await api.revoke(g.id); // mock, or headless demo owner on the server
     }
+  }
+
+  async function submitValidatedTransfer(g: Grant, mint: string, destination: string, amountUnits: bigint) {
+    const draft = {
+      grantId: g.id,
+      mint,
+      destination,
+      amountUnits: amountUnits.toString(),
+      reason: "Owner-triggered transfer validated by REDLINE preflight",
+    };
+    const preview = await api.previewIntent(draft);
+    if (!preview.verdict.allow) {
+      throw new Error(`Preflight blocked this transfer: ${preview.verdict.message}`);
+    }
+    const submitted = await api.submitIntent({ ...draft, nonce: preview.nonce });
+    if (!submitted.submitted || submitted.onchainSuccess === false) {
+      throw new Error(`Solana did not confirm the transfer: ${submitted.onchainReason ?? submitted.precheck.message}`);
+    }
+    return submitted;
   }
 
   const activeRun = (g: Grant) => g.runs?.find(r => r.status === "running");
@@ -110,8 +132,10 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
       {grants.length === 0 && !error && <div className="px-5 py-6 text-[13px]" style={{ ...mono, color: color.textDim }}>No grants yet — create one in the wizard below.</div>}
       {grants.map(g => {
         const oc = g.onchain;
-        const cap = Number(g.policyVersion.spendCapUnits);
-        const spent = Number(oc?.spentUnits ?? g.spentUnits);
+        const capUnits = BigInt(g.policyVersion.spendCapUnits);
+        const spentUnits = BigInt(oc?.spentUnits ?? g.spentUnits);
+        const cap = Number(capUnits);
+        const spent = Number(spentUnits);
         const pct = cap ? Math.min(100, (spent / cap) * 100) : 0;
         const revoked = g.revoked || oc?.active === false;
         const running = activeRun(g);
@@ -131,6 +155,11 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         const mint = (JSON.parse(g.policyVersion.allowedMints) as string[])[0];
         const ownerWallet = connected ? String(connected.account.address) : "";
         const isOwner = ownerWallet === g.owner.wallet;
+        const remainingUnits = capUnits > spentUnits ? capUnits - spentUnits : 0n;
+        const safeSlice = capUnits / 5n > 0n ? capUnits / 5n : 1n;
+        const safeAmountUnits = remainingUnits < safeSlice ? remainingUnits : safeSlice;
+        const txCount = oc?.transactionCount ?? g.transactionCount;
+        const canTransfer = !expired && safeAmountUnits > 0n && txCount < g.policyVersion.maxTransactions && Boolean(mint && dest);
         return (
           <div key={g.id} className="px-5 py-4 border-b space-y-3" style={{ borderColor: color.border }}>
             <div className="flex items-center gap-4">
@@ -163,9 +192,9 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
               <div className="flex flex-wrap gap-2">
                 {isOwner ? (
                   <>
-                    <Btn icon={Play} label={running ? "Agent running…" : "Start agent (scripted)"} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id), g.owner.wallet)} />
-                    <Btn icon={Zap} label={`Force ${fmtUsdc(cap)} USDC (over cap)`} accent={A} disabled={!!busy} busy={busy === `force-${g.id}`}
-                      onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }), g.owner.wallet)} />
+                    <Btn icon={Play} label={running ? "Safe run active…" : "Run safe sequence"} accent={M} disabled={!!running || !!busy || !canTransfer} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id), g.owner.wallet)} />
+                    <Btn icon={Zap} label={canTransfer ? `Send ${fmtUsdc(safeAmountUnits)} USDC safely` : "No valid transfer available"} accent={A} disabled={!!busy || !canTransfer} busy={busy === `safe-${g.id}`}
+                      onClick={() => run(`safe-${g.id}`, () => submitValidatedTransfer(g, mint, dest, safeAmountUnits), g.owner.wallet)} />
                     <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                   </>
                 ) : (
@@ -185,7 +214,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 {!intents[g.id] ? (
                   <div className="px-3 py-3 text-[12px] flex items-center gap-2" style={{ ...mono, color: color.textDim }}><LoaderCircle size={11} className="animate-spin" /> loading…</div>
                 ) : intents[g.id].length === 0 ? (
-                  <div className="px-3 py-3 text-[12px]" style={{ ...mono, color: color.textDim }}>No proposals yet — start the agent, or force one over the cap.</div>
+                  <div className="px-3 py-3 text-[12px]" style={{ ...mono, color: color.textDim }}>No proposals yet — run a safe sequence or submit a validated transfer.</div>
                 ) : intents[g.id].map(it => {
                   const d = it.decision;
                   const tx = d?.chainTx;

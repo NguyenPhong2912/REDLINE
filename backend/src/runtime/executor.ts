@@ -9,12 +9,8 @@ import type { GrantState, Intent, Verdict } from "../policy/types.js";
 //   record intent → off-chain precheck → (optionally) submit on-chain →
 //   record decision + chain tx → audit every step.
 //
-// `submitEvenIfDenied` is the demo switch: normally a DENY stops here and no
-// fee is paid; for the "watch the program reject it" moment we send anyway.
-
 export interface ProcessOptions {
   runId?: string;
-  submitEvenIfDenied?: boolean;
   now?: () => number;
 }
 
@@ -81,8 +77,7 @@ export async function processIntent(
     payload: { grantId, allow: precheck.allow, reasonCode: precheck.reasonCode, gate: precheck.gate, message: precheck.message, ruleSnapshotHash: snapshot },
   });
 
-  const shouldSubmit = precheck.allow || opts.submitEvenIfDenied === true;
-  if (!shouldSubmit) {
+  if (!precheck.allow) {
     await prisma.policyDecision.create({
       data: { intentId: row.id, allow: false, reasonCode: precheck.reasonCode, ruleSnapshotHash: snapshot, stage: "precheck" },
     });

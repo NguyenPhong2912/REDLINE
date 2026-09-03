@@ -29,12 +29,8 @@ describe("isAddressLike", () => {
     }
   });
 
-  // Worth stating outright: valid addresses run 32–44 characters, so dropping
-  // a couple from the end of a real one leaves something this check accepts.
-  // The wallet and the program are what reject it; this only catches the
-  // obvious mistakes early.
-  it("cannot catch a small truncation, and does not pretend to", () => {
-    expect(isAddressLike("Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4Wb")).toBe(true);
+  it("rejects a small truncation that still looks like base58", () => {
+    expect(isAddressLike("Fj7MV8Z2a3RdH4W8VF2XKfWAsWHT3jxhoqGMcmb4Wb")).toBe(false);
   });
 
   it("rejects the base58 characters that do not exist", () => {

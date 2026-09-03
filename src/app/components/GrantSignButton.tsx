@@ -9,6 +9,8 @@ import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { createGrantInstruction, findVaultPda, initVaultInstruction, policyHashHex, randomAgentId, toHex } from "../solana/redline";
 import { color } from "../theme";
+import { isAddressLike } from "../solana/client";
+import { playSound } from "../lib/soundscape";
 
 const ACCENT = color.primary;
 const CYAN = color.info;
@@ -35,6 +37,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
   // to look at could be signed without anyone confirming they had.
   const needsAcceptance = assessment?.decision === "REVIEW";
   const held = needsAcceptance && !accepted;
+  const configurationError = !isAddressLike(USDC_MINT) ? "Demo USDC mint is missing or invalid" : "";
 
   // A fresh assessment is a fresh decision to make.
   useEffect(() => { setAccepted(false); }, [assessment]);
@@ -44,7 +47,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
   }, []);
 
   async function sign() {
-    if (!connected?.signer || blocked || held || destinationsInvalid || !health) return;
+    if (!connected?.signer || blocked || held || destinationsInvalid || configurationError || !health) return;
     setError("");
     const owner = String(connected.account.address);
     try {
@@ -93,10 +96,12 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
       const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agentVersion, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined, hireId: hireId ?? undefined });
       setGrantId(created.grant.id);
       setPhase("done");
+      playSound("success");
       onCreated?.(created.grant.id);
     } catch (e) {
       setPhase("idle");
       setError(e instanceof Error ? e.message : "Transaction was rejected or could not reach Solana Devnet.");
+      playSound("error");
     }
   }
 
@@ -114,12 +119,12 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
     );
   }
 
-  const label = apiError ? "Backend offline" : !connected ? "Connect wallet to sign grant"
+  const label = apiError ? "Backend offline" : configurationError || (!connected ? "Connect wallet to sign grant"
     : blocked ? "Blocked by risk policy"
     : destinationsInvalid ? "Add a valid destination address"
     : held ? "Accept the flagged risk to continue"
     : phase === "vault" ? "Creating vault…" : phase === "grant" ? "Sign create_grant…" : phase === "register" ? "Registering…"
-    : "Sign & create on-chain grant";
+    : "Sign & create on-chain grant");
   const busy = phase !== "idle";
 
   return (
@@ -132,14 +137,14 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
           </span>
         </label>
       )}
-      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || destinationsInvalid || !!apiError || !health}
+      <button type="button" onClick={sign} disabled={!connected?.signer || busy || blocked || held || destinationsInvalid || !!apiError || !!configurationError || !health}
         className="w-full py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
         style={{ background: `linear-gradient(135deg, ${ACCENT}dd, ${CYAN}cc)`, color: color.bg }}>
         {busy ? <LoaderCircle size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
         {label}
       </button>
       <p className="text-[12px] text-center" style={{ color: color.textDim }}>
-        {health ? `Program ${health.programId.slice(0, 6)}… · executor ${health.executor.slice(0, 6)}… · ${health.chain}` : apiError ? `API: ${apiError}` : "Connecting to REDLINE API…"}
+        {configurationError || (health ? `Program ${health.programId.slice(0, 6)}… · executor ${health.executor.slice(0, 6)}… · ${health.chain}` : apiError ? `API: ${apiError}` : "Connecting to REDLINE API…")}
       </p>
       {error && <p role="alert" className="text-[12px] text-center" style={{ color: color.danger }}>{error}</p>}
     </div>

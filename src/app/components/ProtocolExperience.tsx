@@ -11,6 +11,17 @@ import { api, type Analytics } from "../lib/api";
 import type { AppClient } from "../solana/client";
 import { color, mono, sans } from "../theme";
 import heroArt from "../../assets/redline-celestial-vault-hero.webp";
+import guardrailsArt from "../../assets/redline-guardrails-citadel.webp";
+import treasuryArt from "../../assets/redline-treasury-core.webp";
+import evidenceArt from "../../assets/redline-evidence-observatory.webp";
+import { CelestialCore } from "./CelestialCore";
+import { PolicyLab } from "./PolicyLab";
+
+const worlds = [
+  { title: "The Citadel", subtitle: "GUARDRAILS", description: "Define the boundary. Give every agent a budget, a destination and a deadline.", image: guardrailsArt, route: 6 },
+  { title: "The Vault", subtitle: "TREASURY", description: "Your capital. Your authority. Fund a vault and keep control of every permission.", image: treasuryArt, route: 4 },
+  { title: "The Observatory", subtitle: "AUDIT TRAIL", description: "Follow every decision back to its evidence. Nothing is left to a promise.", image: evidenceArt, route: 5 },
+];
 
 const principles = [
   { number: "01", title: "Propose", body: "An autonomous agent can request an action, but it never receives unrestricted authority." },
@@ -23,7 +34,10 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : "";
   const [stats, setStats] = useState<Analytics | null>(null);
+  const [world, setWorld] = useState(0);
   const [showProtocolReturn, setShowProtocolReturn] = useState(false);
+  const [showChapterNav, setShowChapterNav] = useState(false);
+  const factsRef = useRef<HTMLDivElement | null>(null);
   const reduced = useReducedMotion();
   const heroRef = useRef<HTMLElement | null>(null);
 
@@ -73,9 +87,18 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!factsRef.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowChapterNav(!entry.isIntersecting && entry.boundingClientRect.top < 150);
+    }, { rootMargin: "-150px 0px 0px 0px" });
+    observer.observe(factsRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <article className="protocol-experience">
-      <section className="protocol-hero" ref={heroRef}>
+      <section className="protocol-hero astral-hero" ref={heroRef}>
         <motion.div
           className="protocol-hero-art-layer"
           aria-hidden="true"
@@ -86,6 +109,8 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           <img src={heroArt} alt="" width={1672} height={941} decoding="async" fetchPriority="high" />
         </motion.div>
         <div className="protocol-hero-wash" aria-hidden="true" />
+        <div className="astral-hero-grid" aria-hidden="true" />
+        <CelestialCore />
         <div className="protocol-depth-field" aria-hidden="true">
           {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
         </div>
@@ -96,29 +121,31 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="protocol-kicker">
-            <Sparkles size={12} /> Protection for autonomous finance
+            <Sparkles size={12} /> A NEW ORBIT FOR AUTONOMOUS FINANCE
           </div>
           <h1 className="protocol-hero-title">
-            <span className="protocol-title-line">Boundless intelligence.</span>
-            <span className="protocol-title-line protocol-title-accent">Protected by design.</span>
+            <span className="protocol-title-line">Intelligence,</span>
+            <span className="protocol-title-line">without limits.</span>
+            <span className="protocol-title-line protocol-title-accent">Authority, with them.</span>
           </h1>
           <p className="protocol-hero-lede">
-            Give AI agents room to act while REDLINE keeps every asset, recipient, budget and decision inside your signed boundaries.
+            Let your agents explore. Keep your assets within reach. Seven on-chain gates protect the boundary between ambition and permission.
           </p>
           <div className="protocol-hero-actions">
             <button type="button" onClick={() => setNav?.(6)} className="protocol-primary-action">
-              Enter REDLINE <ArrowUpRight size={14} />
+              Launch the protocol <ArrowUpRight size={16} />
             </button>
-            <button type="button" onClick={scrollToChapters} className="protocol-text-action">
-              <Play size={13} fill="currentColor" /> Explore the protocol
+            <button type="button" onClick={() => document.getElementById("policy-lab")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" })} className="protocol-text-action">
+              <Play size={13} fill="currentColor" /> Try Policy Lab
             </button>
           </div>
         </motion.div>
+        <div className="astral-hero-edition"><span>REDLINE UNIVERSE</span><b>01 — GENESIS</b><i />SOLANA DEVNET</div>
         {/* It looks like an affordance and reads like an instruction, so it has
             to behave like one. It was a decorative div that did nothing when
             clicked. */}
         <button type="button" className="protocol-scroll-cue" onClick={scrollToChapters}>
-          Discover the boundary <ArrowDown size={14} />
+          SCROLL TO DISCOVER <ArrowDown size={14} />
         </button>
       </section>
 
@@ -141,7 +168,24 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
       </AnimatePresence>
 
       <div className="protocol-story">
-        <nav className={`protocol-chapter-nav ${showProtocolReturn ? "is-visible" : ""}`} aria-label="Protocol chapters">
+        <section className="astral-worlds" aria-labelledby="worlds-title">
+          <div className="section-eyebrow">THE REDLINE UNIVERSE / EXPLORE</div>
+          <div className="worlds-heading"><h2 id="worlds-title">One mission. <em>Three worlds.</em></h2><span>YOUR JOURNEY STARTS HERE ↗</span></div>
+          <div className="world-tabs" aria-label="Choose a world">{worlds.map((item, index) => <button type="button" key={item.title} aria-pressed={world === index} onClick={() => setWorld(index)}><span>0{index + 1}</span>{item.title}<small>{item.subtitle}</small></button>)}</div>
+          <div className="world-feature">
+            <AnimatePresence initial={false}>
+              <motion.img key={world} src={worlds[world].image} alt="" aria-hidden="true"
+                initial={reduced ? false : { opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: reduced ? 0 : .4, ease: [0.22, 1, 0.36, 1] }} />
+            </AnimatePresence>
+            <motion.div key={`copy-${world}`} className="world-feature-copy"
+              initial={reduced ? false : { opacity: .4, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : .28 }}>
+              <span>0{world + 1} / {worlds[world].subtitle}</span><h3>{worlds[world].title}</h3><p>{worlds[world].description}</p><button type="button" onClick={() => setNav?.(worlds[world].route)}>Enter this world <ArrowUpRight size={17} /></button>
+            </motion.div>
+          </div>
+        </section>
+        <PolicyLab />
+        <nav className={`protocol-chapter-nav ${showChapterNav ? "is-visible" : ""}`} inert={!showChapterNav} aria-hidden={!showChapterNav} aria-label="Protocol chapters">
           {[
             ["01", "Enforcement", chaptersRef],
             ["02", "Evidence", evidenceRef],
@@ -154,7 +198,7 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           ))}
         </nav>
 
-        <div className="protocol-facts" aria-label="Protocol facts">
+        <div className="protocol-facts" ref={factsRef} aria-label="Protocol facts">
         {facts.map(([label, value]) => (
           <div key={label} className="protocol-fact">
             <span>{label}</span>

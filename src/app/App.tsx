@@ -7,7 +7,7 @@ import {
   Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
   Clock, Network, ExternalLink,
-  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3,
+  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3, Menu, X,
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
@@ -23,6 +23,8 @@ import { SpatialBackdrop } from "./components/SpatialBackdrop";
 import { ProtocolExperience } from "./components/ProtocolExperience";
 import { CommandPalette, type CommandItem } from "./components/CommandPalette";
 import { RouteScene } from "./components/RouteScene";
+import { SoundControl } from "./components/SoundControl";
+import { playSound } from "./lib/soundscape";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -1210,16 +1212,20 @@ export default function App() {
     return index < 0 ? 0 : index;
   };
   const [nav, setNav] = useState(indexFromHash);
+  const previousNav = useRef(nav);
+  const direction = FLOW_ORDER.indexOf(nav as (typeof FLOW_ORDER)[number]) - FLOW_ORDER.indexOf(previousNav.current as (typeof FLOW_ORDER)[number]);
   const mainRef = useRef<HTMLElement | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [density, setDensity] = useState<"comfortable" | "compact">(() => {
     try { return localStorage.getItem("redline.density") === "compact" ? "compact" : "comfortable"; }
     catch { return "comfortable"; }
   });
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const Page = PAGES[nav] as React.ComponentType<{ setNav?: (n: number) => void }>;
 
   useEffect(() => {
-    const sync = () => setNav(indexFromHash());
+    const sync = () => { setNav(indexFromHash()); setMobileMenuOpen(false); };
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
@@ -1229,7 +1235,10 @@ export default function App() {
     // route's internal scroll position makes a freshly opened page appear
     // cropped or incorrectly scaled beneath the fixed header.
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    previousNav.current = nav;
   }, [nav]);
+
+  useEffect(() => { document.title = `${NAV[nav].label} · REDLINE`; }, [nav]);
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -1237,13 +1246,27 @@ export default function App() {
         event.preventDefault();
         setCommandOpen(open => !open);
       }
-      if (event.key === "Escape") setCommandOpen(false);
+      if (event.key === "Escape") { setCommandOpen(false); setMobileMenuOpen(false); }
     };
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onScroll = () => setHeaderScrolled(el.scrollTop > 12);
+    // Route changes reset the scroll position without always emitting a scroll
+    // event, so read the position directly rather than waiting to be told.
+    onScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [nav]);
+
   const navigate = (index: number) => {
+    setMobileMenuOpen(false);
+    if (index === nav) mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (index !== nav) playSound("navigate");
     setNav(index);
     window.location.hash = `/${NAV[index].slug}`;
   };
@@ -1284,17 +1307,15 @@ export default function App() {
         @keyframes redline-shimmer { 0% { left: -60px; } 100% { left: calc(100% + 60px); } }
         @keyframes redline-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         @keyframes redline-scan { 0% { top:-2%; } 100% { top:102%; } }
-        ::-webkit-scrollbar { display: none; }
-        * { scrollbar-width: none; }
         input[type=range] { -webkit-appearance: none; appearance: none; }
       `}</style>
 
       {nav !== 0 && <SpatialBackdrop />}
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full" style={{ position: "relative", zIndex: 1 }}>
+      <div className="app-shell flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full" style={{ position: "relative", zIndex: 1 }}>
         {/* Topbar */}
-        <header className="app-header fixed inset-x-0 top-0 z-50 flex items-center gap-3 px-3 sm:px-6 py-3"
+        <header className={`app-header relative z-50 flex shrink-0 items-center gap-3 px-3 sm:px-6 py-3${headerScrolled ? " header-scrolled" : ""}`}
           style={{ background: "rgba(238,243,249,0.90)", backdropFilter: "blur(22px)", borderBottom: `1px solid ${color.border}` }}>
           <button type="button" onClick={() => navigate(0)} className="flex shrink-0 items-center gap-2.5" aria-label="Open REDLINE protocol experience">
             <span className="grid h-8 w-8 place-items-center rounded-full" style={{ color: M, border: `1px solid ${M}55`, background: `${M}10` }}>
@@ -1302,6 +1323,13 @@ export default function App() {
             </span>
             <span className="hidden sm:block text-[13px] font-bold tracking-[0.2em]" style={{ ...mono, color: color.text }}>REDLINE</span>
           </button>
+
+          <button type="button" className="mobile-nav-toggle" onClick={() => setMobileMenuOpen(open => !open)} aria-label={mobileMenuOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation">
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}<span>Explore</span>
+          </button>
+          {mobileMenuOpen && <nav id="mobile-navigation" className="mobile-nav-panel" aria-label="Mobile navigation">
+            {FLOW_ORDER.map(index => <button type="button" key={NAV[index].slug} onClick={() => navigate(index)} aria-current={nav === index ? "page" : undefined}>{NAV[index].label}<ArrowRight size={14} /></button>)}
+          </nav>}
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
             {FLOW_ORDER.map(index => {
@@ -1329,6 +1357,7 @@ export default function App() {
           <button type="button" className="header-tool header-density-trigger" onClick={toggleDensity} aria-label={`Use ${density === "comfortable" ? "compact" : "comfortable"} density`}>
             <Rows3 size={13} /><span>{density === "comfortable" ? "Comfort" : "Compact"}</span>
           </button>
+          <SoundControl />
 
           <div className="hidden xl:flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
             <span className="redline-live-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
@@ -1338,9 +1367,8 @@ export default function App() {
         </header>
 
         {/* Page content */}
-        <main ref={mainRef} className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
+        <main ref={mainRef} aria-label={`${NAV[nav].label} page`} className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
           <div data-route={NAV[nav].slug} className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
-            {nav !== 0 && <RouteScene icon={NAV[nav].icon} label={NAV[nav].label} scene={NAV[nav].slug} />}
             {nav !== 0 && (
               <div className="route-flow-bar" aria-label="Product journey navigation">
                 <button type="button" className="route-flow-home" onClick={() => navigate(0)}>
@@ -1362,6 +1390,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                <span className="route-current-page">{NAV[nav].label}</span>
                 <div className="route-flow-pager">
                   {previousPage !== null && previousPage !== 0 && (
                     <button type="button" onClick={() => navigate(previousPage)} aria-label={`Previous: ${NAV[previousPage].label}`}>
@@ -1376,10 +1405,12 @@ export default function App() {
                 </div>
               </div>
             )}
-            <PageTransition pageKey={NAV[nav].label}>
-              <Page setNav={navigate} />
+            <PageTransition pageKey={NAV[nav].label} direction={direction} home={nav === 0}>
+              <div className={nav === 0 ? "protocol-view" : "route-page-stage"}>
+                {nav !== 0 && <RouteScene icon={NAV[nav].icon} label={NAV[nav].label} scene={NAV[nav].slug} />}
+                <Page setNav={navigate} />
+              </div>
             </PageTransition>
-            <div className="h-8" />
           </div>
         </main>
       </div>

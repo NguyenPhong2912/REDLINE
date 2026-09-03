@@ -20,7 +20,7 @@ import { audit } from "./db/audit.js";
 
 const NONCE_TTL_MS = 5 * 60_000;
 const SESSION_TTL_MS = 12 * 60 * 60_000;
-const PUBLIC_WRITES = new Set(["/risk-assess", "/auth/nonce", "/auth/verify", "/assistant"]);
+const PUBLIC_WRITES = new Set(["/risk-assess", "/auth/nonce", "/auth/verify", "/assistant", "/policy/simulate"]);
 
 const addressEncoder = getAddressEncoder();
 
@@ -153,6 +153,11 @@ export function registerAuth(app: FastifyInstance) {
   // Resolve a session on every request so routes can check ownership even on
   // reads, then apply the write guard.
   app.addHook("onRequest", async (req, reply) => {
+    const path = req.url.split("?")[0];
+    // These routes inspect only caller-supplied hypothetical inputs. They do
+    // not need session resolution (or a database read) even for signed-in users.
+    if ((req.method === "POST" && path === "/policy/simulate") ||
+        ((req.method === "GET" || req.method === "HEAD") && path === "/policy/presets")) return;
     const header = req.headers.authorization;
     if (header?.startsWith("Bearer ")) {
       const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(header.slice(7).trim()) } });
@@ -162,7 +167,6 @@ export function registerAuth(app: FastifyInstance) {
     }
 
     if (req.method === "GET" || req.method === "OPTIONS" || req.method === "HEAD") return;
-    const path = req.url.split("?")[0];
     if (PUBLIC_WRITES.has(path)) return;
     if (sessionWallet(req)) return;
     if (!key) return; // local/mock: writes are open, as before

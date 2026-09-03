@@ -21,6 +21,7 @@ import { listingRoutes } from "./routes/listings.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { protocolRoutes } from "./routes/protocol.js";
 import { assistantRoutes } from "./routes/assistant.js";
+import { simulationRoutes } from "./routes/simulation.js";
 
 const app = Fastify({
   logger: {
@@ -81,6 +82,7 @@ await app.register(listingRoutes);
 await app.register(analyticsRoutes);
 await app.register(protocolRoutes);
 await app.register(assistantRoutes);
+await app.register(simulationRoutes);
 
 const port = Number(process.env.PORT ?? 8787);
 await app.listen({ port, host: "0.0.0.0" });

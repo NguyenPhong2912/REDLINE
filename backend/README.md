@@ -70,7 +70,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/grants`, `/grants/:id` | grants with live on-chain state |
 | POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana) |
 | POST | `/intents/preview` | dry-run the gates; no write, no fee |
-| POST | `/intents` | submit one intent; `submitEvenIfDenied: true` forces the on-chain rejection |
+| POST | `/intents` | record one intent and submit it only when the current policy precheck allows it |
 | GET | `/grants/:id/intents` | intents with decisions and chain transactions |
 | POST | `/runs` · `/runs/:id/stop` | start / stop the agent runtime (`mode: scripted | llm`) |
 | GET | `/grants/:id/feed` | server-sent events (`*` = all grants) |
@@ -80,16 +80,24 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written. A grant for a rented agent records which agreement covers it, and is refused once it lapses |
 | GET | `/analytics?owner=` | volume, allowed/blocked counts and decision latency computed from the audit trail |
 | GET | `/protocol/overview?owner=` | ordered seven-gate catalog, network state and decision/rejection rollup for the live policy visualization |
+| GET | `/policy/presets` | three versioned hypothetical policy configurations for Policy Lab |
+| POST | `/policy/simulate` | public, bounded sequential simulation with seven-gate traces; no wallet, database writes or chain calls |
 | POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |
 | POST | `/assistant` | answers a question about recorded state; the brief is assembled server-side and is the only fact source the model gets |
 
 Amounts are strings of base units (`"100000000"` = 100 USDC).
 
+Policy Lab input limits, examples, response semantics and Vietnamese user documentation: [docs/POLICY_LAB.md](../docs/POLICY_LAB.md). Run `npm run dev:lab` for an isolated local server on `127.0.0.1:8788` without Postgres or a chain executor. Only the two Policy Lab endpoints are available in this mode; other endpoints explicitly return 503. The normal server includes both new routes automatically, with no schema migration.
+
+`/protocol/overview` now excludes expired grants as well as revoked grants from its active count, using the same clock as the policy engine.
+
 ## Runtime modes
 
-- `scripted` — 3 transfers of 20 % of cap, then one of 60 % that exceeds the cap and is submitted anyway. The demo story, independent of any LLM.
+- `scripted` — three paced transfers of 20% of the cap, then stop. Rejection cases run in Policy Lab without fees or failed transactions.
 - `llm` — a model proposes an action under a strict JSON schema; the proposal is clamped to the allowlists and judged by the program like any other intent. Needs `OPENAI_API_KEY`.
+
+Transaction requests accept canonical 32-byte Solana addresses and positive base-unit amounts up to `u64::MAX`. `/intents/preview` returns the nonce and exact verdict used by the UI; `/intents` rechecks the live state and never bypasses a denied precheck. The program remains the final authority if chain state changes between those calls.
 
 Both the planner and the risk copilot talk to any OpenAI-compatible chat-completions endpoint (`src/llm-client.ts`). Set `OPENAI_BASE_URL` to point at one — Groq's free tier needs no card — or leave it unset for OpenAI, which has no free tier. `OPENAI_MODEL` must name a model that endpoint serves; when it does not, the call fails and the copilot answers from the deterministic floor, with the reason logged.
 
@@ -102,7 +110,7 @@ A subscription only delivers what happens while it is open, so on every connect 
 ## Tests
 
 ```bash
-npm test                 # 71 tests: gates, wire format, transient errors, auth, risk floor, failure reporting, wallet sign-in, protocol gates, assistant grounding
+npm test                 # 83 tests including Policy Lab, API boundaries and expired-grant counts
 npm run program:fetch    # download the deployed program binary from Devnet
 npm run test:onchain     # LiteSVM: 3 allows, nonce replay, spend cap, foreign destination, wrong signer, revoke
 ```

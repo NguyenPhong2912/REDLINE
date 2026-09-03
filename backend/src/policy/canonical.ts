@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { SolanaAddressSchema } from "../validation.js";
 
 // The policy the owner reviews in the UI. Same field set as the frontend's
 // AgentPolicyInput plus the on-chain allowlists; hashing must stay identical
@@ -13,8 +14,8 @@ export const PolicySchema = z.object({
   maxTransactions: z.number().int().min(1).max(1_000),
   durationHours: z.number().int().min(1).max(168),
   cooldownMinutes: z.number().int().min(0).max(120), // 0 allowed for fast Devnet demos; UI keeps its own floor
-  allowedMints: z.array(z.string().min(32).max(44)).min(1).max(4),
-  allowedDestinations: z.array(z.string().min(32).max(44)).min(1).max(4),
+  allowedMints: z.array(SolanaAddressSchema).min(1).max(4),
+  allowedDestinations: z.array(SolanaAddressSchema).min(1).max(4),
 });
 export type PolicyInput = z.infer<typeof PolicySchema>;
 

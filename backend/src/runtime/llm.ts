@@ -47,6 +47,5 @@ export async function llmPlan(grant: GrantState, grantId: string): Promise<Plann
     amountUnits: BigInt(Math.round(plan.amountUsdc * 1e6)),
     destination: dest,
     reason: plan.reason.slice(0, 200),
-    submitEvenIfDenied: false,
   };
 }

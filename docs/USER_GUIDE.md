@@ -128,8 +128,8 @@ Ba nút thao tác (ẩn nếu grant đã bị revoke):
 
 | Nút | Chức năng |
 |---|---|
-| **Start agent (scripted)** | Lần đầu ví sẽ xin **chữ ký đăng nhập** (ký thông điệp, không phải giao dịch — không mất phí, không chuyển gì): khởi động agent nghĩa là để executor chi tiền từ vault của bạn, nên API đòi bằng chứng bạn giữ khoá chủ sở hữu chứ không nhận API key chung. Sau đó gọi `POST /runs`, khởi động agent runtime kịch bản sẵn: 3 giao dịch = 20% hạn mức (được duyệt), rồi 1 giao dịch = 60% hạn mức cố tình vượt cap để minh hoạ on-chain reject. Trong lúc chạy nút đổi thành *"Agent running…"*. **Lưu ý về thời gian:** runtime tự giãn nhịp đúng bằng cooldown để không vấp cổng 7, nên với cooldown 10 phút thì bốn bước này mất hơn nửa tiếng. Muốn xem ngay cú bị chặn thì bấm **Force** ở dòng dưới thay vì chờ. |
-| **Force `<cap>` USDC (over cap)** | Gửi thẳng một intent vượt hạn mức để xem chương trình từ chối on-chain |
+| **Run safe sequence** | Lần đầu ví sẽ xin **chữ ký đăng nhập** (ký thông điệp, không phải giao dịch — không mất phí, không chuyển gì). Sau đó runtime chạy ba giao dịch hợp lệ, mỗi giao dịch bằng 20% hạn mức và tự chờ đúng cooldown. |
+| **Send `<số tiền>` USDC safely** | Kiểm tra trước bằng `/intents/preview`, giữ đúng nonce vừa kiểm tra và chỉ gửi lên Solana khi cả bảy cổng đều cho phép. Nếu trạng thái thay đổi trước lúc gửi, backend và chương trình sẽ kiểm tra lại. Các tình huống vượt cap hoặc sai địa chỉ được thử trong Policy Lab, không tốn phí. |
 | **Revoke** | Ký `revoke_grant` bằng ví chủ (hoặc revoke qua backend nếu đang ở chế độ mock); sau khi revoke, mọi lệnh thực thi tiếp theo đều bị từ chối với lỗi `Revoked` |
 
 > Đây là nơi **duy nhất** trong toàn dashboard để khởi động agent. Trang Agents chỉ để publish agent version và xem số liệu thật của chúng (số grant, tổng đã chi, số lần chuyển).
