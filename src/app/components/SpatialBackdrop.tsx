@@ -54,7 +54,7 @@ export function SpatialBackdrop() {
         const scale = 520 / point.z;
         const x = width / 2 + (point.x + pointerX * (point.z / 900)) * scale;
         const y = height / 2 + (point.y + pointerY * (point.z / 900)) * scale;
-        const alpha = Math.max(0.04, Math.min(0.32, 1 - point.z / 1160));
+        const alpha = Math.max(0.06, Math.min(0.42, 1 - point.z / 1160));
         projected.push({ x, y, alpha, radius: Math.max(0.6, 2.2 * scale) });
       }
 
@@ -64,12 +64,19 @@ export function SpatialBackdrop() {
         const point = points[i];
         const rgb = point.tone === 0 ? "167, 139, 250" : "34, 211, 238";
         const shimmer = Math.sin(time * 0.00065 + point.phase);
-        ctx.fillStyle = `rgba(${rgb}, ${a.alpha + shimmer * 0.035})`;
+        const glowAlpha = Math.min(0.65, a.alpha + shimmer * 0.06 + 0.06);
+        ctx.fillStyle = `rgba(${rgb}, ${a.alpha + shimmer * 0.06})`;
+        if (a.radius > 1.4) {
+          // A soft halo on the nearer points — the light this scene is short on.
+          ctx.shadowBlur = 9;
+          ctx.shadowColor = `rgba(${rgb}, ${glowAlpha})`;
+        }
         ctx.beginPath();
         ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
         if (a.radius > 1.25 && shimmer > 0.72) {
-          ctx.strokeStyle = `rgba(${rgb}, ${a.alpha * 0.42})`;
+          ctx.strokeStyle = `rgba(${rgb}, ${a.alpha * 0.55})`;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y + 4);
           ctx.lineTo(a.x - pointerX * 0.4, a.y + 18 + a.radius * 3);
@@ -79,7 +86,7 @@ export function SpatialBackdrop() {
           const b = projected[j];
           const distance = Math.hypot(a.x - b.x, a.y - b.y);
           if (distance > 115) continue;
-          ctx.strokeStyle = `rgba(${rgb}, ${(1 - distance / 115) * 0.06})`;
+          ctx.strokeStyle = `rgba(${rgb}, ${(1 - distance / 115) * 0.09})`;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);

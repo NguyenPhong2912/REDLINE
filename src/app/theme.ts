@@ -17,26 +17,29 @@ import type { CSSProperties } from "react";
 // most important words on the page.
 
 export const color = {
-  bg: "#cbd5df",
-  surface: "#e2e8ee",
-  surfaceSubtle: "#d8e0e8",
-  surfaceInset: "#cbd6e0",
+  bg: "#EBF0FF",
+  canvasDeep: "#EBF0FF",
+  surface: "#ffffff",
+  surfaceSubtle: "#ffffff",
+  surfaceInset: "#f1f5f9",
 
-  border: "#aebdcb",
-  borderStrong: "#8799ab",
+  border: "#cbd5e1",
+  borderStrong: "#94a3b8",
 
-  text: "#172330",
-  textSecondary: "#34475a",
-  textMuted: "#3f4e5e",
-  textDim: "#4e5c69",
+  text: "#0f172a",         // --color-ink (tiêu đề + dữ liệu quan trọng nhất)
+  textSecondary: "#1e293b",
+  textMuted: "#334155",     // --color-ink-muted (mô tả phụ >= 4.5:1 WCAG AA) — darkened a step so body copy reads as ink, not haze
+  textDim: "#54637a",
 
-  primary: "#365f84",
-  primaryText: "#294f73",
+  primary: "#2563eb",
+  primaryText: "#1d4ed8",
 
-  info: "#356166",
-  warn: "#7d500d",
-  danger: "#a92640",
-  success: "#186649",
+  info: "#3b82f6",         // --color-info
+  verified: "#0f766e",     // --color-verified (qua cổng / ALLOW / khớp on-chain)
+  blocked: "#b45309",      // --color-blocked (bị chặn / BLOCK / evidence lệch)
+  warn: "#b45309",
+  danger: "#b45309",
+  success: "#0f766e",
 
   onAccent: "#ffffff",
 } as const;
@@ -60,6 +63,20 @@ export const tint = (hex: string, alpha = 0.14) => {
   const a = Math.round(alpha * 255).toString(16).padStart(2, "0");
   return `${hex}${a}`;
 };
+
+// Radiant accents — decorative light only (glow, gradient stops, live
+// indicators). Never assign these as flat text color: they aren't checked
+// against `bg` the way the palette above is, because a glow next to a
+// pixel isn't a word inside it.
+export const glow = {
+  cyan: "#22d3ee",
+  violet: "#a78bfa",
+  primaryBright: "#38bdf8",
+} as const;
+
+/** A soft radiant glow for CTAs and live status accents. */
+export const glowShadow = (hex: string, alpha = 0.45, blur = 26): string =>
+  `0 0 ${blur}px ${tint(hex, alpha)}`;
 
 export const mono: CSSProperties = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 export const sans: CSSProperties = { fontFamily: "'Inter', system-ui, sans-serif" };

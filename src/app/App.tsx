@@ -7,7 +7,7 @@ import {
   Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
   Clock, Network, ExternalLink,
-  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3,
+  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3, BookOpen,
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
@@ -23,6 +23,7 @@ import { SpatialBackdrop } from "./components/SpatialBackdrop";
 import { ProtocolExperience } from "./components/ProtocolExperience";
 import { CommandPalette, type CommandItem } from "./components/CommandPalette";
 import { RouteScene } from "./components/RouteScene";
+import { GuidePage } from "./components/GuidePage";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -48,6 +49,7 @@ const FALLBACK_AGENT = {
 const DEMO_OPS_DESTINATION = String(import.meta.env.VITE_DEMO_OPS_DESTINATION ?? "");
 import { transferSolInstruction } from "./solana/payments";
 import { color, mono, sans } from "./theme";
+import { useLang, useT } from "./i18n/LanguageContext";
 
 /* ── palette ── */
 const M = color.primary;
@@ -56,9 +58,12 @@ const A = color.warn;
 const BG = color.bg;
 
 /* ── glass helper ── */
+// A faint blue glow under every panel by default — the "radiant" pass —
+// unless a call site already asks for its own boxShadow via `extra`.
 const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
   background: color.surface,
   border: `1px solid ${color.border}`,
+  boxShadow: "0 18px 48px rgba(37, 99, 235, 0.08)",
   ...extra,
 });
 
@@ -73,6 +78,234 @@ function ChartTip({ active, payload, accent = M, prefix = "", suffix = "" }: { a
 }
 
 
+// English is the source language everywhere in this file: every literal
+// below is wrapped as `t("exact English string")`, and this map supplies the
+// Vietnamese side. Missing an entry here just means that one string stays in
+// English when the toggle is set to VI — never a blank or a crash.
+const VI: Record<string, string> = {
+  // header / nav
+  "Protocol": "Protocol", "Agents": "Agents", "Analytics": "Analytics", "Marketplace": "Marketplace",
+  "Treasury": "Treasury", "Audit": "Audit", "Guardrails": "Guardrails", "Settings": "Cài đặt", "Guide": "Hướng dẫn",
+  "Find": "Tìm",
+  "Comfort": "Thoải mái", "Compact": "Gọn",
+  "Solana devnet": "Solana devnet",
+  "Protocol story, live backbone and evidence": "Câu chuyện giao thức, sơ đồ trực tiếp và bằng chứng",
+  "Discover and rent published agent versions": "Khám phá và thuê các phiên bản agent đã đăng",
+  "Inspect agents, grants and active versions": "Xem chi tiết agent, grant và phiên bản đang hoạt động",
+  "Create bounded policies and signed permissions": "Tạo chính sách giới hạn và quyền đã ký",
+  "Review vault balances and recent transactions": "Xem số dư vault và giao dịch gần đây",
+  "Verify every intent, decision and signature": "Đối chiếu từng ý định, quyết định và chữ ký",
+  "Understand execution volume and policy outcomes": "Nắm khối lượng thực thi và kết quả chính sách",
+  "Inspect network and deployment configuration": "Xem cấu hình mạng và triển khai",
+  "Step-by-step: wallet, vault, grants, running an agent": "Từng bước: ví, vault, grant, chạy agent",
+
+  // dashboard
+  "REDLINE Overview": "Tổng quan REDLINE",
+  "Autonomous finance. ": "Tài chính tự động. ",
+  "Hard limits.": "Giới hạn cứng.",
+  "Design agent permissions, assess operational risk, and anchor policy proofs on Solana.": "Thiết kế quyền cho agent, đánh giá rủi ro vận hành, và neo bằng chứng chính sách trên Solana.",
+  "CONNECT A WALLET TO SEE YOUR NUMBERS": "KẾT NỐI VÍ ĐỂ XEM SỐ LIỆU CỦA BẠN",
+  "Active Grants": "Grant Đang Hoạt Động",
+  "Volume Moved": "Khối Lượng Đã Chuyển",
+  "Avg. Decision": "Quyết Định TB",
+  "Allowed by Policy": "Được Chính Sách Cho Phép",
+  "total": "tổng",
+  "connect wallet": "kết nối ví",
+  "USDC settled on-chain": "USDC đã tất toán on-chain",
+  "precheck → decision": "kiểm tra trước → quyết định",
+  "no decisions yet": "chưa có quyết định",
+  "blocked": "bị chặn",
+  "Weekly Execution Volume": "Khối Lượng Thực Thi Theo Tuần",
+  "USDC confirmed on-chain · your grants": "USDC đã xác nhận on-chain · grant của bạn",
+  "My Agents": "Agent Của Tôi",
+  "active": "đang hoạt động",
+  "No agents published yet.": "Chưa có agent nào được đăng.",
+  "Policy Review Recommended": "Nên Xem Lại Chính Sách",
+  "policy expires": "chính sách hết hạn lúc",
+  "Review before extending agent permissions.": "Xem lại trước khi gia hạn quyền cho agent.",
+  "Open Guardrails": "Mở Guardrails",
+
+  // agents page
+  "Real agent versions and grants from the REDLINE API": "Phiên bản agent và grant thật từ REDLINE API",
+  "Publish Agent Version": "Đăng Phiên Bản Agent",
+  "Agent name": "Tên agent",
+  "Strategy description": "Mô tả chiến lược",
+  "Publishing…": "Đang đăng…",
+  "Publish": "Đăng",
+  "Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.":
+    "Đăng ký một AgentVersion thật qua POST /agents — agentHash là sha256 thật của model/code/config. Sau đó tạo grant cho nó từ Guardrails.",
+  "Loading agents…": "Đang tải agent…",
+  "No agents published yet — publish one above, or create a grant from Guardrails (which publishes one automatically).":
+    "Chưa có agent nào — đăng một agent ở trên, hoặc tạo grant từ Guardrails (grant sẽ tự động đăng agent).",
+  "Total Grants": "Tổng Số Grant",
+  "Total Spent": "Tổng Đã Chi",
+  "Total Transfers": "Tổng Giao Dịch",
+  "Grants": "Grant",
+  "No grants yet for this agent.": "Agent này chưa có grant nào.",
+  "Latest grant policy": "Chính Sách Grant Mới Nhất",
+  "Expires:": "Hết hạn:",
+  "last active": "hoạt động gần nhất",
+
+  // analytics page
+  "Computed from your grants' real audit trail — no price feed, so no P&L or APY": "Tính từ nhật ký kiểm toán thật của grant — không có price feed nên không có P&L hay APY",
+  "Connect a wallet to see analytics for your grants.": "Kết nối ví để xem thống kê cho các grant của bạn.",
+  "Total Volume": "Tổng Khối Lượng",
+  "Success Rate": "Tỷ Lệ Thành Công",
+  "Avg Decision Latency": "Độ Trễ Quyết Định TB",
+  "Confirmed Volume — Last 7 Days": "Khối Lượng Đã Xác Nhận — 7 Ngày Qua",
+  "Top Agents by Volume": "Agent Dẫn Đầu Theo Khối Lượng",
+  "No confirmed transfers yet.": "Chưa có giao dịch nào được xác nhận.",
+  "grant": "grant",
+  "confirmed": "đã xác nhận",
+  "rejected by the on-chain gates across": "bị các cổng on-chain từ chối trên",
+
+  // marketplace page
+  "Agent Marketplace · Devnet": "Chợ Agent · Devnet",
+  "Published ": "Đã Đăng ",
+  "Agent Versions": "Phiên Bản Agent",
+  "Every listing is a real, immutable agent version. Renting sends SOL to the publisher's wallet and is verified on Devnet before the agreement is recorded.":
+    "Mỗi listing là một phiên bản agent thật, không thể đổi. Thuê agent sẽ chuyển SOL đến ví người đăng và được xác minh trên Devnet trước khi ghi nhận thỏa thuận.",
+  "Search agents by name...": "Tìm agent theo tên...",
+  "Rentable only": "Chỉ agent thuê được",
+  "active hire": "lượt thuê đang chạy",
+  "Showing": "Đang hiển thị",
+  "listing": "listing",
+  "Could not load listings from the API.": "Không tải được danh sách listing từ API.",
+  "If this says “Not Found”, the API is running a build without the marketplace routes.":
+    "Nếu báo “Not Found” nghĩa là API đang chạy bản build không có route marketplace.",
+  "No listings yet — publish an agent from the Agents page and it appears here.":
+    "Chưa có listing nào — đăng một agent từ trang Agents và nó sẽ xuất hiện ở đây.",
+  "Agent hash": "Agent hash",
+  "Publisher": "Người đăng",
+  "unclaimed": "chưa nhận",
+  "published": "đăng lúc",
+  "Rate": "Mức giá",
+  "SOL per 24h": "SOL mỗi 24h",
+  "no price set": "chưa đặt giá",
+  "total for": "tổng cho",
+  "Claim it to set a price and start renting": "Nhận listing để đặt giá và bắt đầu cho thuê",
+  "Duration": "Thời hạn",
+  "You publish this agent — you cannot rent it from yourself.": "Bạn là người đăng agent này — bạn không thể tự thuê từ chính mình.",
+  "Saving…": "Đang lưu…",
+  "Save price": "Lưu giá",
+  "Cancel": "Hủy",
+  "Rent": "Thuê",
+  "Paying…": "Đang thanh toán…",
+  "Edit price": "Sửa giá",
+  "Claim": "Nhận listing",
+
+  // vault / treasury page
+  "Solana Devnet · your wallet and the program-owned vault": "Solana Devnet · ví của bạn và vault do chương trình sở hữu",
+  "Connect a wallet to see its balances and recent on-chain activity.": "Kết nối ví để xem số dư và hoạt động on-chain gần đây.",
+  "Wallet SOL Balance": "Số Dư SOL Trong Ví",
+  "Devnet SOL · pays transaction fees": "SOL Devnet · dùng để trả phí giao dịch",
+  "Owner wallet": "Ví chủ sở hữu",
+  "Solana Devnet": "Solana Devnet",
+  "Recent Transactions": "Giao Dịch Gần Đây",
+  "No on-chain activity recorded yet.": "Chưa ghi nhận hoạt động on-chain nào.",
+
+  // guardrails wizard (sessions page)
+  "Agent Guardrails": "Agent Guardrails",
+  "Design bounded Solana policies, run AI risk checks, and publish verifiable proofs": "Thiết kế chính sách Solana có giới hạn, chạy kiểm tra rủi ro AI, và đăng bằng chứng có thể xác minh",
+  "Create Agent Policy": "Tạo Chính Sách Agent",
+  "SOLANA DEVNET": "SOLANA DEVNET",
+  "Scope": "Phạm vi",
+  "Spend Limits": "Hạn Mức Chi",
+  "Time Bounds": "Giới Hạn Thời Gian",
+  "Review & Sign": "Xem Lại & Ký",
+  "Which published agent version does this grant authorise? The grant records its ": "Grant này ủy quyền cho phiên bản agent nào đã đăng? Grant sẽ ghi lại ",
+  ", so this is the build the policy is bound to.": " của phiên bản đó, nên đây chính là bản build mà chính sách bị ràng buộc vào.",
+  "No agent published yet — signing this grant publishes “": "Chưa có agent nào được đăng — ký grant này sẽ đăng “",
+  "” and binds the grant to it. Publish from the Agents page first to name your own.": "” và ràng buộc grant vào đó. Hãy đăng agent từ trang Agents trước nếu muốn tự đặt tên.",
+  "Running under your rental of this agent — it covers grants until ": "Đang chạy theo lượt thuê agent này của bạn — có hiệu lực cho grant đến ",
+  ". The grant records which rental authorised it.": ". Grant sẽ ghi lại lượt thuê nào đã ủy quyền cho nó.",
+  "Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.":
+    "Chọn danh sách token SPL mà agent được phép dùng. Mọi mint khác đều nằm ngoài chính sách đã ký.",
+  "Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to ":
+    "Chọn danh sách địa chỉ mà agent được phép chi trả. Chương trình kiểm tra mọi giao dịch với danh sách này — địa chỉ không có trong đây sẽ không nhận được tiền, dù agent đề xuất gì. Tối đa ",
+  ".": ".",
+  "Recipient address (base58)": "Địa chỉ nhận (base58)",
+  "+ Add destination": "+ Thêm địa chỉ",
+  "One of these is not a valid Solana address.": "Một trong các địa chỉ này không hợp lệ trên Solana.",
+  "Add at least one address the agent may pay.": "Thêm ít nhất một địa chỉ mà agent được phép chi trả.",
+  "Duplicate destinations are ignored.": "Các địa chỉ trùng lặp sẽ bị bỏ qua.",
+  "The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.":
+    "Policy digest gộp phạm vi token, danh sách địa chỉ, hạn mức chi, giới hạn thực thi, cooldown và thời hạn hiệu lực thành một bằng chứng có thể xác minh.",
+  "Configure total spend ceiling and per-session transaction limits.": "Cấu hình trần chi tiêu tổng và giới hạn giao dịch mỗi phiên.",
+  "Total Spend Cap": "Trần Chi Tiêu Tổng",
+  "Max Transactions / Session": "Số Giao Dịch Tối Đa / Phiên",
+  "Avg/Tx": "TB/Giao dịch",
+  "Risk": "Rủi ro",
+  "Tokens": "Token",
+  "Set validity window and minimum cooldown between executions.": "Đặt thời hạn hiệu lực và cooldown tối thiểu giữa các lần thực thi.",
+  "Session Duration": "Thời Lượng Phiên",
+  "Execution Cooldown": "Cooldown Thực Thi",
+  "Expires": "Hết hạn",
+  "executions": "lượt thực thi",
+  "cooldown": "cooldown",
+  "Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.":
+    "Xem lại chính sách đã giới hạn, chạy risk copilot, rồi ký grant on-chain. Chương trình sẽ áp các giới hạn này cho mọi giao dịch của agent.",
+  "Agent": "Agent",
+  "Rental": "Lượt thuê",
+  "not rented — yours to run": "chưa thuê — của bạn để chạy",
+  "until": "đến",
+  "Token Scope": "Phạm Vi Token",
+  "Destinations": "Địa Chỉ Nhận",
+  "none": "không có",
+  "Spend Cap": "Hạn Mức Chi",
+  "Max Txns": "Số GD Tối Đa",
+  "Network": "Mạng",
+  "(new)": "(mới)",
+  "transactions": "giao dịch",
+  "hours": "giờ",
+  "minutes": "phút",
+  "Risk copilot verdict": "Kết Luận Của Risk Copilot",
+  "Deterministic safety fallback": "Cơ chế an toàn dự phòng (deterministic)",
+  "Back": "Quay lại",
+  "Continue": "Tiếp tục",
+  "Assessing policy…": "Đang đánh giá chính sách…",
+  "Re-run risk assessment": "Đánh giá rủi ro lại",
+  "Run AI risk assessment": "Chạy đánh giá rủi ro AI",
+
+  // settings page
+  "Live configuration of this REDLINE deployment": "Cấu hình trực tiếp của bản triển khai REDLINE này",
+  "Connected wallet": "Ví đã kết nối",
+  "No wallet connected": "Chưa kết nối ví",
+  "Connect a Wallet Standard account to sign grants": "Kết nối tài khoản theo chuẩn Wallet Standard để ký grant",
+  "Devnet": "Devnet",
+  "Wallet Standard": "Wallet Standard",
+  "Language": "Ngôn ngữ",
+  "Interface language, saved on this device.": "Ngôn ngữ giao diện, được lưu trên thiết bị này.",
+  "View on Explorer": "Xem trên Explorer",
+  "Environment": "Môi trường",
+  "Chain": "Chain",
+  "Cluster": "Cluster",
+  "Backend adapter": "Backend adapter",
+  "Program": "Chương trình",
+  "Executor": "Executor",
+  "Commitment": "Commitment",
+  "unreachable": "không kết nối được",
+  "Policy Enforcement": "Thực Thi Chính Sách",
+  "Gates enforced on-chain": "Số cổng thực thi on-chain",
+  "Policy digest": "Policy digest",
+  "Allowlist size limit": "Giới hạn kích thước allowlist",
+  "Mock clock speed": "Tốc độ đồng hồ mô phỏng",
+  "4 mints · 4 destinations": "4 mint · 4 địa chỉ nhận",
+  "Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.":
+    "Được thiết lập lúc build/deploy. Thông tin bí mật không bao giờ tới trình duyệt — khóa OpenAI và executor keypair chỉ tồn tại trên server.",
+  "API URL": "API URL",
+  "Program ID (frontend)": "Program ID (frontend)",
+  "Demo USDC mint": "Demo USDC mint",
+  "Demo destination": "Địa chỉ demo",
+  "not configured": "chưa cấu hình",
+  "Write key": "Write key",
+  "configured": "đã cấu hình",
+  "open (local/mock)": "mở (local/mock)",
+  "Revoking access": "Thu hồi quyền",
+  "Grants are revoked one at a time from Guardrails → Active Policy Accounts, because each revocation is a transaction the owner signs in their own wallet. There is no bulk switch: the program only accepts a signature per grant.":
+    "Grant được thu hồi từng cái một từ Guardrails → Active Policy Accounts, vì mỗi lần thu hồi là một giao dịch mà chủ sở hữu tự ký bằng ví của mình. Không có công tắc thu hồi hàng loạt: chương trình chỉ chấp nhận chữ ký cho từng grant.",
+};
+
 const NAV = [
   { icon: LayoutDashboard, label: "Protocol", slug: "protocol" },
   { icon: Bot, label: "Agents", slug: "agents" },
@@ -82,11 +315,14 @@ const NAV = [
   { icon: ScrollText, label: "Audit", slug: "audit" },
   { icon: Layers, label: "Guardrails", slug: "guardrails" },
   { icon: Settings, label: "Settings", slug: "settings" },
+  { icon: BookOpen, label: "Guide", slug: "guide" },
 ];
 
 // Product journey, separate from the stable page indexes used by existing
 // actions and hashes: discover → configure → fund → verify → understand.
-const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7] as const;
+// Guide is appended last, on purpose — it's the reference a person reaches
+// for, not a step in the flow, so it doesn't get a numbered stop on it.
+const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7, 8] as const;
 
 /* ── reusable components ── */
 function Badge({ status }: { status: string }) {
@@ -122,7 +358,7 @@ function KpiCard({ label, value, sub, accent, icon: Icon, data, gradId }: { labe
           <AreaChart data={data}>
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={accent} stopOpacity={0.3} />
+                <stop offset="0%" stopColor={accent} stopOpacity={0.45} />
                 <stop offset="100%" stopColor={accent} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -158,6 +394,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
   const owner = connected ? String(connected.account.address) : "";
   const { agents } = useRealAgents();
   const [stats, setStats] = useState<Analytics | null>(null);
+  const tr = useT(VI);
 
   useEffect(() => {
     if (!owner) { setStats(null); return; }
@@ -180,18 +417,18 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>REDLINE Overview</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>{tr("REDLINE Overview")}</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Autonomous finance. <span style={{ color: M }}>Hard limits.</span></h1>
-        <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>Design agent permissions, assess operational risk, and anchor policy proofs on Solana.</p>
-        {!owner && <span className="inline-flex mt-3 text-[11px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>CONNECT A WALLET TO SEE YOUR NUMBERS</span>}
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Autonomous finance. ")}<span style={{ color: M }}>{tr("Hard limits.")}</span></h1>
+        <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>{tr("Design agent permissions, assess operational risk, and anchor policy proofs on Solana.")}</p>
+        {!owner && <span className="inline-flex mt-3 text-[11px] px-2 py-1 rounded-full tracking-widest" style={{ ...mono, color: A, background: `${A}10`, border: `1px solid ${A}25` }}>{tr("CONNECT A WALLET TO SEE YOUR NUMBERS")}</span>}
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <KpiCard label="Active Grants" value={stats ? String(stats.activeGrants) : "—"} sub={stats ? `${stats.totalGrants} total` : "connect wallet"} icon={Bot} accent={M} data={flat(stats?.activeGrants ?? 0)} gradId="kpi-agents" />
-        <KpiCard label="Volume Moved" value={stats ? `${stats.totalVolumeUsdc.toLocaleString()}` : "—"} sub="USDC settled on-chain" icon={DollarSign} accent={A} data={volumeSeries} gradId="kpi-vol" />
-        <KpiCard label="Avg. Decision" value={stats?.avgDecisionLatencyMs != null ? `${stats.avgDecisionLatencyMs}ms` : "—"} sub="precheck → decision" icon={Cpu} accent={C} data={flat(stats?.avgDecisionLatencyMs ?? 0)} gradId="kpi-lat" />
-        <KpiCard label="Allowed by Policy" value={stats?.successRatePct != null ? `${stats.successRatePct}%` : "—"} sub={stats ? `${stats.totalRejections} blocked` : "no decisions yet"} icon={CheckCircle2} accent={M} data={flat(stats?.successRatePct ?? 0)} gradId="kpi-success" />
+        <KpiCard label={tr("Active Grants")} value={stats ? String(stats.activeGrants) : "—"} sub={stats ? `${stats.totalGrants} ${tr("total")}` : tr("connect wallet")} icon={Bot} accent={M} data={flat(stats?.activeGrants ?? 0)} gradId="kpi-agents" />
+        <KpiCard label={tr("Volume Moved")} value={stats ? `${stats.totalVolumeUsdc.toLocaleString()}` : "—"} sub={tr("USDC settled on-chain")} icon={DollarSign} accent={A} data={volumeSeries} gradId="kpi-vol" />
+        <KpiCard label={tr("Avg. Decision")} value={stats?.avgDecisionLatencyMs != null ? `${stats.avgDecisionLatencyMs}ms` : "—"} sub={tr("precheck → decision")} icon={Cpu} accent={C} data={flat(stats?.avgDecisionLatencyMs ?? 0)} gradId="kpi-lat" />
+        <KpiCard label={tr("Allowed by Policy")} value={stats?.successRatePct != null ? `${stats.successRatePct}%` : "—"} sub={stats ? `${stats.totalRejections} ${tr("blocked")}` : tr("no decisions yet")} icon={CheckCircle2} accent={M} data={flat(stats?.successRatePct ?? 0)} gradId="kpi-success" />
       </div>
 
       <ProtocolSpine owner={owner || undefined} />
@@ -200,8 +437,8 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
       <div className="rounded-2xl p-5" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Weekly Execution Volume</div>
-            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>USDC confirmed on-chain · your grants</div>
+            <div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Weekly Execution Volume")}</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("USDC confirmed on-chain · your grants")}</div>
           </div>
         </div>
         <div className="h-44">
@@ -209,8 +446,8 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
             <BarChart data={stats?.weeklyVolume ?? []} barSize={24}>
               <defs>
                 <linearGradient id="bar-vol" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={M} stopOpacity={0.8} />
-                  <stop offset="100%" stopColor={M} stopOpacity={0.2} />
+                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor={M} stopOpacity={0.45} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="t" tick={{ fill: color.textDim, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
@@ -233,10 +470,10 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         {/* Quick agents */}
         <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
           <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
-            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>My Agents</span>
-            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} active</span>
+            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("My Agents")}</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>{agents.filter(a => a.status === "ACTIVE").length} {tr("active")}</span>
           </div>
-          {agents.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No agents published yet.</div>}
+          {agents.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>{tr("No agents published yet.")}</div>}
           {agents.slice(0, 6).map((a, i) => (
             <div key={`dash-agent-${a.id}`} className="flex items-center gap-3 px-5 py-3 border-b hover:bg-white/[0.018] transition-colors"
               style={{ borderColor: i < Math.min(agents.length, 6) - 1 ? color.border : "transparent" }}>
@@ -261,10 +498,10 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
         <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${A}09`, border: `1px solid ${A}20` }}>
           <div className="p-2 rounded-xl" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><AlertTriangle size={14} style={{ color: A }} /></div>
           <div className="flex-1">
-            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Policy Review Recommended</div>
-            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{expiringSoon.name} policy expires {new Date(expiringSoon.latestExpiresAt!).toLocaleTimeString()}. Review before extending agent permissions.</div>
+            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{tr("Policy Review Recommended")}</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{expiringSoon.name} {tr("policy expires")} {new Date(expiringSoon.latestExpiresAt!).toLocaleTimeString()}. {tr("Review before extending agent permissions.")}</div>
           </div>
-          {setNav && <button type="button" onClick={() => setNav(6)} className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${A}14`, border: `1px solid ${A}30`, color: A }}>Open Guardrails</button>}
+          {setNav && <button type="button" onClick={() => setNav(6)} className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${A}14`, border: `1px solid ${A}30`, color: A }}>{tr("Open Guardrails")}</button>}
         </div>
       )}
     </div>
@@ -275,6 +512,7 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
 const AGENT_ACCENTS = [M, C, A, color.info];
 
 function AgentsPage() {
+  const tr = useT(VI);
   const { agents, loading, error, reload } = useRealAgents();
   const [sel, setSel] = useState(0);
   const [deploying, setDeploying] = useState(false);
@@ -307,37 +545,37 @@ function AgentsPage() {
     <div className="route-page page-agents space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>My Agents</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Real agent versions and grants from the REDLINE API</p>
+          <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("My Agents")}</h1>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Real agent versions and grants from the REDLINE API")}</p>
         </div>
         <button type="button" onClick={() => setDeploying(d => !d)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
           style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>
-          <Plus size={13} />Publish Agent Version
+          <Plus size={13} />{tr("Publish Agent Version")}
         </button>
       </div>
 
       {deploying && (
         <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ ...glass() }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Agent name" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
-            <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="Strategy description" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={tr("Agent name")} className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
+            <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder={tr("Strategy description")} className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
           </div>
           <div className="flex items-center gap-3">
             <button type="button" disabled={busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
-              {busy ? "Publishing…" : "Publish"}
+              {busy ? tr("Publishing…") : tr("Publish")}
             </button>
             {deployError && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{deployError}</span>}
           </div>
-          <p className="text-[12px]" style={{ ...sans, color: color.textDim }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
+          <p className="text-[12px]" style={{ ...sans, color: color.textDim }}>{tr("Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.")}</p>
         </div>
       )}
 
-      {loading && <div className="text-xs" style={{ ...sans, color: color.textDim }}>Loading agents…</div>}
+      {loading && <div className="text-xs" style={{ ...sans, color: color.textDim }}>{tr("Loading agents…")}</div>}
       {error && <div className="text-xs" style={{ ...mono, color: color.danger }}>{error}</div>}
       {!loading && !error && agents.length === 0 && (
         <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
-          <p className="text-sm" style={{ ...sans, color: color.textMuted }}>No agents published yet — publish one above, or create a grant from Guardrails (which publishes one automatically).</p>
+          <p className="text-sm" style={{ ...sans, color: color.textMuted }}>{tr("No agents published yet — publish one above, or create a grant from Guardrails (which publishes one automatically).")}</p>
         </div>
       )}
 
@@ -381,10 +619,10 @@ function AgentsPage() {
               </div>
               <div className="agent-metrics grid grid-cols-2 sm:grid-cols-4 gap-0">
                 {[
-                  { label: "Active Grants", value: String(a.activeGrants), color: M },
-                  { label: "Total Grants", value: String(a.totalGrants), color: C },
-                  { label: "Total Spent", value: `${a.totalSpentUsdc.toLocaleString()} USDC`, color: A },
-                  { label: "Total Transfers", value: String(a.totalTx), color: M },
+                  { label: tr("Active Grants"), value: String(a.activeGrants), color: M },
+                  { label: tr("Total Grants"), value: String(a.totalGrants), color: C },
+                  { label: tr("Total Spent"), value: `${a.totalSpentUsdc.toLocaleString()} USDC`, color: A },
+                  { label: tr("Total Transfers"), value: String(a.totalTx), color: M },
                 ].map((s, i) => (
                   <div key={`det-stat-${i}`} className="rounded-xl p-3" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                     <div className="text-[12px] mb-1" style={{ ...sans, color: color.textDim }}>{s.label}</div>
@@ -397,10 +635,10 @@ function AgentsPage() {
             {/* Grants for this agent */}
             <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
               <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
-                <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Grants</span>
-                <span className="text-[12px]" style={{ ...sans, color: color.textDim }}>{a.grants.length} total</span>
+                <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Grants")}</span>
+                <span className="text-[12px]" style={{ ...sans, color: color.textDim }}>{a.grants.length} {tr("total")}</span>
               </div>
-              {a.grants.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No grants yet for this agent.</div>}
+              {a.grants.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>{tr("No grants yet for this agent.")}</div>}
               {a.grants.map(g => (
                 <div key={g.id} className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: color.border }}>
                   <span className="text-[13px] flex-1" style={{ ...mono, color: C }}>{short(g.grantPda)}</span>
@@ -418,13 +656,13 @@ function AgentsPage() {
                   <Key size={16} style={{ color: M }} />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Latest grant policy</div>
+                  <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{tr("Latest grant policy")}</div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>Expires:</span>
+                    <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>{tr("Expires:")}</span>
                     <span className="text-[13px] font-bold" style={{ ...mono, color: M }}>{new Date(a.latestExpiresAt).toLocaleString()}</span>
                   </div>
                 </div>
-                {a.lastActiveAt && <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>last active {new Date(a.lastActiveAt).toLocaleString()}</span>}
+                {a.lastActiveAt && <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{tr("last active")} {new Date(a.lastActiveAt).toLocaleString()}</span>}
               </div>
             )}
           </div>
@@ -436,6 +674,8 @@ function AgentsPage() {
 
 /* ── 3. ANALYTICS ── */
 function AnalyticsPage() {
+  const { lang } = useLang();
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : "";
@@ -454,21 +694,21 @@ function AnalyticsPage() {
   return (
     <div className="route-page page-analytics space-y-7">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Analytics</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Computed from your grants' real audit trail — no price feed, so no P&L or APY</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Analytics")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Computed from your grants' real audit trail — no price feed, so no P&L or APY")}</p>
       </div>
 
-      {!owner && <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}><p className="text-sm" style={{ ...sans, color: color.textMuted }}>Connect a wallet to see analytics for your grants.</p></div>}
+      {!owner && <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}><p className="text-sm" style={{ ...sans, color: color.textMuted }}>{tr("Connect a wallet to see analytics for your grants.")}</p></div>}
       {owner && error && <div className="text-xs" style={{ ...mono, color: color.danger }}>{error}</div>}
 
       {owner && data && (
         <>
           <div className="analytics-ledger grid grid-cols-2 sm:grid-cols-4 gap-0">
             {[
-              { label: "Active Grants", value: String(data.activeGrants) },
-              { label: "Total Volume", value: `${data.totalVolumeUsdc.toLocaleString()} USDC` },
-              { label: "Success Rate", value: data.successRatePct === null ? "—" : `${data.successRatePct}%` },
-              { label: "Avg Decision Latency", value: data.avgDecisionLatencyMs === null ? "—" : `${data.avgDecisionLatencyMs}ms` },
+              { label: tr("Active Grants"), value: String(data.activeGrants) },
+              { label: tr("Total Volume"), value: `${data.totalVolumeUsdc.toLocaleString()} USDC` },
+              { label: tr("Success Rate"), value: data.successRatePct === null ? "—" : `${data.successRatePct}%` },
+              { label: tr("Avg Decision Latency"), value: data.avgDecisionLatencyMs === null ? "—" : `${data.avgDecisionLatencyMs}ms` },
             ].map((s, i) => (
               <div key={`an-kpi-${i}`} className="analytics-stat p-5" style={{ borderRight: `1px solid ${color.border}` }}>
                 <div className="text-[13px] mb-2" style={{ ...sans, color: color.textDim }}>{s.label}</div>
@@ -479,14 +719,14 @@ function AnalyticsPage() {
 
           {/* Weekly volume */}
           <div className="analytics-volume rounded-[28px] p-6" style={{ ...glass() }}>
-            <SectionTitle icon={TrendingUp} text="Confirmed Volume — Last 7 Days" />
+            <SectionTitle icon={TrendingUp} text={tr("Confirmed Volume — Last 7 Days")} />
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.weeklyVolume} barSize={28}>
                   <defs>
                     <linearGradient id="vol-bar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={M} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={M} stopOpacity={0.15} />
+                      <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor={M} stopOpacity={0.45} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="t" tick={{ fill: color.textDim, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} axisLine={false} tickLine={false} />
@@ -501,9 +741,9 @@ function AnalyticsPage() {
           {/* Top agents by volume */}
           <div className="analytics-ranking rounded-[28px] overflow-hidden" style={{ ...glass() }}>
             <div className="px-5 py-4 border-b" style={{ borderColor: color.border }}>
-              <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Top Agents by Volume</span>
+              <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Top Agents by Volume")}</span>
             </div>
-            {data.topAgentsByVolume.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No confirmed transfers yet.</div>}
+            {data.topAgentsByVolume.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>{tr("No confirmed transfers yet.")}</div>}
             {data.topAgentsByVolume.map((a, i) => (
               <div key={`an-ag-${i}`} className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors"
                 style={{ gridTemplateColumns: "1fr 120px 80px", borderColor: color.border }}>
@@ -512,13 +752,13 @@ function AnalyticsPage() {
                   <span className="text-xs font-medium" style={{ ...sans, color: color.text }}>{a.name}</span>
                 </div>
                 <span className="text-[13px] font-bold" style={{ ...mono, color: M }}>{a.volumeUsdc.toLocaleString()} USDC</span>
-                <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>{a.grants} grant{a.grants === 1 ? "" : "s"}</span>
+                <span className="text-[13px]" style={{ ...mono, color: color.textDim }}>{a.grants} {tr("grant")}{lang === "en" && a.grants !== 1 ? "s" : ""}</span>
               </div>
             ))}
           </div>
 
           <div className="text-[13px]" style={{ ...sans, color: color.textDim }}>
-            {data.totalTransactions} confirmed · {data.totalRejections} rejected by the on-chain gates across {data.totalGrants} grant{data.totalGrants === 1 ? "" : "s"}.
+            {data.totalTransactions} {tr("confirmed")} · {data.totalRejections} {tr("rejected by the on-chain gates across")} {data.totalGrants} {tr("grant")}{lang === "en" && data.totalGrants !== 1 ? "s" : ""}.
           </div>
         </>
       )}
@@ -531,6 +771,8 @@ const LAMPORTS_PER_SOL = 1_000_000_000;
 const fmtSol = (lamports: string) => (Number(lamports) / LAMPORTS_PER_SOL).toLocaleString("en-US", { maximumFractionDigits: 4 });
 
 function MarketplacePage() {
+  const { lang } = useLang();
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
@@ -595,25 +837,25 @@ function MarketplacePage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
-          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Agent Marketplace · Devnet</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>{tr("Agent Marketplace · Devnet")}</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Published <span style={{ color: M }}>Agent Versions</span></h1>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Published ")}<span style={{ color: M }}>{tr("Agent Versions")}</span></h1>
         <p className="text-sm mt-1 max-w-xl" style={{ ...sans, color: color.textDim, lineHeight: 1.7 }}>
-          Every listing is a real, immutable agent version. Renting sends SOL to the publisher's wallet and is verified on Devnet before the agreement is recorded.
+          {tr("Every listing is a real, immutable agent version. Renting sends SOL to the publisher's wallet and is verified on Devnet before the agreement is recorded.")}
         </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: color.textDim }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents by name..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr("Search agents by name...")}
             className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
             style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text, caretColor: M }} />
         </div>
         <button type="button" onClick={() => setPricedOnly(p => !p)} aria-pressed={pricedOnly}
           className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold transition-all shrink-0"
           style={{ ...sans, background: pricedOnly ? `${M}12` : color.surface, border: `1px solid ${pricedOnly ? M + "35" : color.border}`, color: pricedOnly ? M : color.textDim }}>
-          <ShieldCheck size={13} />Rentable only
+          <ShieldCheck size={13} />{tr("Rentable only")}
           <div className="relative w-8 h-4 rounded-full ml-1" style={{ background: pricedOnly ? `${M}35` : color.border, border: `1px solid ${pricedOnly ? M + "50" : color.border}` }}>
             <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: pricedOnly ? "calc(100% - 14px)" : 2, background: pricedOnly ? M : color.textDim }} />
           </div>
@@ -621,7 +863,7 @@ function MarketplacePage() {
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs" style={{ ...sans, color: color.textDim }}>Showing <span style={{ color: color.text }}>{filtered.length}</span> listing{filtered.length === 1 ? "" : "s"}</span>
+        <span className="text-xs" style={{ ...sans, color: color.textDim }}>{tr("Showing")} <span style={{ color: color.text }}>{filtered.length}</span> {tr("listing")}{lang === "en" && filtered.length !== 1 ? "s" : ""}</span>
         {error && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{error}</span>}
         {notice && <span className="text-[13px]" style={{ ...mono, color: M }}>{notice}</span>}
       </div>
@@ -633,12 +875,12 @@ function MarketplacePage() {
         <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
           {loadFailed ? (
             <>
-              <p className="text-sm" style={{ ...sans, color: color.text }}>Could not load listings from the API.</p>
+              <p className="text-sm" style={{ ...sans, color: color.text }}>{tr("Could not load listings from the API.")}</p>
               <p className="text-[13px] mt-1" style={{ ...mono, color: color.textMuted }}>{API_URL} · {error}</p>
-              <p className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>If this says “Not Found”, the API is running a build without the marketplace routes.</p>
+              <p className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>{tr("If this says “Not Found”, the API is running a build without the marketplace routes.")}</p>
             </>
           ) : (
-            <p className="text-sm" style={{ ...sans, color: color.textMuted }}>No listings yet — publish an agent from the Agents page and it appears here.</p>
+            <p className="text-sm" style={{ ...sans, color: color.textMuted }}>{tr("No listings yet — publish an agent from the Agents page and it appears here.")}</p>
           )}
         </div>
       )}
@@ -662,37 +904,37 @@ function MarketplacePage() {
                     <span className="text-sm font-bold" style={{ ...sans, color: color.text }}>{l.agentVersion.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[12px]" style={{ ...mono, color: accent, opacity: 0.7 }}>{l.agentVersion.version}</span>
-                      {l.activeHires > 0 && <span className="text-[12px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} active hire{l.activeHires === 1 ? "" : "s"}</span>}
+                      {l.activeHires > 0 && <span className="text-[12px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} {tr("active hire")}{lang === "en" && l.activeHires !== 1 ? "s" : ""}</span>}
                     </div>
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed" style={{ ...sans, color: color.textMuted, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.agentVersion.strategy}</p>
                 <div className="rounded-xl px-3.5 py-3 space-y-1.5" style={{ background: color.bg, border: `1px solid ${color.border}` }}>
-                  <div className="flex items-center justify-between"><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Agent hash</span><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Publisher</span></div>
+                  <div className="flex items-center justify-between"><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>{tr("Agent hash")}</span><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>{tr("Publisher")}</span></div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px]" style={{ ...mono, color: C }}>{short(l.agentVersion.agentHash, 6)}</span>
-                    <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{l.developerWallet ? short(l.developerWallet) : "unclaimed"}</span>
+                    <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{l.developerWallet ? short(l.developerWallet) : tr("unclaimed")}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={10} style={{ color: color.textDim }} />
-                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>published {new Date(l.createdAt).toLocaleDateString()}</span>
+                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{tr("published")} {new Date(l.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
               <div className="px-6 py-4 border-t flex flex-col gap-3" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[12px]" style={{ ...sans, color: color.textDim }}>{priced ? `${fmtSol(l.priceLamports)} SOL per 24h` : "Rate"}</div>
+                    <div className="text-[12px]" style={{ ...sans, color: color.textDim }}>{priced ? `${fmtSol(l.priceLamports)} ${tr("SOL per 24h")}` : tr("Rate")}</div>
                     <div className="text-base font-bold" style={{ ...mono, color: priced ? color.text : color.textDim }}>
-                      {priced ? `${fmtSol(String(BigInt(l.priceLamports) * BigInt(periodsFor(l.id))))} SOL` : "no price set"}
+                      {priced ? `${fmtSol(String(BigInt(l.priceLamports) * BigInt(periodsFor(l.id))))} SOL` : tr("no price set")}
                     </div>
                     {priced
-                      ? <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>total for {hoursFor(l.id)}h</div>
-                      : <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>Claim it to set a price and start renting</div>}
+                      ? <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("total for")} {hoursFor(l.id)}h</div>
+                      : <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Claim it to set a price and start renting")}</div>}
                   </div>
                   {priced && (
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.textDim }}>Duration</span>
+                      <span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.textDim }}>{tr("Duration")}</span>
                       <div className="flex gap-1">
                         {[24, 72, 168].map(h => (
                           <button type="button" key={`${l.id}-h${h}`} onClick={() => setHours(v => ({ ...v, [l.id]: h }))} aria-pressed={hoursFor(l.id) === h}
@@ -705,23 +947,23 @@ function MarketplacePage() {
                     </div>
                   )}
                 </div>
-                {mine && <div className="text-[12px]" style={{ ...sans, color: A }}>You publish this agent — you cannot rent it from yourself.</div>}
+                {mine && <div className="text-[12px]" style={{ ...sans, color: A }}>{tr("You publish this agent — you cannot rent it from yourself.")}</div>}
                 {editing === l.id ? (
                   <div className="flex items-center gap-2">
                     <input value={priceSol} onChange={e => setPriceSol(e.target.value.replace(/[^\d.]/g, ""))} aria-label="Rental price in SOL"
                       className="w-24 px-3 py-2 rounded-xl text-xs text-right" style={{ ...mono, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
                     <button type="button" disabled={busy === l.id} onClick={() => savePrice(l)} className="flex-1 px-3 py-2 rounded-xl text-[13px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}14`, border: `1px solid ${M}30`, color: M }}>
-                      {busy === l.id ? "Saving…" : "Save price"}
+                      {busy === l.id ? tr("Saving…") : tr("Save price")}
                     </button>
-                    <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl text-[13px]" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textDim }}>Cancel</button>
+                    <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl text-[13px]" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textDim }}>{tr("Cancel")}</button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <button type="button" disabled={!connected?.signer || !priced || busy === l.id || mine} onClick={() => rent(l)}
                       title={mine ? "You publish this agent" : !priced ? "The publisher has not set a price" : !connected?.signer ? "Connect a wallet to rent" : ""}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
+                      className="btn-radiant flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
                       style={{ ...sans, background: `${C}14`, border: `1px solid ${C}30`, color: C }}>
-                      {busy === l.id ? "Paying…" : `Rent ${hoursFor(l.id)}h`}
+                      {busy === l.id ? tr("Paying…") : `${tr("Rent")} ${hoursFor(l.id)}h`}
                     </button>
                     {/* Shown unless the listing belongs to someone else — the
                         payout wallet is write-once, so offering "Claim" there
@@ -732,7 +974,7 @@ function MarketplacePage() {
                         title={wallet ? "" : "Connect a wallet — it receives the rental payments"}
                         onClick={() => { setEditing(l.id); setPriceSol(priced ? String(Number(l.priceLamports) / LAMPORTS_PER_SOL) : "0.05"); }}
                         className="px-3 py-2.5 rounded-xl text-[13px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}28`, color: accent }}>
-                        {mine ? "Edit price" : "Claim"}
+                        {mine ? tr("Edit price") : tr("Claim")}
                       </button>
                     )}
                   </div>
@@ -748,6 +990,7 @@ function MarketplacePage() {
 
 /* ── 5. VAULT ── */
 function VaultPage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : "";
@@ -775,8 +1018,8 @@ function VaultPage() {
   return (
     <div className="route-page page-treasury space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Treasury</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Solana Devnet · your wallet and the program-owned vault</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Treasury")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Solana Devnet · your wallet and the program-owned vault")}</p>
       </div>
 
       {/* Real program vault for the connected wallet */}
@@ -784,7 +1027,7 @@ function VaultPage() {
 
       {!owner && (
         <div className="rounded-2xl p-8 text-center" style={{ ...glass() }}>
-          <p className="text-sm" style={{ ...sans, color: color.textMuted }}>Connect a wallet to see its balances and recent on-chain activity.</p>
+          <p className="text-sm" style={{ ...sans, color: color.textMuted }}>{tr("Connect a wallet to see its balances and recent on-chain activity.")}</p>
         </div>
       )}
 
@@ -794,17 +1037,17 @@ function VaultPage() {
             <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
-                <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ ...mono, color: color.textDim }}>Wallet SOL Balance</div>
+                <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ ...mono, color: color.textDim }}>{tr("Wallet SOL Balance")}</div>
                 <div className="text-4xl font-bold" style={{ ...mono, color: color.text }}>{sol === null ? "—" : `${sol.toFixed(4)} SOL`}</div>
-                <div className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>Devnet SOL · pays transaction fees</div>
+                <div className="text-[13px] mt-2" style={{ ...sans, color: color.textDim }}>{tr("Devnet SOL · pays transaction fees")}</div>
               </div>
               <div className="text-right">
-                <div className="text-xs mb-1" style={{ ...sans, color: color.textDim }}>Owner wallet</div>
+                <div className="text-xs mb-1" style={{ ...sans, color: color.textDim }}>{tr("Owner wallet")}</div>
                 <div className="flex items-center gap-2 justify-end">
                   <span className="text-sm font-semibold" style={{ ...mono, color: C }}>{short(owner)}</span>
                   <a href={explorerAddressUrl(owner)} target="_blank" rel="noreferrer" aria-label="Open wallet in Solana Explorer" className="p-1 rounded-md" style={{ background: color.surfaceInset, color: C }}><ExternalLink size={11} /></a>
                 </div>
-                <div className="text-[12px] mt-1" style={{ ...sans, color: color.textDim }}>Solana Devnet</div>
+                <div className="text-[12px] mt-1" style={{ ...sans, color: color.textDim }}>{tr("Solana Devnet")}</div>
               </div>
             </div>
           </div>
@@ -812,9 +1055,9 @@ function VaultPage() {
           {/* Recent on-chain activity, straight from the audit trail */}
           <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
             <div className="px-5 py-4 border-b" style={{ borderColor: color.border }}>
-              <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Recent Transactions</span>
+              <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Recent Transactions")}</span>
             </div>
-            {events.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>No on-chain activity recorded yet.</div>}
+            {events.length === 0 && <div className="px-5 py-4 text-xs" style={{ ...sans, color: color.textDim }}>{tr("No on-chain activity recorded yet.")}</div>}
             {events.map(e => (
               <div key={e.id} className="px-5 py-3.5 border-b" style={{ borderColor: color.border }}>
                 <div className="flex items-center justify-between mb-1">
@@ -837,6 +1080,7 @@ function VaultPage() {
 
 /* ── 7. SESSIONS ── */
 function SessionsPage() {
+  const tr = useT(VI);
   const [step, setStep] = useState(0);
   const [tokens, setTokens] = useState(["SOL", "USDC"]);
   const [cap, setCap] = useState(500);
@@ -937,8 +1181,8 @@ function SessionsPage() {
   return (
     <div className="route-page page-guardrails space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Agent Guardrails</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Design bounded Solana policies, run AI risk checks, and publish verifiable proofs</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Agent Guardrails")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Design bounded Solana policies, run AI risk checks, and publish verifiable proofs")}</p>
       </div>
 
       {/* Real grants from the REDLINE API (on-chain state via /grants/:id) */}
@@ -949,15 +1193,15 @@ function SessionsPage() {
         <div className="px-6 py-4 border-b" style={{ borderColor: color.border, background: `${M}04` }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Key size={12} style={{ color: M }} /></div>
-            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Create Agent Policy</span>
-            <span className="ml-auto text-[12px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>SOLANA DEVNET</span>
+            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Create Agent Policy")}</span>
+            <span className="ml-auto text-[12px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>{tr("SOLANA DEVNET")}</span>
           </div>
           <div className="flex gap-2">
             {STEPS.map((s, i) => (
               <button type="button" key={`wiz-step-${i}`} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined} aria-label={`Step ${i + 1}: ${s}`} className="flex-1 flex flex-col items-center gap-1.5">
                 <div className="w-full h-0.5 rounded-full transition-all" style={{ background: i <= step ? (i === step ? M : `${M}50`) : color.border }} />
                 <span className="text-[11px] font-semibold hidden sm:block" style={{ ...mono, color: i === step ? M : i < step ? `${M}60` : "rgba(148,163,184,0.35)" }}>
-                  {String(i + 1).padStart(2, "0")} {s}
+                  {String(i + 1).padStart(2, "0")} {tr(s)}
                 </span>
               </button>
             ))}
@@ -967,7 +1211,7 @@ function SessionsPage() {
           {step === 0 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>Which published agent version does this grant authorise? The grant records its <code>agentHash</code>, so this is the build the policy is bound to.</p>
+                <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>{tr("Which published agent version does this grant authorise? The grant records its ")}<code>agentHash</code>{tr(", so this is the build the policy is bound to.")}</p>
                 {agentVersions.length > 0 ? (
                   <select value={agentId} onChange={e => setAgentId(e.target.value)} aria-label="Agent version this grant authorises"
                     className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
@@ -978,17 +1222,17 @@ function SessionsPage() {
                   </select>
                 ) : (
                   <p className="text-[13px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${A}0b`, border: `1px solid ${A}25`, color: color.warn }}>
-                    No agent published yet — signing this grant publishes “{FALLBACK_AGENT.name}” and binds the grant to it. Publish from the Agents page first to name your own.
+                    {tr("No agent published yet — signing this grant publishes “")}{FALLBACK_AGENT.name}{tr("” and binds the grant to it. Publish from the Agents page first to name your own.")}
                   </p>
                 )}
                 {selectedAgent && <p className="text-[12px]" style={{ ...sans, color: color.textMuted, lineHeight: 1.6 }}>{selectedAgent.strategy}</p>}
                 {activeHire && (
                   <p className="text-[12px] px-3 py-2 rounded-xl" style={{ ...sans, background: `${C}0b`, border: `1px solid ${C}25`, color: C, lineHeight: 1.6 }}>
-                    Running under your rental of this agent — it covers grants until {new Date(activeHire.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}. The grant records which rental authorised it.
+                    {tr("Running under your rental of this agent — it covers grants until ")}{new Date(activeHire.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}{tr(". The grant records which rental authorised it.")}
                   </p>
                 )}
               </div>
-              <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.</p>
+              <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>{tr("Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.")}</p>
               <div className="flex flex-wrap gap-2">
                 {tList.map((t, ti) => { const on = tokens.includes(t); return (
                   <button type="button" key={`wiz-tok-${ti}`} onClick={() => setTokens(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])} aria-pressed={on}
@@ -999,11 +1243,11 @@ function SessionsPage() {
                 ); })}
               </div>
               <div className="pt-1 space-y-2">
-                <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to {MAX_DESTS}.</p>
+                <p className="text-xs" style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}>{tr("Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to ")}{MAX_DESTS}.</p>
                 {dests.map((d, di) => (
                   <div key={`dest-${di}`} className="flex gap-2">
                     <input value={d} onChange={e => setDests(p => p.map((x, i) => i === di ? e.target.value.trim() : x))}
-                      placeholder="Recipient address (base58)" aria-label={`Allowed destination ${di + 1}`} spellCheck={false}
+                      placeholder={tr("Recipient address (base58)")} aria-label={`Allowed destination ${di + 1}`} spellCheck={false}
                       className="flex-1 px-3 py-2 rounded-xl text-[13px] outline-none"
                       style={{ ...mono, background: color.surfaceSubtle, border: `1px solid ${d && !isAddressLike(d) ? "#ef444455" : color.border}`, color: color.text }} />
                     {dests.length > 1 && (
@@ -1014,23 +1258,23 @@ function SessionsPage() {
                 ))}
                 {dests.length < MAX_DESTS && (
                   <button type="button" onClick={() => setDests(p => [...p, ""])}
-                    className="text-[13px] px-3 py-1.5 rounded-xl" style={{ ...mono, background: `${C}10`, border: `1px solid ${C}25`, color: C }}>+ Add destination</button>
+                    className="text-[13px] px-3 py-1.5 rounded-xl" style={{ ...mono, background: `${C}10`, border: `1px solid ${C}25`, color: C }}>+ {tr("Add destination")}</button>
                 )}
-                {destError && <p role="alert" className="text-[12px]" style={{ ...sans, color: color.danger }}>{destError}</p>}
+                {destError && <p role="alert" className="text-[12px]" style={{ ...sans, color: color.danger }}>{tr(destError)}</p>}
               </div>
               <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
                 <Lock size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
-                <p className="text-[13px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.</p>
+                <p className="text-[13px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>{tr("The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.")}</p>
               </div>
             </div>
           )}
           {step === 1 && (
             <div className="space-y-5">
-              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>Configure total spend ceiling and per-session transaction limits.</p>
-              <SliderCtl label="Total Spend Cap" value={cap} onChange={setCap} min={10} max={10000} unit=" USDC" accent={A} />
-              <SliderCtl label="Max Transactions / Session" value={txn} onChange={setTxn} min={1} max={500} unit=" txns" accent={C} />
+              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>{tr("Configure total spend ceiling and per-session transaction limits.")}</p>
+              <SliderCtl label={tr("Total Spend Cap")} value={cap} onChange={setCap} min={10} max={10000} unit=" USDC" accent={A} />
+              <SliderCtl label={tr("Max Transactions / Session")} value={txn} onChange={setTxn} min={1} max={500} unit=" txns" accent={C} />
               <div className="grid grid-cols-3 gap-2">
-                {[{ label: "Avg/Tx", value: `$${(cap / txn).toFixed(2)}`, color: A }, { label: "Risk", value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW", color: cap > 5000 ? color.danger : cap > 1000 ? A : M }, { label: "Tokens", value: String(tokens.length), color: C }].map((row, ri) => (
+                {[{ label: tr("Avg/Tx"), value: `$${(cap / txn).toFixed(2)}`, color: A }, { label: tr("Risk"), value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW", color: cap > 5000 ? color.danger : cap > 1000 ? A : M }, { label: tr("Tokens"), value: String(tokens.length), color: C }].map((row, ri) => (
                   <div key={`wiz-row-${ri}`} className="rounded-xl p-3 text-center" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                     <div className="text-[12px] mb-1" style={{ ...sans, color: color.textMuted }}>{row.label}</div>
                     <div className="text-sm font-bold" style={{ ...mono, color: row.color }}>{row.value}</div>
@@ -1041,25 +1285,25 @@ function SessionsPage() {
           )}
           {step === 2 && (
             <div className="space-y-5">
-              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>Set validity window and minimum cooldown between executions.</p>
-              <SliderCtl label="Session Duration" value={dur} onChange={setDur} min={1} max={168} unit="h" accent={M} />
-              <SliderCtl label="Execution Cooldown" value={cool} onChange={setCool} min={1} max={60} unit="m" accent={C} />
+              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>{tr("Set validity window and minimum cooldown between executions.")}</p>
+              <SliderCtl label={tr("Session Duration")} value={dur} onChange={setDur} min={1} max={168} unit="h" accent={M} />
+              <SliderCtl label={tr("Execution Cooldown")} value={cool} onChange={setCool} min={1} max={60} unit="m" accent={C} />
               <div className="rounded-xl p-3.5 flex items-center gap-3" style={{ background: `${M}09`, border: `1px solid ${M}18` }}>
                 <Timer size={14} style={{ color: M, flexShrink: 0 }} />
                 <div>
-                  <div className="text-[13px] font-semibold" style={{ ...mono, color: M }}>Expires {new Date(Date.now() + dur * 3600000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                  <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textMuted }}>≤ {Math.floor((dur * 60) / cool)} executions · {cool}m cooldown</div>
+                  <div className="text-[13px] font-semibold" style={{ ...mono, color: M }}>{tr("Expires")} {new Date(Date.now() + dur * 3600000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                  <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textMuted }}>≤ {Math.floor((dur * 60) / cool)} {tr("executions")} · {cool}m {tr("cooldown")}</div>
                 </div>
               </div>
             </div>
           )}
           {step === 3 && (
             <div className="space-y-4">
-              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.</p>
+              <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>{tr("Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.")}</p>
               <div>
-              {[["Agent", selectedAgent ? `${selectedAgent.name} ${selectedAgent.version}` : `${FALLBACK_AGENT.name} (new)`, M], ["Rental", activeHire ? `until ${new Date(activeHire.endsAt).toLocaleDateString()}` : "not rented — yours to run", C], ["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || "none", A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} transactions`, C], ["Duration", `${dur} hours`, M], ["Cooldown", `${cool} minutes`, M], ["Network", "Solana Devnet", C]].map(([k, v, col], ri) => (
+              {[["Agent", selectedAgent ? `${selectedAgent.name} ${selectedAgent.version}` : `${FALLBACK_AGENT.name} ${tr("(new)")}`, M], ["Rental", activeHire ? `${tr("until")} ${new Date(activeHire.endsAt).toLocaleDateString()}` : tr("not rented — yours to run"), C], ["Token Scope", tokens.join(", "), C], ["Destinations", cleanDests.map(d => short(d, 6)).join(", ") || tr("none"), A], ["Spend Cap", `${cap.toLocaleString()} USDC`, A], ["Max Txns", `${txn} ${tr("transactions")}`, C], ["Duration", `${dur} ${tr("hours")}`, M], ["Cooldown", `${cool} ${tr("minutes")}`, M], ["Network", tr("Solana Devnet"), C]].map(([k, v, col], ri) => (
                 <div key={`rev-${ri}`} className="flex justify-between py-2.5 border-b" style={{ borderColor: color.border }}>
-                  <span className="text-[13px]" style={{ ...sans, color: color.textMuted }}>{k}</span>
+                  <span className="text-[13px]" style={{ ...sans, color: color.textMuted }}>{tr(k)}</span>
                   <span className="text-[13px] font-semibold" style={{ ...mono, color: col as string }}>{v}</span>
                 </div>
               ))}
@@ -1068,8 +1312,8 @@ function SessionsPage() {
                 <div className="rounded-xl p-4 space-y-3" style={{ background: `${assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : color.danger}0b`, border: `1px solid ${assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : color.danger}25` }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-semibold" style={{ color: color.text }}>Risk copilot verdict</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: color.textMuted }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : assessment.source === "openai+deterministic-floor" ? `OpenAI + deterministic safety floor · ${assessment.model}` : "Deterministic safety fallback"}</div>
+                      <div className="text-xs font-semibold" style={{ color: color.text }}>{tr("Risk copilot verdict")}</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: color.textMuted }}>{assessment.source === "openai" ? `OpenAI · ${assessment.model}` : assessment.source === "openai+deterministic-floor" ? `OpenAI + deterministic safety floor · ${assessment.model}` : tr("Deterministic safety fallback")}</div>
                     </div>
                     <div className="text-right"><div className="text-xl font-bold" style={{ ...mono, color: assessment.decision === "ALLOW" ? M : assessment.decision === "REVIEW" ? A : color.danger }}>{assessment.score}/100</div><div className="text-[12px]" style={{ ...mono, color: color.textSecondary }}>{assessment.decision}</div></div>
                   </div>
@@ -1085,11 +1329,11 @@ function SessionsPage() {
         <div className="px-6 py-4 border-t flex gap-2" style={{ borderColor: color.border }}>
           <button type="button" onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
             className="px-4 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-25"
-            style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textSecondary }}>Back</button>
+            style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textSecondary }}>{tr("Back")}</button>
           <button type="button" onClick={() => step < STEPS.length - 1 ? setStep(s => s + 1) : void assessPolicy()} disabled={assessing}
             className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
             style={{ ...sans, background: step === STEPS.length - 1 ? color.primary : `${M}12`, border: `1px solid ${step === STEPS.length - 1 ? color.primary : M + "35"}`, color: step === STEPS.length - 1 ? color.onAccent : M, boxShadow: step === STEPS.length - 1 ? "0 6px 18px rgba(167,139,250,0.28)" : "none" }}>
-            {step === STEPS.length - 1 ? <><Shield size={12} />{assessing ? "Assessing policy…" : assessment ? "Re-run risk assessment" : "Run AI risk assessment"}</> : <>Continue <ChevronRight size={12} /></>}
+            {step === STEPS.length - 1 ? <><Shield size={12} />{assessing ? tr("Assessing policy…") : assessment ? tr("Re-run risk assessment") : tr("Run AI risk assessment")}</> : <>{tr("Continue")} <ChevronRight size={12} /></>}
           </button>
         </div>
       </div>
@@ -1099,6 +1343,8 @@ function SessionsPage() {
 
 /* ── 8. SETTINGS ── */
 function SettingsPage() {
+  const tr = useT(VI);
+  const { lang, toggle: toggleLang } = useLang();
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
@@ -1124,8 +1370,8 @@ function SettingsPage() {
   return (
     <div className="route-page page-settings space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Settings</h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Live configuration of this REDLINE deployment</p>
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>{tr("Settings")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Live configuration of this REDLINE deployment")}</p>
       </div>
 
       {/* Connected wallet */}
@@ -1135,14 +1381,35 @@ function SettingsPage() {
           <Wallet size={22} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold" style={{ ...sans, color: color.text }}>{wallet ? "Connected wallet" : "No wallet connected"}</div>
-          <div className="text-[13px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || "Connect a Wallet Standard account to sign grants"}</div>
+          <div className="text-sm font-bold" style={{ ...sans, color: color.text }}>{wallet ? tr("Connected wallet") : tr("No wallet connected")}</div>
+          <div className="text-[13px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || tr("Connect a Wallet Standard account to sign grants")}</div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
-            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>{tr("Devnet")}</span>
+            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>{tr("Wallet Standard")}</span>
           </div>
         </div>
-        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>View on Explorer</a>}
+        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>{tr("View on Explorer")}</a>}
+      </div>
+
+      {/* Language */}
+      <div className="rounded-2xl p-6 flex items-center gap-5 relative overflow-hidden" style={{ ...glass() }}>
+        <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${C}40, transparent)` }} />
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C}22, ${M}18)`, border: `1px solid ${C}28`, color: C }}>
+          <Globe size={22} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold" style={{ ...sans, color: color.text }}>{tr("Language")}</div>
+          <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Interface language, saved on this device.")}</div>
+        </div>
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
+          {(["en", "vi"] as const).map(l => (
+            <button type="button" key={l} onClick={() => l !== lang && toggleLang()} aria-pressed={lang === l}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
+              style={{ ...mono, background: lang === l ? `${M}18` : "transparent", color: lang === l ? M : color.textDim, border: lang === l ? `1px solid ${M}28` : "1px solid transparent" }}>
+              {l === "en" ? "EN" : "VI"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -1151,7 +1418,7 @@ function SettingsPage() {
           <button type="button" role="tab" key={`set-tab-${i}`} onClick={() => setActiveTab(i)} aria-selected={activeTab === i}
             className="px-4 py-2 rounded-lg text-xs font-semibold transition-all"
             style={{ ...sans, background: activeTab === i ? `${M}18` : "transparent", color: activeTab === i ? M : color.textDim, border: activeTab === i ? `1px solid ${M}28` : "1px solid transparent" }}>
-            {t}
+            {tr(t)}
           </button>
         ))}
       </div>
@@ -1159,39 +1426,39 @@ function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {activeTab === 0 && (<>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>Chain</div>
-            <Row label="Cluster" value="Solana Devnet" />
-            <Row label="Backend adapter" value={health?.chain ?? "unreachable"} accent={health ? C : color.danger} />
-            <Row label="Program" value={health ? short(health.programId, 8) : "—"} accent={C} />
-            <Row label="Executor" value={health ? short(health.executor, 8) : "—"} accent={C} />
-            <Row label="Commitment" value="confirmed" accent={M} />
+            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>{tr("Chain")}</div>
+            <Row label={tr("Cluster")} value={tr("Solana Devnet")} />
+            <Row label={tr("Backend adapter")} value={health?.chain ?? tr("unreachable")} accent={health ? C : color.danger} />
+            <Row label={tr("Program")} value={health ? short(health.programId, 8) : "—"} accent={C} />
+            <Row label={tr("Executor")} value={health ? short(health.executor, 8) : "—"} accent={C} />
+            <Row label={tr("Commitment")} value="confirmed" accent={M} />
           </div>
           <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>Policy Enforcement</div>
-            <Row label="Gates enforced on-chain" value="7" accent={M} />
-            <Row label="Policy digest" value="SHA-256" accent={M} />
-            <Row label="Allowlist size limit" value="4 mints · 4 destinations" accent={C} />
-            <Row label="Mock clock speed" value={health ? `${health.clockSpeed}×` : "—"} accent={A} />
+            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>{tr("Policy Enforcement")}</div>
+            <Row label={tr("Gates enforced on-chain")} value="7" accent={M} />
+            <Row label={tr("Policy digest")} value="SHA-256" accent={M} />
+            <Row label={tr("Allowlist size limit")} value={tr("4 mints · 4 destinations")} accent={C} />
+            <Row label={tr("Mock clock speed")} value={health ? `${health.clockSpeed}×` : "—"} accent={A} />
           </div>
         </>)}
         {activeTab === 1 && (
           <div className="rounded-2xl p-5 col-span-full" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.text }}>Environment</div>
-            <p className="text-[13px] mb-4" style={{ ...sans, color: color.textDim }}>Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.</p>
-            <Row label="API URL" value={API_URL} accent={C} />
-            <Row label="Program ID (frontend)" value={short(PROGRAM_ID, 8)} accent={C} />
-            <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? short(String(import.meta.env.VITE_DEMO_USDC_MINT), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? M : A} />
-            <Row label="Demo destination" value={import.meta.env.VITE_DEMO_OPS_DESTINATION ? short(String(import.meta.env.VITE_DEMO_OPS_DESTINATION), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_OPS_DESTINATION ? M : A} />
-            <Row label="Write key" value={import.meta.env.VITE_API_KEY ? "configured" : "open (local/mock)"} accent={import.meta.env.VITE_API_KEY ? M : A} />
+            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.text }}>{tr("Environment")}</div>
+            <p className="text-[13px] mb-4" style={{ ...sans, color: color.textDim }}>{tr("Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.")}</p>
+            <Row label={tr("API URL")} value={API_URL} accent={C} />
+            <Row label={tr("Program ID (frontend)")} value={short(PROGRAM_ID, 8)} accent={C} />
+            <Row label={tr("Demo USDC mint")} value={import.meta.env.VITE_DEMO_USDC_MINT ? short(String(import.meta.env.VITE_DEMO_USDC_MINT), 8) : tr("not configured")} accent={import.meta.env.VITE_DEMO_USDC_MINT ? M : A} />
+            <Row label={tr("Demo destination")} value={import.meta.env.VITE_DEMO_OPS_DESTINATION ? short(String(import.meta.env.VITE_DEMO_OPS_DESTINATION), 8) : tr("not configured")} accent={import.meta.env.VITE_DEMO_OPS_DESTINATION ? M : A} />
+            <Row label={tr("Write key")} value={import.meta.env.VITE_API_KEY ? tr("configured") : tr("open (local/mock)")} accent={import.meta.env.VITE_API_KEY ? M : A} />
           </div>
         )}
       </div>
 
       {/* Danger zone */}
       <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-        <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.danger }}>Revoking access</div>
+        <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.danger }}>{tr("Revoking access")}</div>
         <p className="text-xs" style={{ ...sans, color: color.textMuted }}>
-          Grants are revoked one at a time from Guardrails → Active Policy Accounts, because each revocation is a transaction the owner signs in their own wallet. There is no bulk switch: the program only accepts a signature per grant.
+          {tr("Grants are revoked one at a time from Guardrails → Active Policy Accounts, because each revocation is a transaction the owner signs in their own wallet. There is no bulk switch: the program only accepts a signature per grant.")}
         </p>
       </div>
     </div>
@@ -1201,7 +1468,7 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage];
+const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage, GuidePage];
 
 export default function App() {
   const indexFromHash = () => {
@@ -1212,6 +1479,7 @@ export default function App() {
   const [nav, setNav] = useState(indexFromHash);
   const mainRef = useRef<HTMLElement | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
+  const tr = useT(VI);
   const [density, setDensity] = useState<"comfortable" | "compact">(() => {
     try { return localStorage.getItem("redline.density") === "compact" ? "compact" : "comfortable"; }
     catch { return "comfortable"; }
@@ -1255,19 +1523,20 @@ export default function App() {
     });
   };
   const commandDescriptions: Record<string, string> = {
-    protocol: "Protocol story, live backbone and evidence",
-    marketplace: "Discover and rent published agent versions",
-    agents: "Inspect agents, grants and active versions",
-    guardrails: "Create bounded policies and signed permissions",
-    treasury: "Review vault balances and recent transactions",
-    audit: "Verify every intent, decision and signature",
-    analytics: "Understand execution volume and policy outcomes",
-    settings: "Inspect network and deployment configuration",
+    protocol: tr("Protocol story, live backbone and evidence"),
+    marketplace: tr("Discover and rent published agent versions"),
+    agents: tr("Inspect agents, grants and active versions"),
+    guardrails: tr("Create bounded policies and signed permissions"),
+    treasury: tr("Review vault balances and recent transactions"),
+    audit: tr("Verify every intent, decision and signature"),
+    analytics: tr("Understand execution volume and policy outcomes"),
+    settings: tr("Inspect network and deployment configuration"),
+    guide: tr("Step-by-step: wallet, vault, grants, running an agent"),
   };
   const commandItems: CommandItem[] = FLOW_ORDER.map((pageIndex, position) => {
     const item = NAV[pageIndex];
     return {
-      label: item.label,
+      label: tr(item.label),
       description: commandDescriptions[item.slug],
       shortcut: position === 0 ? "HOME" : `0${position}`,
       icon: item.icon,
@@ -1316,7 +1585,7 @@ export default function App() {
                   className="relative shrink-0 rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
                   style={{ ...sans, color: active ? color.primaryText : color.textDim, background: active ? "rgba(75,134,247,0.09)" : "transparent" }}
                 >
-                  {item.label}
+                  {tr(item.label)}
                   {active && <motion.span layoutId="primary-nav-indicator" className="absolute inset-x-3 -bottom-[13px] h-px" style={{ background: M, boxShadow: `0 0 14px ${M}` }} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                 </button>
               );
@@ -1324,15 +1593,19 @@ export default function App() {
           </nav>
 
           <button type="button" className="header-tool header-command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open command palette">
-            <Search size={13} /><span>Find</span><kbd>⌘K</kbd>
+            <Search size={13} /><span>{tr("Find")}</span><kbd>⌘K</kbd>
           </button>
           <button type="button" className="header-tool header-density-trigger" onClick={toggleDensity} aria-label={`Use ${density === "comfortable" ? "compact" : "comfortable"} density`}>
-            <Rows3 size={13} /><span>{density === "comfortable" ? "Comfort" : "Compact"}</span>
+            <Rows3 size={13} /><span>{density === "comfortable" ? tr("Comfort") : tr("Compact")}</span>
           </button>
 
-          <div className="hidden xl:flex shrink-0 items-center gap-2 text-[11px] uppercase tracking-[0.14em]" style={{ ...mono, color: color.textDim }}>
-            <span className="redline-live-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
-            Solana devnet
+          <div
+            className="hidden lg:flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] uppercase tracking-[0.14em]"
+            style={{ ...mono, color: M, background: `${M}0e`, border: `1px solid ${M}30` }}
+            title="This build runs against Solana Devnet, not mainnet — no real funds move."
+          >
+            <span className="redline-live-dot glow-pulse-dot h-1.5 w-1.5 rounded-full" style={{ background: M }} />
+            {tr("Solana devnet")}
           </div>
           <SolanaWalletControl />
         </header>
@@ -1340,25 +1613,28 @@ export default function App() {
         {/* Page content */}
         <main ref={mainRef} className={`app-main flex-1 overflow-y-auto ${nav === 0 ? "app-main-home" : "px-3 sm:px-5 lg:px-8 py-5 lg:py-7"}`}>
           <div data-route={NAV[nav].slug} className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
-            {nav !== 0 && <RouteScene icon={NAV[nav].icon} label={NAV[nav].label} scene={NAV[nav].slug} />}
+            {nav !== 0 && <RouteScene icon={NAV[nav].icon} label={tr(NAV[nav].label)} scene={NAV[nav].slug} />}
             {nav !== 0 && (
               <div className="route-flow-bar" aria-label="Product journey navigation">
                 <button type="button" className="route-flow-home" onClick={() => navigate(0)}>
                   <ArrowLeft size={14} />
-                  <span>Protocol</span>
+                  <span>{tr("Protocol")}</span>
                 </button>
                 <div className="route-flow-track">
-                  {FLOW_ORDER.slice(1, -1).map((pageIndex, position) => (
+                  {/* Settings (7) and Guide (8) are reference pages, not
+                      steps in the guided task flow — excluded by value, not
+                      by array position, now that Guide sits after Settings. */}
+                  {FLOW_ORDER.filter(i => i !== 0 && i !== 7 && i !== 8).map((pageIndex, position) => (
                     <button
                       type="button"
                       key={NAV[pageIndex].slug}
                       className={nav === pageIndex ? "is-active" : ""}
                       onClick={() => navigate(pageIndex)}
                       aria-current={nav === pageIndex ? "step" : undefined}
-                      title={NAV[pageIndex].label}
+                      title={tr(NAV[pageIndex].label)}
                     >
                       <span>{position + 1}</span>
-                      <em>{NAV[pageIndex].label}</em>
+                      <em>{tr(NAV[pageIndex].label)}</em>
                     </button>
                   ))}
                 </div>
@@ -1370,7 +1646,7 @@ export default function App() {
                   )}
                   {nextPage !== null && (
                     <button type="button" onClick={() => navigate(nextPage)} aria-label={`Next: ${NAV[nextPage].label}`}>
-                      <span>{NAV[nextPage].label}</span><ArrowRight size={13} />
+                      <span>{tr(NAV[nextPage].label)}</span><ArrowRight size={13} />
                     </button>
                   )}
                 </div>
