@@ -3,8 +3,15 @@ import { Terminal } from "lucide-react";
 import { api, subscribeFeed, type FeedEvent, fmtUsdc, short } from "../lib/api";
 import { explorerTransactionUrl } from "../solana/client";
 import { color, mono, panel, term } from "../theme";
+import { useT } from "../i18n/LanguageContext";
 
 const M = term.success, C = term.info, A = term.warn, R = term.danger;
+
+const VI: Record<string, string> = {
+  "live feed": "live feed",
+  "Start the backend (cd backend && npm run dev) to see live events.": "Khởi động backend (cd backend && npm run dev) để xem sự kiện trực tiếp.",
+  "Waiting for events — create a grant and start an agent.": "Đang chờ sự kiện — hãy tạo một grant và chạy agent.",
+};
 
 // Replaces the simulated runtime feed. Loads the audit tail, then appends
 // server-sent events as they happen. Every line with a signature links to
@@ -28,6 +35,7 @@ function describe(e: FeedEvent): { color: string; text: string } {
 }
 
 export function LiveFeed({ grantId = "*", limit = 12 }: { grantId?: string; limit?: number }) {
+  const tr = useT(VI);
   const [rows, setRows] = useState<FeedEvent[]>([]);
   const [status, setStatus] = useState<"connecting" | "live" | "offline">("connecting");
 
@@ -47,14 +55,14 @@ export function LiveFeed({ grantId = "*", limit = 12 }: { grantId?: string; limi
       <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
         <div className="flex gap-1.5">{[R, A, M].map((c, i) => <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: 0.7 }} />)}</div>
         <Terminal size={11} style={{ color: M }} />
-        <span className="text-[13px]" style={{ ...mono, color: color.textMuted }}>runtime · {status === "live" ? "live feed" : status}</span>
+        <span className="text-[13px]" style={{ ...mono, color: color.textMuted }}>runtime · {status === "live" ? tr("live feed") : status}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: status === "live" ? M : status === "offline" ? R : A, animation: status === "live" ? "redline-pulse 2s infinite" : "none" }} />
           <span className="text-[12px] font-bold" style={{ ...mono, color: status === "live" ? M : status === "offline" ? R : A }}>{status === "live" ? "LIVE" : status === "offline" ? "OFFLINE" : "…"}</span>
         </div>
       </div>
       <div className="p-4 space-y-2 min-h-[180px]" style={{ background: term.bg }}>
-        {rows.length === 0 && <div className="text-[13px]" style={{ ...mono, color: term.dim }}>{status === "offline" ? "Start the backend (cd backend && npm run dev) to see live events." : "Waiting for events — create a grant and start an agent."}</div>}
+        {rows.length === 0 && <div className="text-[13px]" style={{ ...mono, color: term.dim }}>{status === "offline" ? tr("Start the backend (cd backend && npm run dev) to see live events.") : tr("Waiting for events — create a grant and start an agent.")}</div>}
         {rows.map(e => {
           const d = describe(e);
           return (

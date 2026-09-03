@@ -8,8 +8,61 @@ import {
 import { api, subscribeFeed, fmtUsdc, short, type AuditRow, type Grant, type FeedEvent } from "../lib/api";
 import { explorerTransactionUrl } from "../solana/client";
 import { color, mono, sans } from "../theme";
+import { useT } from "../i18n/LanguageContext";
 
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
+
+// English is the source language here too — every string below is written
+// in English and wrapped as `tr("...")`; this map supplies the Vietnamese side.
+const VI: Record<string, string> = {
+  "Verifiable Audit Trail": "Nhật Ký Kiểm Toán Có Thể Xác Minh",
+  "Log": "Log",
+  "Every intent, decision, and on-chain signature — verifiable on Solana Explorer.":
+    "Mọi intent, quyết định và chữ ký on-chain — đều có thể xác minh trên Solana Explorer.",
+  "Two writers fill this table. The runtime records what it submitted; the indexer decodes the program's own logs and writes its own row — for these transactions and anyone else's. Rows marked ":
+    "Hai bên ghi vào bảng này. Runtime ghi lại những gì nó đã gửi; indexer giải mã log của chính chương trình và ghi dòng riêng của nó — cho giao dịch của bạn và của bất kỳ ai khác. Các dòng đánh dấu ",
+  " came from the second, so a decision carrying ": " đến từ indexer, nên một quyết định mang biểu tượng ",
+  " is one where both accounts agree. Nothing here rests on this server being believed.":
+    " là quyết định mà cả hai bản ghi đều khớp nhau. Không có gì ở đây phụ thuộc vào việc tin tưởng server này.",
+  "Total Events": "Tổng Số Sự Kiện",
+  "Every row this system has written.": "Mọi dòng mà hệ thống này đã ghi.",
+  "On-chain Sigs": "Chữ Ký On-chain",
+  "Rows carrying a real Devnet signature you can open.": "Các dòng mang chữ ký Devnet thật mà bạn có thể mở ra xem.",
+  "Corroborated": "Được Đối Chiếu",
+  "Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust.":
+    "Các quyết định mà bản ghi của server và log của chính chương trình khớp nhau — được đọc lại độc lập, không dựa trên niềm tin.",
+  "TX Rejected": "Giao Dịch Bị Từ Chối",
+  "Transfers the program refused. Nothing moved on any of them.": "Các giao dịch bị chương trình từ chối. Không có giao dịch nào trong số đó được thực hiện.",
+  "Search events, signatures, reason codes...": "Tìm sự kiện, chữ ký, mã lý do...",
+  "Grant …": "Grant …",
+  "All Grants": "Tất Cả Grant",
+  "Refresh": "Làm Mới",
+  "Showing": "Đang hiển thị",
+  "events": "sự kiện",
+  "matching": "khớp với",
+  "Backend Unreachable": "Không Kết Nối Được Backend",
+  "Start the backend with": "Khởi động backend bằng lệnh",
+  "Time": "Thời Gian",
+  "Event": "Sự Kiện",
+  "Details": "Chi Tiết",
+  "Source": "Nguồn",
+  "Signature": "Chữ Ký",
+  "No audit events yet": "Chưa có sự kiện kiểm toán nào",
+  "Create a grant and start an agent to see events appear here in real time.":
+    "Tạo một grant và chạy agent để thấy sự kiện xuất hiện tại đây theo thời gian thực.",
+  "Decoded from the program's own logs by the indexer — not from anything this server remembered.":
+    "Được indexer giải mã trực tiếp từ log của chương trình — không phải từ bất cứ điều gì server này tự ghi nhớ.",
+  "Recorded by the ": "Được ghi lại bởi ",
+  "owner's action": "hành động của chủ sở hữu",
+  " as it happened.": " ngay khi nó xảy ra.",
+  "chain log": "chain log",
+  "The server's record of this transaction and the program's own logs agree. Two independent writers, one signature.":
+    "Bản ghi của server cho giao dịch này khớp với log của chính chương trình. Hai bên ghi độc lập, cùng một chữ ký.",
+  "This audit trail is append-only. Every event with a chain signature can be independently verified on":
+    "Nhật ký kiểm toán này chỉ có thể được thêm vào, không thể sửa. Mọi sự kiện có chữ ký on-chain đều có thể được xác minh độc lập trên",
+  "The indexer reads program logs directly — dashboard numbers come from the chain, not the server.":
+    "Indexer đọc trực tiếp log của chương trình — số liệu trên dashboard đến từ chuỗi, không phải từ server.",
+};
 const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
   background: color.surface,
   boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)",
@@ -64,6 +117,7 @@ function describePayload(row: AuditRow): string {
 }
 
 export function AuditPage() {
+  const tr = useT(VI);
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [selectedGrant, setSelectedGrant] = useState<string>("");
@@ -158,22 +212,22 @@ export function AuditPage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><ScrollText size={12} style={{ color: M }} /></div>
-          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Verifiable Audit Trail</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>{tr("Verifiable Audit Trail")}</span>
         </div>
-        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Audit <span style={{ color: M }}>Log</span></h1>
-        <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>Every intent, decision, and on-chain signature — verifiable on Solana Explorer.</p>
-        <p className="text-xs mt-2 max-w-2xl" style={{ ...sans, color: color.textDim, lineHeight: 1.7 }}>
-          Two writers fill this table. The runtime records what it submitted; the indexer decodes the program's own logs and writes its own row — for these transactions and anyone else's. Rows marked <span style={{ ...mono, color: C }}>chain log</span> came from the second, so a decision carrying <ShieldCheck size={11} style={{ color: M, display: "inline", verticalAlign: "-1px" }} /> is one where both accounts agree. Nothing here rests on this server being believed.
+        <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Audit <span style={{ color: M }}>{tr("Log")}</span></h1>
+        <p className="text-sm mt-1" style={{ ...sans, color: color.textDim }}>{tr("Every intent, decision, and on-chain signature — verifiable on Solana Explorer.")}</p>
+        <p className="text-xs mt-2 max-w-3xl" style={{ ...sans, color: color.textDim, lineHeight: 1.7 }}>
+          {tr("Two writers fill this table. The runtime records what it submitted; the indexer decodes the program's own logs and writes its own row — for these transactions and anyone else's. Rows marked ")}<span style={{ ...mono, color: C }}>chain log</span>{tr(" came from the second, so a decision carrying ")}<ShieldCheck size={11} style={{ color: M, display: "inline", verticalAlign: "-1px" }} />{tr(" is one where both accounts agree. Nothing here rests on this server being believed.")}
         </p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Events", value: totalEvents.toLocaleString(), color: M, icon: Activity, hint: "Every row this system has written." },
-          { label: "On-chain Sigs", value: onchainEvents.toLocaleString(), color: C, icon: ExternalLink, hint: "Rows carrying a real Devnet signature you can open." },
-          { label: "Corroborated", value: corroborated.toLocaleString(), color: corroborated > 0 ? M : color.textMuted, icon: ShieldCheck, hint: "Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust." },
-          { label: "TX Rejected", value: rejects.toLocaleString(), color: rejects > 0 ? R : color.textMuted, icon: XCircle, hint: "Transfers the program refused. Nothing moved on any of them." },
+          { label: tr("Total Events"), value: totalEvents.toLocaleString(), color: M, icon: Activity, hint: tr("Every row this system has written.") },
+          { label: tr("On-chain Sigs"), value: onchainEvents.toLocaleString(), color: C, icon: ExternalLink, hint: tr("Rows carrying a real Devnet signature you can open.") },
+          { label: tr("Corroborated"), value: corroborated.toLocaleString(), color: corroborated > 0 ? M : color.textMuted, icon: ShieldCheck, hint: tr("Decisions where the server's record and the program's own logs agree — read back independently, not taken on trust.") },
+          { label: tr("TX Rejected"), value: rejects.toLocaleString(), color: rejects > 0 ? R : color.textMuted, icon: XCircle, hint: tr("Transfers the program refused. Nothing moved on any of them.") },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
@@ -197,7 +251,7 @@ export function AuditPage() {
         {/* Search */}
         <div className="relative flex-1">
           <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: color.textDim }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, signatures, reason codes..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr("Search events, signatures, reason codes...")}
             className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
             style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text, caretColor: M }}
             onFocus={e => { e.target.style.borderColor = `${M}35`; e.target.style.boxShadow = `0 0 0 3px ${M}10`; }}
@@ -210,7 +264,7 @@ export function AuditPage() {
             className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold transition-all shrink-0 min-w-[180px]"
             style={{ ...sans, background: selectedGrant ? `${C}12` : color.surface, border: `1px solid ${selectedGrant ? C + "35" : color.border}`, color: selectedGrant ? C : color.textDim }}>
             <Filter size={13} />
-            {selectedGrant ? `Grant …${selectedGrant.slice(-6)}` : "All Grants"}
+            {selectedGrant ? `${tr("Grant …")}${selectedGrant.slice(-6)}` : tr("All Grants")}
             <ChevronDown size={12} className="ml-auto" style={{ transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </button>
           {dropdownOpen && (
@@ -219,7 +273,7 @@ export function AuditPage() {
               <button type="button" onClick={() => { setSelectedGrant(""); setDropdownOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs hover:bg-white/[0.04] transition-colors"
                 style={{ ...sans, color: !selectedGrant ? M : color.textSecondary, background: !selectedGrant ? `${M}08` : "transparent" }}>
-                All Grants
+                {tr("All Grants")}
               </button>
               {grants.map(g => (
                 <button type="button" key={g.id} onClick={() => { setSelectedGrant(g.id); setDropdownOpen(false); }}
@@ -240,15 +294,15 @@ export function AuditPage() {
         <button type="button" onClick={() => { setLoading(true); void load(); }}
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold shrink-0 transition-all hover:bg-white/[0.04]"
           style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.textDim }}>
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />Refresh
+          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />{tr("Refresh")}
         </button>
       </div>
 
       {/* Status bar */}
       <div className="flex items-center justify-between">
         <span className="text-xs" style={{ ...sans, color: color.textDim }}>
-          Showing <span style={{ color: color.text }}>{filtered.length}</span> events
-          {search && <span> matching &quot;{search}&quot;</span>}
+          {tr("Showing")} <span style={{ color: color.text }}>{filtered.length}</span> {tr("events")}
+          {search && <span> {tr("matching")} &quot;{search}&quot;</span>}
           {selectedGrant && <span> · grant {short(selectedGrant)}</span>}
         </span>
         <div className="flex items-center gap-1.5">
@@ -262,8 +316,8 @@ export function AuditPage() {
         <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: `${R}09`, border: `1px solid ${R}20` }}>
           <div className="p-2 rounded-xl" style={{ background: `${R}14`, border: `1px solid ${R}25` }}><AlertTriangle size={14} style={{ color: R }} /></div>
           <div className="flex-1">
-            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Backend Unreachable</div>
-            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{error}. Start the backend with <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
+            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{tr("Backend Unreachable")}</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{error}. {tr("Start the backend with")} <code style={{ ...mono, color: C }}>cd backend && npm run dev</code></div>
           </div>
         </div>
       )}
@@ -271,21 +325,21 @@ export function AuditPage() {
       {/* Audit table */}
       <div className="audit-ledger rounded-2xl overflow-hidden" style={{ ...glass() }}>
         {/* Table header */}
-        <div className="grid items-center px-5 py-3 border-b"
+        <div className="grid items-center px-5 py-3 border-b audit-ledger-head"
           style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: color.border, background: color.surfaceSubtle }}>
-          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Time</span>
-          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Event</span>
-          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Details</span>
-          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>Source</span>
-          <span className="text-[12px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: color.textDim }}>Signature</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>{tr("Time")}</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>{tr("Event")}</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>{tr("Details")}</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase" style={{ ...mono, color: color.textDim }}>{tr("Source")}</span>
+          <span className="text-[12px] font-bold tracking-widest uppercase text-right" style={{ ...mono, color: color.textDim }}>{tr("Signature")}</span>
         </div>
 
         {/* Empty state */}
         {filtered.length === 0 && !loading && !error && (
           <div className="px-5 py-12 text-center">
             <ScrollText size={24} style={{ color: color.border, margin: "0 auto 12px" }} />
-            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.textDim }}>No audit events yet</div>
-            <div className="text-xs" style={{ ...sans, color: color.textDim }}>Create a grant and start an agent to see events appear here in real time.</div>
+            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.textDim }}>{tr("No audit events yet")}</div>
+            <div className="text-xs" style={{ ...sans, color: color.textDim }}>{tr("Create a grant and start an agent to see events appear here in real time.")}</div>
           </div>
         )}
 
@@ -311,7 +365,7 @@ export function AuditPage() {
           const agreed = Boolean(pair?.chain && pair.server);
           return (
             <div key={row.id}
-              className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors group"
+              className="grid items-center px-5 py-3 border-b hover:bg-white/[0.018] transition-colors group ledger-row"
               style={{
                 gridTemplateColumns: "90px 130px 1fr 120px 90px",
                 borderColor: color.border,
@@ -339,18 +393,18 @@ export function AuditPage() {
                 <span
                   className="text-[12px] px-2 py-0.5 rounded-md truncate w-fit"
                   title={fromIndexer
-                    ? "Decoded from the program's own logs by the indexer — not from anything this server remembered."
-                    : `Recorded by the ${row.actorType === "owner" ? "owner's action" : row.actorType} as it happened.`}
+                    ? tr("Decoded from the program's own logs by the indexer — not from anything this server remembered.")
+                    : `${tr("Recorded by the ")}${row.actorType === "owner" ? tr("owner's action") : row.actorType}${tr(" as it happened.")}`}
                   style={{
                     ...mono,
                     background: fromIndexer ? `${C}12` : color.border,
                     color: fromIndexer ? C : color.textDim,
                     border: `1px solid ${fromIndexer ? `${C}25` : color.border}`,
                   }}>
-                  {fromIndexer ? "chain log" : row.actorType}
+                  {fromIndexer ? tr("chain log") : row.actorType}
                 </span>
                 {agreed && (
-                  <span title="The server's record of this transaction and the program's own logs agree. Two independent writers, one signature.">
+                  <span title={tr("The server's record of this transaction and the program's own logs agree. Two independent writers, one signature.")}>
                     <ShieldCheck size={11} style={{ color: M }} />
                   </span>
                 )}
@@ -380,9 +434,9 @@ export function AuditPage() {
       <div className="rounded-xl p-3 flex gap-2.5" style={{ background: `${C}0a`, border: `1px solid ${C}18` }}>
         <ScrollText size={12} style={{ color: C, marginTop: 1, flexShrink: 0 }} />
         <p className="text-[13px]" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>
-          This audit trail is append-only. Every event with a chain signature can be independently verified on{" "}
+          {tr("This audit trail is append-only. Every event with a chain signature can be independently verified on")}{" "}
           <a href="https://explorer.solana.com/?cluster=devnet" target="_blank" rel="noreferrer" style={{ color: C }}>Solana Explorer (Devnet)</a>.
-          The indexer reads program logs directly — dashboard numbers come from the chain, not the server.
+          {" "}{tr("The indexer reads program logs directly — dashboard numbers come from the chain, not the server.")}
         </p>
       </div>
     </div>

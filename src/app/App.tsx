@@ -7,7 +7,7 @@ import {
   Key, Timer, Lock,
   TrendingUp, Cpu, DollarSign, CheckCircle2, AlertTriangle,
   Clock, Network, ExternalLink,
-  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3, Menu, X,
+  Plus, PieChart, Shield, ArrowLeft, ArrowRight, Rows3, Menu, X, BookOpen,
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
@@ -24,6 +24,7 @@ import { ProtocolExperience } from "./components/ProtocolExperience";
 import { CommandPalette, type CommandItem } from "./components/CommandPalette";
 import { RouteScene } from "./components/RouteScene";
 import { SoundControl } from "./components/SoundControl";
+import { GuidePage } from "./components/GuidePage";
 import { playSound } from "./lib/soundscape";
 import {
   requestRiskAssessment,
@@ -84,11 +85,12 @@ const NAV = [
   { icon: ScrollText, label: "Audit", slug: "audit" },
   { icon: Layers, label: "Guardrails", slug: "guardrails" },
   { icon: Settings, label: "Settings", slug: "settings" },
+  { icon: BookOpen, label: "Guide", slug: "guide" },
 ];
 
 // Product journey, separate from the stable page indexes used by existing
 // actions and hashes: discover → configure → fund → verify → understand.
-const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7] as const;
+const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7, 8] as const;
 
 /* ── reusable components ── */
 function Badge({ status }: { status: string }) {
@@ -1203,7 +1205,7 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage];
+const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage, GuidePage];
 
 export default function App() {
   const indexFromHash = () => {

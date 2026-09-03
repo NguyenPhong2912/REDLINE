@@ -3,12 +3,26 @@ import { Key, ExternalLink, Activity, ShieldCheck, ShieldOff } from "lucide-reac
 import { api, subscribeFeed, fmtUsdc, short, type Grant } from "../lib/api";
 import { explorerTransactionUrl } from "../solana/client";
 import { color, mono, sans } from "../theme";
+import { useT } from "../i18n/LanguageContext";
 
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
+
+// English is the source language here too — every string below is written
+// in English and wrapped as `tr("...")`; this map supplies the Vietnamese side.
+const VI: Record<string, string> = {
+  "Live Grants": "Grant Đang Hoạt Động Trực Tiếp",
+  "Connect the backend to see on-chain grants here.": "Kết nối backend để xem các grant on-chain tại đây.",
+  "active": "hoạt động",
+  "revoked": "đã revoke",
+  "Total spend across all grants": "Tổng chi tiêu trên tất cả grant",
+  "View on Explorer": "Xem trên Explorer",
+  "Go to Guardrails →": "Vào Guardrails →",
+};
 
 // Live summary of all grants from the REDLINE API — shows real on-chain
 // data so the Dashboard isn't purely mock. Refreshes via SSE.
 export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void }) {
+  const tr = useT(VI);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [error, setError] = useState("");
 
@@ -39,8 +53,8 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
           <Activity size={13} style={{ color: A }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>Live Grants</div>
-          <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>Connect the backend to see on-chain grants here.</div>
+          <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{tr("Live Grants")}</div>
+          <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Connect the backend to see on-chain grants here.")}</div>
         </div>
       </div>
     );
@@ -59,16 +73,16 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}>
             <Key size={12} style={{ color: M }} />
           </div>
-          <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Live Grants</span>
+          <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Live Grants")}</span>
           <span className="text-[12px] font-bold tracking-widest" style={{ ...mono, color: M }}>ON-CHAIN</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
-            {active.length} active
+            {active.length} {tr("active")}
           </span>
           {revoked.length > 0 && (
             <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${R}14`, color: R, border: `1px solid ${R}25` }}>
-              {revoked.length} revoked
+              {revoked.length} {tr("revoked")}
             </span>
           )}
         </div>
@@ -77,11 +91,18 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
       {/* Overall progress */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px]" style={{ ...sans, color: color.textSecondary }}>Total spend across all grants</span>
+          <span className="text-[13px]" style={{ ...sans, color: color.textSecondary }}>{tr("Total spend across all grants")}</span>
           <span className="text-[13px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(totalSpent)} / {fmtUsdc(totalCap)} USDC</span>
         </div>
-        <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 4 }}>
-          <div className="absolute left-0 top-0 h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: A }} />
+        <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 6 }}>
+          <div
+            className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${pct}%`,
+              background: pct > 85 ? `linear-gradient(90deg, ${R}80, ${R})` : pct > 60 ? `linear-gradient(90deg, ${A}80, ${A})` : `linear-gradient(90deg, ${M}, #22d3ee)`,
+              boxShadow: pct > 85 ? `0 0 12px ${R}90` : pct > 60 ? `0 0 12px ${A}90` : `0 0 12px ${M}80`,
+            }}
+          />
         </div>
       </div>
 
@@ -92,7 +113,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
         const spent = Number(g.spentUnits);
         const rowPct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
         return (
-          <div key={g.id} className="px-5 py-3 border-t flex items-center gap-3 hover:bg-white/[0.018] transition-colors" style={{ borderColor: color.border }}>
+          <div key={g.id} className="px-5 py-3 border-t flex items-center gap-3 hover:bg-white/[0.018] transition-colors ledger-row" style={{ borderColor: color.border }}>
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}>
               {g.revoked ? <ShieldOff size={11} style={{ color: accent }} /> : <ShieldCheck size={11} style={{ color: accent }} />}
             </div>
@@ -109,7 +130,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
               </div>
             </div>
             {g.createSignature && !g.createSignature.startsWith("MOCK") && (
-              <a href={explorerTransactionUrl(g.createSignature)} target="_blank" rel="noreferrer" title="View on Explorer">
+              <a href={explorerTransactionUrl(g.createSignature)} target="_blank" rel="noreferrer" title={tr("View on Explorer")}>
                 <ExternalLink size={10} style={{ color: C }} />
               </a>
             )}
@@ -122,7 +143,7 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
         <button type="button" onClick={onNavigate}
           className="w-full px-5 py-3 text-center text-[13px] font-semibold border-t transition-all hover:bg-white/[0.03]"
           style={{ ...sans, color: C, borderColor: color.border }}>
-          Go to Guardrails →
+          {tr("Go to Guardrails →")}
         </button>
       )}
     </div>

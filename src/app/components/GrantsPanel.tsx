@@ -8,15 +8,48 @@ import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
+import { CopyChip } from "./CopyChip";
+import { useT } from "../i18n/LanguageContext";
 import { playSound } from "../lib/soundscape";
 
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 
-// Real grants from the API with three owner controls:
-//   Safe run → three paced, compliant transfers
-//   Safe transfer → preview the next transfer, then submit only if allowed
+// English is the source language here too — every string below is written
+// in English and wrapped as `tr("...")`; this map supplies the Vietnamese side.
+const VI: Record<string, string> = {
+  "Active Policy Accounts": "Tài Khoản Chính Sách Đang Hoạt Động",
+  "active": "hoạt động",
+  "api offline": "api mất kết nối",
+  "No grants yet — create one in the wizard below.": "Chưa có grant nào — tạo một grant ở wizard bên dưới.",
+  "Agent running…": "Agent đang chạy…",
+  "Start agent (scripted)": "Start agent (scripted)",
+  "Stress Test & Revoke:": "Kiểm Tra Chịu Tải & Revoke:",
+  "Force": "Force",
+  "USDC (over cap)": "USDC (vượt hạn mức)",
+  "Revoke": "Revoke",
+  "Read-only · Connect owner wallet to manage": "Chỉ xem · Kết nối ví chủ sở hữu để quản lý",
+  "Hide": "Ẩn",
+  "Show": "Xem",
+  "every proposal this agent made": "mọi đề xuất mà agent này đã đưa ra",
+  "loading…": "đang tải…",
+  "No proposals yet — start the agent, or force one over the cap.": "Chưa có đề xuất nào — hãy chạy agent, hoặc buộc gửi một đề xuất vượt hạn mức.",
+  "moved": "đã chuyển",
+  "passed precheck": "qua precheck",
+  "pending": "đang chờ",
+  "refused": "bị từ chối",
+  "expired": "đã hết hạn",
+  "m left": " phút nữa",
+  "h left": " giờ nữa",
+  "d left": " ngày nữa",
+  "rented": "đã thuê",
+};
+
+// Real grants from the API with the three demo controls:
+//   Start agent  → POST /runs (scripted: 3 compliant transfers + 1 over cap)
+//   Force over-cap → POST /intents submitEvenIfDenied (program rejects on-chain)
 //   Revoke → owner signs revoke_grant in the wallet, API records the signature
 export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const signMessage = useSignMessage(client);
@@ -88,25 +121,6 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     }
   }
 
-  async function submitValidatedTransfer(g: Grant, mint: string, destination: string, amountUnits: bigint) {
-    const draft = {
-      grantId: g.id,
-      mint,
-      destination,
-      amountUnits: amountUnits.toString(),
-      reason: "Owner-triggered transfer validated by REDLINE preflight",
-    };
-    const preview = await api.previewIntent(draft);
-    if (!preview.verdict.allow) {
-      throw new Error(`Preflight blocked this transfer: ${preview.verdict.message}`);
-    }
-    const submitted = await api.submitIntent({ ...draft, nonce: preview.nonce });
-    if (!submitted.submitted || submitted.onchainSuccess === false) {
-      throw new Error(`Solana did not confirm the transfer: ${submitted.onchainReason ?? submitted.precheck.message}`);
-    }
-    return submitted;
-  }
-
   const activeRun = (g: Grant) => g.runs?.find(r => r.status === "running");
 
   // Per-grant proposal history. The API has always returned this; nothing in
@@ -123,19 +137,17 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
       <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
-        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Active Policy Accounts</span>
+        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Active Policy Accounts")}</span>
         <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
-          {grants.filter(g => !g.revoked).length} active · {chain || "api offline"}
+          {grants.filter(g => !g.revoked).length} {tr("active")} · {chain || tr("api offline")}
         </span>
       </div>
       {error && <div className="px-5 py-2 text-[13px]" style={{ ...mono, color: R }}>{error}</div>}
-      {grants.length === 0 && !error && <div className="px-5 py-6 text-[13px]" style={{ ...mono, color: color.textDim }}>No grants yet — create one in the wizard below.</div>}
+      {grants.length === 0 && !error && <div className="px-5 py-6 text-[13px]" style={{ ...mono, color: color.textDim }}>{tr("No grants yet — create one in the wizard below.")}</div>}
       {grants.map(g => {
         const oc = g.onchain;
-        const capUnits = BigInt(g.policyVersion.spendCapUnits);
-        const spentUnits = BigInt(oc?.spentUnits ?? g.spentUnits);
-        const cap = Number(capUnits);
-        const spent = Number(spentUnits);
+        const cap = Number(g.policyVersion.spendCapUnits);
+        const spent = Number(oc?.spentUnits ?? g.spentUnits);
         const pct = cap ? Math.min(100, (spent / cap) * 100) : 0;
         const revoked = g.revoked || oc?.active === false;
         const running = activeRun(g);
@@ -145,60 +157,91 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         const expiresAt = new Date(oc ? oc.expiresAt * 1000 : g.policyVersion.expiresAt);
         const msLeft = expiresAt.getTime() - Date.now();
         const expired = msLeft <= 0;
-        const expiry = expired ? "expired"
-          : msLeft < 3_600_000 ? `${Math.max(1, Math.round(msLeft / 60_000))}m left`
-          : msLeft < 86_400_000 ? `${Math.round(msLeft / 3_600_000)}h left`
-          : `${Math.round(msLeft / 86_400_000)}d left`;
+        const expiry = expired ? tr("expired")
+          : msLeft < 3_600_000 ? `${Math.max(1, Math.round(msLeft / 60_000))}${tr("m left")}`
+          : msLeft < 86_400_000 ? `${Math.round(msLeft / 3_600_000)}${tr("h left")}`
+          : `${Math.round(msLeft / 86_400_000)}${tr("d left")}`;
         const expirySoon = !expired && msLeft < 3_600_000;
         const accent = revoked || expired ? R : running ? M : C;
         const dest = (JSON.parse(g.policyVersion.allowedDests) as string[])[0];
         const mint = (JSON.parse(g.policyVersion.allowedMints) as string[])[0];
         const ownerWallet = connected ? String(connected.account.address) : "";
         const isOwner = ownerWallet === g.owner.wallet;
-        const remainingUnits = capUnits > spentUnits ? capUnits - spentUnits : 0n;
-        const safeSlice = capUnits / 5n > 0n ? capUnits / 5n : 1n;
-        const safeAmountUnits = remainingUnits < safeSlice ? remainingUnits : safeSlice;
-        const txCount = oc?.transactionCount ?? g.transactionCount;
-        const canTransfer = !expired && safeAmountUnits > 0n && txCount < g.policyVersion.maxTransactions && Boolean(mint && dest);
         return (
-          <div key={g.id} className="px-5 py-4 border-b space-y-3" style={{ borderColor: color.border }}>
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}><Key size={13} style={{ color: accent }} /></div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span></div>
-                <div className="text-[12px] flex gap-3" style={{ ...mono, color: C }}>
-                  <span title={g.grantPda}>grant {short(g.grantPda)}</span>
-                  <span style={{ color: color.textDim }} title={g.policyVersion.policyHash}>policy {g.policyVersion.policyHash.slice(0, 8)}…</span>
-                  {g.createSignature && !g.createSignature.startsWith("MOCK") && <a href={explorerTransactionUrl(g.createSignature)} target="_blank" rel="noreferrer" style={{ color: C }}>explorer <ExternalLink size={9} className="inline" /></a>}
+          <div key={g.id} className="px-5 py-4 border-b space-y-3 ledger-row" style={{ borderColor: color.border }}>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 sm:mt-0" style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}>
+                  <Key size={13} style={{ color: accent }} />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="text-xs font-semibold leading-normal" style={{ ...sans, color: color.text }}>
+                    {g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span>
+                  </div>
+                  <div className="text-[12px] flex flex-wrap items-center gap-x-3 gap-y-1 leading-normal" style={{ ...mono, color: C }}>
+                    <CopyChip value={g.grantPda} label={`grant ${short(g.grantPda)}`} title="Copy full grant address" toastLabel={short(g.grantPda)} />
+                    <span style={{ color: color.textDim }} title={g.policyVersion.policyHash}>policy {g.policyVersion.policyHash.slice(0, 8)}…</span>
+                    {g.createSignature && !g.createSignature.startsWith("MOCK") && (
+                      <a href={explorerTransactionUrl(g.createSignature)} target="_blank" rel="noreferrer" style={{ color: C }}>
+                        explorer <ExternalLink size={9} className="inline ml-0.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="hidden sm:block text-right">
-                <div className="text-[13px] font-semibold" style={{ ...mono, color: A }}>{fmtUsdc(spent)} / {fmtUsdc(cap)} USDC</div>
-                <div className="text-[12px]" style={{ ...mono, color: color.textDim }}>
-                  tx {oc?.transactionCount ?? g.transactionCount}/{g.policyVersion.maxTransactions} · nonce {oc?.nextNonce ?? g.nextNonce} ·{" "}
-                  <span title={`Gate 2 refuses every transfer after ${expiresAt.toLocaleString()}`} style={{ color: expired ? R : expirySoon ? A : color.textDim }}>{expiry}</span>
-                  {g.hire && <> · <span title={`Runs under a marketplace rental ending ${new Date(g.hire.endsAt).toLocaleString()}`} style={{ color: C }}>rented</span></>}
+
+              <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0" style={{ borderColor: color.border }}>
+                <div className="text-left lg:text-right space-y-0.5 min-w-0">
+                  <div className="text-[13px] font-semibold leading-normal" style={{ ...mono, color: A }}>
+                    {fmtUsdc(spent)} / {fmtUsdc(cap)} USDC
+                  </div>
+                  <div className="text-[12px] leading-normal" style={{ ...mono, color: color.textDim }}>
+                    tx {oc?.transactionCount ?? g.transactionCount}/{g.policyVersion.maxTransactions} · nonce {oc?.nextNonce ?? g.nextNonce} ·{" "}
+                    <span title={`Gate 2 refuses every transfer after ${expiresAt.toLocaleString()}`} style={{ color: expired ? R : expirySoon ? A : color.textDim }}>
+                      {expiry}
+                    </span>
+                    {g.hire && (
+                      <> · <span title={`Runs under a marketplace rental ending ${new Date(g.hire.endsAt).toLocaleString()}`} style={{ color: C }}>{tr("rented")}</span></>
+                    )}
+                  </div>
                 </div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold shrink-0" style={{ ...mono, background: `${accent}12`, color: accent, border: `1px solid ${accent}25` }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, animation: running ? "redline-pulse 2s infinite" : "none" }} />
+                  {revoked ? "REVOKED" : expired ? "EXPIRED" : running ? "AGENT RUNNING" : "ACTIVE"}
+                </span>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold" style={{ ...mono, background: `${accent}12`, color: accent, border: `1px solid ${accent}25` }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, animation: running ? "redline-pulse 2s infinite" : "none" }} />
-                {revoked ? "REVOKED" : expired ? "EXPIRED" : running ? "AGENT RUNNING" : "ACTIVE"}
-              </span>
             </div>
-            <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 3 }}>
-              <div className="absolute left-0 top-0 h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${A}60, ${A})` }} />
+            <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 6 }}>
+              <div
+                className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${pct}%`,
+                  background: pct > 85
+                    ? `linear-gradient(90deg, ${R}80, ${R})`
+                    : pct > 60
+                      ? `linear-gradient(90deg, ${A}80, ${A})`
+                      : `linear-gradient(90deg, ${M}, #22d3ee)`,
+                  boxShadow: pct > 85 ? `0 0 12px ${R}90` : pct > 60 ? `0 0 12px ${A}90` : `0 0 12px ${M}80`,
+                }}
+              />
             </div>
             {!revoked && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 {isOwner ? (
                   <>
-                    <Btn icon={Play} label={running ? "Safe run active…" : "Run safe sequence"} accent={M} disabled={!!running || !!busy || !canTransfer} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id), g.owner.wallet)} />
-                    <Btn icon={Zap} label={canTransfer ? `Send ${fmtUsdc(safeAmountUnits)} USDC safely` : "No valid transfer available"} accent={A} disabled={!!busy || !canTransfer} busy={busy === `safe-${g.id}`}
-                      onClick={() => run(`safe-${g.id}`, () => submitValidatedTransfer(g, mint, dest, safeAmountUnits), g.owner.wallet)} />
-                    <Btn icon={ShieldOff} label="Revoke" accent={R} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
+                    <div className="flex items-center gap-2">
+                      <Btn icon={Play} label={running ? tr("Agent running…") : tr("Start agent (scripted)")} accent={M} disabled={!!running || !!busy} busy={busy === `run-${g.id}`} onClick={() => run(`run-${g.id}`, () => api.startRun(g.id), g.owner.wallet)} />
+                    </div>
+                    {/* Isolated Destructive / Danger Actions Zone */}
+                    <div className="flex items-center gap-2 pl-3 border-l" style={{ borderColor: color.border }}>
+                      <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">{tr("Stress Test & Revoke:")}</span>
+                      <Btn icon={Zap} label={`${tr("Force")} ${fmtUsdc(cap)} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
+                        onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }), g.owner.wallet)} />
+                      <Btn icon={ShieldOff} label={tr("Revoke")} accent={color.blocked} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
+                    </div>
                   </>
                 ) : (
-                  <div className="text-[12px] py-1.5" style={{ ...mono, color: color.textMuted }}>Read-only · Connect owner wallet to manage</div>
+                  <div className="text-[12px] py-1.5" style={{ ...mono, color: color.textMuted }}>{tr("Read-only · Connect owner wallet to manage")}</div>
                 )}
               </div>
             )}
@@ -206,15 +249,15 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             <button type="button" onClick={() => void toggleIntents(g.id)} aria-expanded={openGrant === g.id}
               className="flex items-center gap-1.5 text-[12px] pt-0.5" style={{ ...mono, color: color.textDim }}>
               <ChevronRight size={11} style={{ transform: openGrant === g.id ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
-              {openGrant === g.id ? "Hide" : "Show"} every proposal this agent made
+              {openGrant === g.id ? tr("Hide") : tr("Show")} {tr("every proposal this agent made")}
             </button>
 
             {openGrant === g.id && (
               <div className="rounded-xl overflow-hidden" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                 {!intents[g.id] ? (
-                  <div className="px-3 py-3 text-[12px] flex items-center gap-2" style={{ ...mono, color: color.textDim }}><LoaderCircle size={11} className="animate-spin" /> loading…</div>
+                  <div className="px-3 py-3 text-[12px] flex items-center gap-2" style={{ ...mono, color: color.textDim }}><LoaderCircle size={11} className="animate-spin" /> {tr("loading…")}</div>
                 ) : intents[g.id].length === 0 ? (
-                  <div className="px-3 py-3 text-[12px]" style={{ ...mono, color: color.textDim }}>No proposals yet — run a safe sequence or submit a validated transfer.</div>
+                  <div className="px-3 py-3 text-[12px]" style={{ ...mono, color: color.textDim }}>{tr("No proposals yet — start the agent, or force one over the cap.")}</div>
                 ) : intents[g.id].map(it => {
                   const d = it.decision;
                   const tx = d?.chainTx;
@@ -230,7 +273,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                       <span className="text-[12px] shrink-0" style={{ ...mono, color: color.textDim }}>→ {short(it.destination, 4)}</span>
                       <span className="text-[12px] flex-1 truncate" style={{ ...sans, color: color.textDim }} title={it.reason}>{it.reason}</span>
                       <span className="text-[12px] px-1.5 py-0.5 rounded-md shrink-0" style={{ ...mono, background: `${colour}12`, color: colour, border: `1px solid ${colour}25` }}>
-                        {tx ? (tx.result === "success" ? "moved" : d?.reasonCode ?? "refused") : d ? (d.allow ? "passed precheck" : d.reasonCode) : "pending"}
+                        {tx ? (tx.result === "success" ? tr("moved") : d?.reasonCode ?? tr("refused")) : d ? (d.allow ? tr("passed precheck") : d.reasonCode) : tr("pending")}
                       </span>
                       {tx?.signature && !tx.signature.startsWith("MOCK") && (
                         <a href={explorerTransactionUrl(tx.signature)} target="_blank" rel="noreferrer" className="shrink-0" style={{ color: C }} title="Open this transaction on Solana Explorer">

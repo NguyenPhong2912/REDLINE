@@ -2,6 +2,52 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerDownLeft, TerminalSquare } from "lucide-react";
 import { api, fmtUsdc, short } from "../lib/api";
 import { mono, sans, term } from "../theme";
+import { useT } from "../i18n/LanguageContext";
+
+// English is the source language here too, same as the rest of the app —
+// every string below is written in English and wrapped as `tr("...")`.
+const VI: Record<string, string> = {
+  "REDLINE console — every answer below is read from recorded state.":
+    "Console REDLINE — mọi câu trả lời dưới đây đều được đọc từ trạng thái đã ghi nhận.",
+  "Type `help` for what this can tell you.": "Gõ `help` để xem console này có thể cho bạn biết những gì.",
+
+  "the seven checks, and how often each has refused a transfer": "bảy vòng kiểm tra, và tần suất mỗi vòng đã từ chối một lệnh chuyển",
+  "policy accounts, what they have spent, when they lapse": "các tài khoản policy, số đã chi, khi nào hết hạn",
+  "the last n recorded events (default 8)": "n sự kiện đã ghi nhận gần nhất (mặc định 8)",
+  "which gate owns a reason code, and what it means": "gate nào sở hữu mã lý do đó, và ý nghĩa của nó",
+  "put a question to the assistant, answered from recorded data": "đặt câu hỏi cho trợ lý, được trả lời từ dữ liệu đã ghi nhận",
+  "empty the console": "xoá trắng console",
+
+  "this wallet": "ví này",
+  "protocol-wide": "toàn giao thức",
+  "no grants recorded": "chưa có grant nào được ghi nhận",
+
+  "explain what? try `explain SPEND_CAP_EXCEEDED`": "explain cái gì? thử `explain SPEND_CAP_EXCEEDED`",
+  "is not a gate refusal — it may be a chain error, which sits outside the policy":
+    "không phải một lần từ chối bởi gate — có thể là lỗi trên chuỗi, nằm ngoài phạm vi policy",
+  "is gate": "là gate",
+  "Gates run in order and the first failure stops the transfer, so a": "Các gate chạy tuần tự và lỗi đầu tiên sẽ dừng lệnh chuyển, nên một",
+  "means gates 1–": "nghĩa là các gate 1–",
+  "passed and nothing moved.": "đã qua và không có gì được chuyển.",
+
+  "ask what? try `ask why is my agent being blocked`": "ask cái gì? thử `ask vì sao agent của tôi bị chặn`",
+  "ask why is my agent being blocked": "ask vì sao agent của tôi bị chặn",
+  "Protocol console": "Console giao thức",
+  "answered by": "trả lời bởi",
+  ", grounded in recorded state": ", dựa trên trạng thái đã ghi nhận",
+  "answered from recorded figures — no model configured": "trả lời từ số liệu đã ghi nhận — chưa cấu hình model",
+
+  "unknown command:": "lệnh không xác định:",
+  " — try `help`": " — thử `help`",
+  "the API did not answer": "API không phản hồi",
+
+  "console": "console",
+  "Console command": "Lệnh console",
+  "Run command": "Chạy lệnh",
+
+  "Answers come from this deployment's own records. Where a figure is unknown the console says so instead of estimating one.":
+    "Câu trả lời đến từ chính dữ liệu ghi nhận của deployment này. Khi một số liệu chưa xác định, console sẽ nói rõ thay vì ước tính.",
+};
 
 // One console instead of three widgets.
 //
@@ -13,22 +59,23 @@ import { mono, sans, term } from "../theme";
 
 type Line = { id: number; kind: "in" | "out" | "dim" | "warn" | "good"; text: string };
 
-const HELP = [
-  "gates            the seven checks, and how often each has refused a transfer",
-  "grants           policy accounts, what they have spent, when they lapse",
-  "audit [n]        the last n recorded events (default 8)",
-  "explain <CODE>   which gate owns a reason code, and what it means",
-  "ask <question>   put a question to the assistant, answered from recorded data",
-  "clear            empty the console",
+const HELP: [string, string][] = [
+  ["gates           ", "the seven checks, and how often each has refused a transfer"],
+  ["grants          ", "policy accounts, what they have spent, when they lapse"],
+  ["audit [n]       ", "the last n recorded events (default 8)"],
+  ["explain <CODE>  ", "which gate owns a reason code, and what it means"],
+  ["ask <question>  ", "put a question to the assistant, answered from recorded data"],
+  ["clear           ", "empty the console"],
 ];
 
 let seq = 0;
 const line = (kind: Line["kind"], text: string): Line => ({ id: (seq += 1), kind, text });
 
 export function ProtocolConsole({ owner }: { owner?: string }) {
+  const tr = useT(VI);
   const [lines, setLines] = useState<Line[]>([
-    line("dim", "REDLINE console — every answer below is read from recorded state."),
-    line("dim", "Type `help` for what this can tell you."),
+    line("dim", tr("REDLINE console — every answer below is read from recorded state.")),
+    line("dim", tr("Type `help` for what this can tell you.")),
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,7 +103,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
     try {
       switch (verb.toLowerCase()) {
         case "help":
-          push(...HELP.map(h => line("out", h)));
+          push(...HELP.map(([usage, desc]) => line("out", `${usage} ${tr(desc)}`)));
           break;
 
         case "clear":
@@ -65,7 +112,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
 
         case "gates": {
           const o = await api.protocolOverview(owner);
-          push(line("dim", `${o.scope === "wallet" ? "this wallet" : "protocol-wide"} · ${o.network.cluster}`));
+          push(line("dim", `${o.scope === "wallet" ? tr("this wallet") : tr("protocol-wide")} · ${o.network.cluster}`));
           for (const g of o.gates) {
             const l = g.rejected
               ? line("warn", `${g.id}. ${g.label.padEnd(20)} refused ${g.rejected}× — ${g.detail}`)
@@ -78,7 +125,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
 
         case "grants": {
           const gs = await api.grants();
-          if (!gs.length) { push(line("dim", "no grants recorded")); break; }
+          if (!gs.length) { push(line("dim", tr("no grants recorded"))); break; }
           for (const g of gs) {
             const cap = Number(g.policyVersion.spendCapUnits);
             const spent = Number(g.spentUnits);
@@ -103,47 +150,47 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
 
         case "explain": {
           const code = arg.toUpperCase();
-          if (!code) { push(line("warn", "explain what? try `explain SPEND_CAP_EXCEEDED`")); break; }
+          if (!code) { push(line("warn", tr("explain what? try `explain SPEND_CAP_EXCEEDED`"))); break; }
           const o = await api.protocolOverview(owner);
           const gate = o.gates.find(g => g.reasonCodes.includes(code));
-          if (!gate) { push(line("warn", `${code} is not a gate refusal — it may be a chain error, which sits outside the policy`)); break; }
+          if (!gate) { push(line("warn", `${code} ${tr("is not a gate refusal — it may be a chain error, which sits outside the policy")}`)); break; }
           push(
-            line("out", `${code} is gate ${gate.id}, ${gate.label}.`),
+            line("out", `${code} ${tr("is gate")} ${gate.id}, ${gate.label}.`),
             line("out", gate.detail + "."),
-            line("dim", `Gates run in order and the first failure stops the transfer, so a ${code} means gates 1–${gate.id - 1} passed and nothing moved.`),
+            line("dim", `${tr("Gates run in order and the first failure stops the transfer, so a")} ${code} ${tr("means gates 1–")}${gate.id - 1} ${tr("passed and nothing moved.")}`),
           );
           break;
         }
 
         case "ask": {
-          if (!arg) { push(line("warn", "ask what? try `ask why is my agent being blocked`")); break; }
+          if (!arg) { push(line("warn", tr("ask what? try `ask why is my agent being blocked`"))); break; }
           const reply = await api.ask(arg, owner);
           push(line("out", reply.answer));
           for (const s of reply.suggestions) {
             push(line("warn", `→ ${s.title}`), line("out", `  ${s.detail}`));
           }
           push(line("dim", reply.source === "model"
-            ? `answered by ${reply.model}, grounded in recorded state`
-            : "answered from recorded figures — no model configured"));
+            ? `${tr("answered by")} ${reply.model}${tr(", grounded in recorded state")}`
+            : tr("answered from recorded figures — no model configured")));
           break;
         }
 
         default:
-          push(line("warn", `unknown command: ${verb} — try \`help\``));
+          push(line("warn", `${tr("unknown command:")} ${verb}${tr(" — try `help`")}`));
       }
     } catch (e) {
-      push(line("warn", e instanceof Error ? e.message : "the API did not answer"));
+      push(line("warn", e instanceof Error ? e.message : tr("the API did not answer")));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className="redline-console" aria-label="Protocol console">
+    <section className="redline-console" aria-label={tr("Protocol console")}>
       <header className="redline-console-bar">
         <TerminalSquare size={12} />
-        <span>console</span>
-        <span className="redline-console-hint">{owner ? short(owner, 4) : "protocol-wide"}</span>
+        <span>{tr("console")}</span>
+        <span className="redline-console-hint">{owner ? short(owner, 4) : tr("protocol-wide")}</span>
       </header>
 
       <div className="redline-console-body" ref={scrollRef}>
@@ -176,17 +223,17 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
               setHistoryAt(next); setInput(next < 0 ? "" : history[next]);
             }
           }}
-          placeholder="ask why is my agent being blocked"
-          aria-label="Console command"
+          placeholder={tr("ask why is my agent being blocked")}
+          aria-label={tr("Console command")}
           spellCheck={false}
           autoComplete="off"
           style={{ ...mono }}
         />
-        <button type="submit" disabled={busy} aria-label="Run command"><CornerDownLeft size={12} /></button>
+        <button type="submit" disabled={busy} aria-label={tr("Run command")}><CornerDownLeft size={12} /></button>
       </form>
 
       <p className="redline-console-note" style={sans}>
-        Answers come from this deployment's own records. Where a figure is unknown the console says so instead of estimating one.
+        {tr("Answers come from this deployment's own records. Where a figure is unknown the console says so instead of estimating one.")}
       </p>
     </section>
   );

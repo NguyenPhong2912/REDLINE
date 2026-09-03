@@ -48,6 +48,9 @@ export interface FeedEvent { id: string; at: string; eventType: string; actorTyp
 export interface Listing {
   id: string; agentVersionId: string; priceLamports: string; developerWallet: string | null; status: string; createdAt: string;
   agentVersion: AgentVersion; activeHires: number;
+  // Market stats from the backend, all derived from real records (hire rows +
+  // `listing.hired` audit events). Optional so an older API build still types.
+  totalHires?: number; hires24h?: number; volumeLamports?: string; lastHiredAt?: string | null;
 }
 export interface Hire {
   id: string; listingId: string; ownerWallet: string; paymentSignature: string | null; startsAt: string; endsAt: string; status: string;
@@ -136,7 +139,7 @@ export const api = {
   intents: (grantId: string) => req<IntentRow[]>(`/grants/${grantId}/intents`),
   previewIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
     req<IntentPreview>("/intents/preview", { method: "POST", body: JSON.stringify(b) }),
-  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
+  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number; submitEvenIfDenied?: boolean }) =>
     req<{ intentId: string; precheck: { reasonCode: string; message: string }; submitted: boolean; signature?: string; onchainSuccess?: boolean; onchainReason?: string }>("/intents", { method: "POST", body: JSON.stringify(b) }),
   startRun: (grantId: string, mode: "scripted" | "llm" = "scripted") => req<{ id: string }>("/runs", { method: "POST", body: JSON.stringify({ grantId, mode }) }),
   stopRun: (runId: string) => req<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST" }),
@@ -167,3 +170,18 @@ export function subscribeFeed(grantId: string, onEvent: (e: FeedEvent) => void):
 
 export const fmtUsdc = (units: string | number | bigint, decimals = 6) => (Number(units) / 10 ** decimals).toLocaleString("en-US", { maximumFractionDigits: 2 });
 export const short = (s: string, n = 4) => (s.length > n * 2 + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s);
+
+// Compact relative time: "<1m", "5m", "3h", "2d". Language-neutral units so it
+// reads the same under either locale; the caller translates the surrounding
+// label. Returns "—" when there is no timestamp.
+export function agoShort(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return "—";
+  if (ms < 60_000) return "<1m";
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
