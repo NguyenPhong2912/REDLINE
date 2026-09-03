@@ -109,12 +109,90 @@
 }
 
 /* ─── Journey bar ───────────────────────────────────────────────────────────*/
-.route-flow-home:hover,
-.route-flow-pager button:not(:disabled):hover,
-.route-flow-track button[aria-current="page"] {
-  color: rgb(var(--pg)) !important;
-  background: rgba(var(--pg), .09) !important;
+.app-main:not(.app-main-home) .route-flow-bar {
+  width: min(100%, 1120px);
+  min-height: 72px;
+  margin: 0 auto var(--page-gap);
+  padding: 9px;
+  grid-template-columns: auto minmax(320px, 1fr) auto;
+  gap: 12px;
+  border: 1px solid rgba(99, 119, 151, .42);
+  border-radius: 18px;
+  background: linear-gradient(115deg, rgba(18, 29, 49, .96), rgba(12, 21, 38, .90));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .20), inset 0 1px rgba(255, 255, 255, .035);
 }
+.route-flow-home,
+.route-flow-pager button {
+  min-height: 52px;
+  border: 1px solid rgba(91, 111, 143, .42);
+  border-radius: 12px;
+  color: #d8c18f;
+  background: rgba(31, 45, 69, .72);
+}
+.route-flow-home { padding-inline: 14px; }
+.route-flow-home > span,
+.route-flow-pager button > span { display: grid; gap: 4px; text-align: left; line-height: 1; }
+.route-flow-home small,
+.route-flow-pager small { color: #8392aa; font: 600 8px/1 'JetBrains Mono', monospace; letter-spacing: .14em; }
+.route-flow-context {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) minmax(180px, 1fr);
+  align-items: center;
+  gap: clamp(18px, 3vw, 44px);
+  min-width: 0;
+  padding: 0 clamp(8px, 1.6vw, 20px);
+}
+.route-flow-current { position: relative; display: grid; min-width: 0; gap: 3px; padding-left: 13px; }
+.route-flow-current::before {
+  position: absolute; inset-block: 1px; left: 0; width: 2px; content: "";
+  background: rgb(var(--pg)); box-shadow: 0 0 12px rgba(var(--pg), .65);
+}
+.route-flow-current > span { color: #8392aa; font: 600 8px/1 'JetBrains Mono', monospace; letter-spacing: .17em; }
+.route-flow-current strong { display: flex; align-items: baseline; gap: 9px; min-width: 0; color: #f2eee5; font: 650 14px/1.15 'Inter', sans-serif; white-space: nowrap; }
+.route-flow-current strong b { color: rgb(var(--pg)); font: 600 11px/1 'JetBrains Mono', monospace; }
+.route-flow-current > small { display: none; }
+.route-flow-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(18px, 1fr));
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.route-flow-track::before { display: none; }
+.route-flow-track button {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 28px;
+  padding: 11px 0;
+  border-radius: 7px;
+  background: transparent;
+}
+.route-flow-track button > span {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(102, 120, 150, .38);
+  transition: background .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.route-flow-track button[data-complete="true"] > span { background: rgba(var(--pg), .40); }
+.route-flow-track button.is-active > span {
+  background: rgb(var(--pg));
+  box-shadow: 0 0 13px rgba(var(--pg), .72);
+  transform: scaleY(1.7);
+}
+.route-flow-pager { gap: 7px; }
+.route-flow-pager button { padding-inline: 12px; }
+.route-flow-home:hover,
+.route-flow-pager button:not(:disabled):hover {
+  color: #f5dca8 !important;
+  border-color: rgba(var(--pg), .56) !important;
+  background: rgba(var(--pg), .10) !important;
+}
+.route-flow-track button:hover > span { background: rgba(var(--pg), .72); }
 
 /* ─── Cards ─────────────────────────────────────────────────────────────────
    Hover only. No corner ornament: an accent rail stamped on every card
@@ -200,11 +278,26 @@
 @media (max-width: 920px) {
   .header-sound-trigger span { display: none; }
   .header-sound-trigger { width: 38px; justify-content: center; padding-inline: 0; }
+  .app-main:not(.app-main-home) .route-flow-bar { grid-template-columns: auto minmax(190px, 1fr) auto; }
+  .route-flow-context { grid-template-columns: minmax(110px, auto) minmax(120px, 1fr); gap: 14px; padding-inline: 4px; }
+  .route-flow-pager button > span { display: none; }
+  .route-flow-pager button { width: 42px; padding: 0; }
 }
 
 @media (max-width: 520px) {
   .route-page { font-size: 15px; }
   .route-page .flex.items-center.gap-4 { gap: 10px; }
+  .app-main:not(.app-main-home) .route-flow-bar { min-height: 58px; grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px; padding: 7px; border-radius: 15px; }
+  .route-flow-home, .route-flow-pager button { width: 40px; min-height: 42px; padding: 0; }
+  .route-flow-home > span { display: none; }
+  .route-flow-context { display: block; padding-inline: 5px; }
+  .route-flow-current { padding-left: 10px; }
+  .route-flow-current > span { display: none; }
+  .route-flow-current strong { font-size: 12px; }
+  .route-flow-current > small { display: block; color: #8392aa; font: 600 8px/1 'JetBrains Mono', monospace; letter-spacing: .12em; }
+  .route-flow-track { margin-top: 7px; gap: 3px; }
+  .route-flow-track button { min-height: 8px; padding: 2px 0; }
+  .route-flow-track button > span { height: 2px; }
 }
 
 /* ─── Wide desktop: use the extra width, don't inflate the type ─────────────*/

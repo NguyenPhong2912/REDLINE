@@ -1373,33 +1373,40 @@ export default function App() {
               <div className="route-flow-bar" aria-label="Product journey navigation">
                 <button type="button" className="route-flow-home" onClick={() => navigate(0)}>
                   <ArrowLeft size={14} />
-                  <span>Protocol</span>
+                  <span><small>RETURN TO</small>Protocol</span>
                 </button>
-                <div className="route-flow-track">
-                  {FLOW_ORDER.slice(1, -1).map((pageIndex, position) => (
-                    <button
-                      type="button"
-                      key={NAV[pageIndex].slug}
-                      className={nav === pageIndex ? "is-active" : ""}
-                      onClick={() => navigate(pageIndex)}
-                      aria-current={nav === pageIndex ? "step" : undefined}
-                      title={NAV[pageIndex].label}
-                    >
-                      <span>{position + 1}</span>
-                      <em>{NAV[pageIndex].label}</em>
-                    </button>
-                  ))}
+                <div className="route-flow-context">
+                  <div className="route-flow-current">
+                    <span>PRODUCT JOURNEY</span>
+                    <strong><b>{String(flowPosition).padStart(2, "0")}</b>{NAV[nav].label}</strong>
+                    <small>{String(flowPosition).padStart(2, "0")} / {String(FLOW_ORDER.length - 1).padStart(2, "0")}</small>
+                  </div>
+                  <div className="route-flow-track" aria-label="Journey steps">
+                    {FLOW_ORDER.slice(1).map((pageIndex, position) => (
+                      <button
+                        type="button"
+                        key={NAV[pageIndex].slug}
+                        className={nav === pageIndex ? "is-active" : ""}
+                        data-complete={position < flowPosition - 1}
+                        onClick={() => navigate(pageIndex)}
+                        aria-label={`Step ${position + 1}: ${NAV[pageIndex].label}`}
+                        aria-current={nav === pageIndex ? "step" : undefined}
+                        title={NAV[pageIndex].label}
+                      >
+                        <span />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span className="route-current-page">{NAV[nav].label}</span>
                 <div className="route-flow-pager">
                   {previousPage !== null && previousPage !== 0 && (
                     <button type="button" onClick={() => navigate(previousPage)} aria-label={`Previous: ${NAV[previousPage].label}`}>
-                      <ArrowLeft size={13} />
+                      <ArrowLeft size={13} /><span><small>PREVIOUS</small>{NAV[previousPage].label}</span>
                     </button>
                   )}
                   {nextPage !== null && (
                     <button type="button" onClick={() => navigate(nextPage)} aria-label={`Next: ${NAV[nextPage].label}`}>
-                      <span>{NAV[nextPage].label}</span><ArrowRight size={13} />
+                      <span><small>NEXT</small>{NAV[nextPage].label}</span><ArrowRight size={13} />
                     </button>
                   )}
                 </div>
