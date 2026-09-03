@@ -1180,7 +1180,10 @@ html, body, #root { background: #dde5ed; }
   border-color: rgba(158,175,194,.62) !important;
   box-shadow: none;
 }
-.app-header nav { justify-content: center; }
+.app-header nav { justify-content: flex-start; }
+@media (min-width: 1536px) {
+  .app-header nav { justify-content: center; }
+}
 .app-header nav button { color: #65758a !important; }
 .app-header nav button[aria-current="page"] { color: #365b86 !important; background: rgba(71,107,150,.09) !important; }
 .app-header nav button:hover { color: #365b86 !important; background: rgba(71,107,150,.06) !important; }
@@ -1188,9 +1191,9 @@ html, body, #root { background: #dde5ed; }
 .redline-spatial-canvas { opacity: .16; filter: grayscale(.15) saturate(.55); }
 
 .route-flow-bar {
-  position: sticky;
-  z-index: 24;
-  top: 0;
+  position: relative;
+  z-index: 10;
+  top: auto;
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
   align-items: center;
@@ -1812,7 +1815,8 @@ html, body, #root { background: #cbd5df; }
 .route-scene[data-scene="treasury"] .route-scene-art { object-position: 34% center; }
 .route-scene[data-scene="audit"] .route-scene-art,
 .route-scene[data-scene="analytics"] .route-scene-art,
-.route-scene[data-scene="settings"] .route-scene-art { object-position: 72% 72%; }
+.route-scene[data-scene="settings"] .route-scene-art,
+.route-scene[data-scene="guide"] .route-scene-art { object-position: 72% center; }
 .route-scene-art-wash {
   position: absolute;
   inset: 0;
@@ -2692,8 +2696,8 @@ html, body, #root { background: #eef3ff !important; }
    — so no earlier rule in this file can ever cancel it again.
    -------------------------------------------------------------------------- */
 .route-flow-bar {
-  position: sticky !important;
-  top: 8px !important;
-  z-index: 30 !important;
+  position: relative !important;
+  top: auto !important;
+  z-index: 10 !important;
 }
 

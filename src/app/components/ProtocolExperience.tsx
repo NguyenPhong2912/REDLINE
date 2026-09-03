@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpRight, Fingerprint, Play, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, BookOpen, Fingerprint, Play, Sparkles } from "lucide-react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -85,6 +85,12 @@ const VI: Record<string, string> = {
     "Trợ lý được cấp đúng trạng thái đã ghi nhận mà bạn có thể tự đọc, không hơn không kém. Khi không biết, nó nói rõ thay vì đoán mò.",
 
   "The agent proposes. The chain decides.": "Agent đề xuất. Blockchain quyết định.",
+
+  "New here?": "Lần đầu dùng?",
+  "A step-by-step guide to every button.": "Hướng dẫn từng bước cho mọi nút bấm.",
+  "Connect a wallet, fund the vault, sign a policy, run an agent, and rent one from the marketplace — every step matches the interface exactly, with each wallet prompt and on-chain result spelled out.":
+    "Kết nối ví, nạp vault, ký policy, chạy agent, và thuê agent trên marketplace — mỗi bước khớp đúng với giao diện, ghi rõ từng lần ví hỏi ký và kết quả on-chain.",
+  "Open the user guide": "Mở hướng dẫn sử dụng",
 };
 
 const principles = [
@@ -352,6 +358,22 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
             </p>
           </div>
           <ProtocolConsole owner={owner || undefined} />
+        </div>
+      </section>
+
+      {/* After the chapters have made the case for what REDLINE does, point a
+          first-time visitor at the how-to before the page ends. */}
+      <section className="protocol-chapter">
+        <div className="protocol-chapter-heading">
+          <span>{tr("New here?")}</span>
+          <h2>{tr("A step-by-step guide to every button.")}</h2>
+        </div>
+        <div className="protocol-proof-copy">
+          <BookOpen size={24} />
+          <p>{tr("Connect a wallet, fund the vault, sign a policy, run an agent, and rent one from the marketplace — every step matches the interface exactly, with each wallet prompt and on-chain result spelled out.")}</p>
+          <button type="button" onClick={() => setNav?.(8)}>
+            {tr("Open the user guide")} <ArrowUpRight size={13} />
+          </button>
         </div>
       </section>
 

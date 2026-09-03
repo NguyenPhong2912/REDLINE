@@ -135,6 +135,40 @@ const VI: Record<string, string> = {
   "Volume, approval rate, decision latency — computed from the connected wallet's audit trail.":
     "Volume, tỉ lệ duyệt, độ trễ quyết định — tính từ audit trail của ví đang kết nối.",
 
+  // rent an agent (peer-to-peer)
+  "Rent an agent": "Thuê agent",
+  "Peer to peer": "Ngang hàng (P2P)",
+  "Rent an agent from the Marketplace": "Thuê agent trên Marketplace",
+  "Renting is a plain wallet-to-wallet SOL payment — it does not touch the REDLINE program. The backend re-reads your payment from Devnet and checks it before the rental is recorded.":
+    "Thuê agent là một giao dịch chuyển SOL ví-sang-ví bình thường — không đụng tới chương trình REDLINE. Backend đọc lại giao dịch của bạn từ Devnet và kiểm tra trước khi ghi nhận lượt thuê.",
+  "Open Marketplace and find a listing with a price. A grey “no price set” means the publisher has not offered it yet; toggle “Rentable only” to hide those.":
+    "Mở Marketplace và tìm listing đã có giá. Chữ xám “no price set” nghĩa là người đăng chưa chào cho thuê; bật “Rentable only” để ẩn các listing đó.",
+  "Pick a duration — 1d / 3d / 7d. The price is a 24h rate, so the total scales with the periods covered; the card shows the total you will pay.":
+    "Chọn thời hạn — 1d / 3d / 7d. Giá là mức phí cho mỗi 24h, nên tổng tiền nhân theo số chu kỳ; thẻ hiển thị tổng số bạn sẽ trả.",
+  "Click “Rent”. Your wallet pops up to approve a SystemProgram SOL transfer straight to the publisher's wallet — check the amount and the recipient before signing.":
+    "Bấm “Thuê”. Ví bật lên để duyệt một giao dịch chuyển SOL (SystemProgram) thẳng đến ví người đăng — kiểm tra số tiền và địa chỉ nhận trước khi ký.",
+  "The backend reads that transaction back from Devnet and checks that you signed it, that it reached the publisher, and that the amount covers the full term. A payment that is short, failed, or already used is rejected, with the reason shown on the card.":
+    "Backend đọc lại giao dịch đó từ Devnet và kiểm: bạn đã ký, tiền đã tới ví người đăng, và số tiền đủ cho cả thời hạn. Thanh toán thiếu, lỗi, hoặc đã dùng rồi sẽ bị từ chối, lý do hiện ngay trên thẻ.",
+  "On success a “Rented …” line appears with the payment signature. The rental runs until its end time — there is no auto-renew and no refund.":
+    "Thành công thì hiện dòng “Rented …” kèm chữ ký thanh toán. Lượt thuê chạy tới thời điểm hết hạn — không tự gia hạn và không hoàn tiền.",
+  "To let the rented agent move funds, create a Grant for it in Guardrails. The grant records which rental authorised it, and the agent still runs inside the 7 gates you signed.":
+    "Để agent đã thuê chuyển được tiền, hãy tạo Grant cho nó ở Guardrails. Grant ghi lại lượt thuê nào đã ủy quyền, và agent vẫn chạy trong 7 gates mà bạn đã ký.",
+  "Signs the SOL payment in your wallet, then records the hire after Devnet verification":
+    "Ký giao dịch trả SOL trong ví, rồi ghi nhận lượt thuê sau khi Devnet xác minh",
+  "Rental length; total = the 24h rate × the number of 24h periods":
+    "Độ dài thuê; tổng = mức phí 24h × số chu kỳ 24h",
+  "Publisher only — set the payout wallet and a price (a 24h rate) to offer the agent for rent":
+    "Chỉ người đăng — đặt ví nhận tiền và một mức giá (phí 24h) để chào cho thuê",
+  "Publisher only — change the price later, from the same wallet; the payout wallet is write-once":
+    "Chỉ người đăng — đổi giá về sau, từ cùng ví đó; ví nhận tiền chỉ đặt được một lần",
+  "You cannot rent your own agent — the button is disabled on a listing you published.":
+    "Bạn không thể tự thuê agent của mình — nút bị khoá trên listing do bạn đăng.",
+  "The stats strip at the top of the Marketplace (volume, all-time rentals, active now, floor rate) and the Sort control are read straight from the hire records.":
+    "Dải thống kê ở đầu trang Marketplace (volume, tổng lượt thuê, đang thuê, giá sàn) và nút Sort đều đọc thẳng từ dữ liệu lượt thuê.",
+  "Go to Marketplace": "Vào Marketplace",
+  "Claim": "Nhận listing",
+  "Edit price": "Sửa giá",
+
   "Related technical docs": "Tài liệu kỹ thuật liên quan",
   "More in the repo: ": "Xem thêm trong repo: ",
   " (detailed architecture), ": " (kiến trúc chi tiết), ",
@@ -178,6 +212,7 @@ const SECTIONS = [
   { id: "manage", label: "Run Agent" },
   { id: "monitor", label: "Monitor & Audit" },
   { id: "gates", label: "The 7 Gates" },
+  { id: "rent", label: "Rent an agent" },
   { id: "trouble", label: "Troubleshooting" },
   { id: "more", label: "Marketplace & Agents" },
 ] as const;
@@ -304,7 +339,7 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
       {/* In-page section nav — sticky so a 10-section guide stays navigable
           without a second scrollbar or leaving the page. */}
       <nav
-        className="sticky top-[76px] z-10 flex flex-wrap gap-2 p-2.5 rounded-2xl backdrop-blur"
+        className="relative z-10 flex flex-wrap gap-2 p-2.5 rounded-2xl backdrop-blur"
         style={{ background: "rgba(255,255,255,.86)", border: `1px solid ${color.border}` }}
         aria-label={tr("Guide contents")}
       >
@@ -459,6 +494,45 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
             </tbody>
           </table>
         </div>
+      </SectionCard>
+
+      {/* 8b. Rent an agent — the one wallet-signed flow that is a payment
+          between two people, not an owner acting on their own vault. */}
+      <SectionCard id="rent" icon={Store} eyebrow={tr("Peer to peer")} title={tr("Rent an agent from the Marketplace")} accent={C} register={register}>
+        <p>{tr("Renting is a plain wallet-to-wallet SOL payment — it does not touch the REDLINE program. The backend re-reads your payment from Devnet and checks it before the rental is recorded.")}</p>
+        <ol className="list-decimal pl-5 space-y-1.5">
+          <li>{tr("Open Marketplace and find a listing with a price. A grey “no price set” means the publisher has not offered it yet; toggle “Rentable only” to hide those.")}</li>
+          <li>{tr("Pick a duration — 1d / 3d / 7d. The price is a 24h rate, so the total scales with the periods covered; the card shows the total you will pay.")}</li>
+          <li>{tr("Click “Rent”. Your wallet pops up to approve a SystemProgram SOL transfer straight to the publisher's wallet — check the amount and the recipient before signing.")}</li>
+          <li>{tr("The backend reads that transaction back from Devnet and checks that you signed it, that it reached the publisher, and that the amount covers the full term. A payment that is short, failed, or already used is rejected, with the reason shown on the card.")}</li>
+          <li>{tr("On success a “Rented …” line appears with the payment signature. The rental runs until its end time — there is no auto-renew and no refund.")}</li>
+          <li>{tr("To let the rented agent move funds, create a Grant for it in Guardrails. The grant records which rental authorised it, and the agent still runs inside the 7 gates you signed.")}</li>
+        </ol>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px] border-collapse">
+            <tbody>
+              <tr className="ledger-row">
+                <td className="py-2 pr-4 font-semibold whitespace-nowrap" style={{ color: color.text }}>{tr("Rent")}</td>
+                <td className="py-2" style={{ color: color.textSecondary }}>{tr("Signs the SOL payment in your wallet, then records the hire after Devnet verification")}</td>
+              </tr>
+              <tr className="ledger-row">
+                <td className="py-2 pr-4 font-semibold whitespace-nowrap" style={{ ...mono, color: color.text }}>1d / 3d / 7d</td>
+                <td className="py-2" style={{ color: color.textSecondary }}>{tr("Rental length; total = the 24h rate × the number of 24h periods")}</td>
+              </tr>
+              <tr className="ledger-row">
+                <td className="py-2 pr-4 font-semibold whitespace-nowrap" style={{ color: color.text }}>{tr("Claim")}</td>
+                <td className="py-2" style={{ color: color.textSecondary }}>{tr("Publisher only — set the payout wallet and a price (a 24h rate) to offer the agent for rent")}</td>
+              </tr>
+              <tr className="ledger-row">
+                <td className="py-2 pr-4 font-semibold whitespace-nowrap" style={{ color: color.text }}>{tr("Edit price")}</td>
+                <td className="py-2" style={{ color: color.textSecondary }}>{tr("Publisher only — change the price later, from the same wallet; the payout wallet is write-once")}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style={{ color: color.textDim }}>{tr("You cannot rent your own agent — the button is disabled on a listing you published.")}</p>
+        <p style={{ color: color.textDim }}>{tr("The stats strip at the top of the Marketplace (volume, all-time rentals, active now, floor rate) and the Sort control are read straight from the hire records.")}</p>
+        <NavLink label={tr("Go to Marketplace")} accent={C} onClick={() => setNav?.(3)} />
       </SectionCard>
 
       {/* 9. Marketplace / Agents / Analytics */}

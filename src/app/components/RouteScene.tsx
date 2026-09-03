@@ -12,6 +12,7 @@ const SCENE_ART: Partial<Record<string, string>> = {
   audit: evidenceArt,
   analytics: evidenceArt,
   settings: evidenceArt,
+  guide: evidenceArt,
 };
 
 export function RouteScene({ icon: Icon, label, scene }: { icon: React.ElementType; label: string; scene: string }) {
@@ -21,27 +22,36 @@ export function RouteScene({ icon: Icon, label, scene }: { icon: React.ElementTy
 
   useEffect(() => {
     if (!artwork || !sceneRef.current) return;
-    const updateHeight = () => {
+    const updatePositionAndHeight = () => {
       const firstChild = document.querySelector(".route-page > :first-child") as HTMLElement | null;
       if (firstChild && sceneRef.current) {
         const h = firstChild.offsetHeight;
         if (h > 0) {
           sceneRef.current.style.height = `${h}px`;
+
+          let top = 0;
+          let el: HTMLElement | null = firstChild;
+          const parent = sceneRef.current.offsetParent as HTMLElement | null;
+          while (el && el !== parent) {
+            top += el.offsetTop;
+            el = el.offsetParent as HTMLElement | null;
+          }
+          sceneRef.current.style.top = `${top}px`;
         }
       }
     };
 
-    updateHeight();
-    const timer = setTimeout(updateHeight, 50);
-    const observer = new ResizeObserver(updateHeight);
+    updatePositionAndHeight();
+    const timer = setTimeout(updatePositionAndHeight, 50);
+    const observer = new ResizeObserver(updatePositionAndHeight);
     const firstChild = document.querySelector(".route-page > :first-child");
     if (firstChild) observer.observe(firstChild);
 
-    window.addEventListener("resize", updateHeight);
+    window.addEventListener("resize", updatePositionAndHeight);
     return () => {
       clearTimeout(timer);
       observer.disconnect();
-      window.removeEventListener("resize", updateHeight);
+      window.removeEventListener("resize", updatePositionAndHeight);
     };
   }, [scene, artwork]);
 

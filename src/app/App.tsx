@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { motion } from "motion/react";
 import {
   LayoutDashboard, Bot, BarChart3, Globe, Wallet, ScrollText,
@@ -32,7 +32,7 @@ import {
 import { address } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
-import { api, API_URL, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
+import { agoShort, api, API_URL, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
 import { PROGRAM_ID } from "./solana/redline";
 import { useRealAgents } from "./lib/agents";
 import type { AppClient } from "./solana/client";
@@ -193,6 +193,19 @@ const VI: Record<string, string> = {
   "Paying…": "Đang thanh toán…",
   "Edit price": "Sửa giá",
   "Claim": "Nhận listing",
+  "Market volume": "Khối lượng thị trường",
+  "All-time rentals": "Tổng lượt thuê",
+  "Active now": "Đang thuê",
+  "Floor rate": "Giá sàn",
+  "no rentals yet": "chưa có lượt thuê",
+  "rentals": "lượt thuê",
+  "last": "gần nhất",
+  "Sort": "Sắp xếp",
+  "Newest": "Mới nhất",
+  "Most rented": "Thuê nhiều nhất",
+  "Highest volume": "Khối lượng cao nhất",
+  "Lowest rate": "Giá thấp nhất",
+  "in 24h": "trong 24h",
 
   // vault / treasury page
   "Solana Devnet · your wallet and the program-owned vault": "Solana Devnet · ví của bạn và vault do chương trình sở hữu",
@@ -785,6 +798,7 @@ function MarketplacePage() {
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [priceSol, setPriceSol] = useState("0.05");
+  const [sort, setSort] = useState<"new" | "hires" | "volume" | "rate">("new");
   // Per-listing rental length. The price is a 24h rate, so the total scales
   // with the periods covered — the backend charges the same way.
   const [hours, setHours] = useState<Record<string, number>>({});
@@ -826,11 +840,35 @@ function MarketplacePage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Rental payment was rejected or could not be verified."); } finally { setBusy(""); }
   }
 
-  const filtered = listings.filter(l => {
-    if (pricedOnly && Number(l.priceLamports) === 0) return false;
-    if (search && !l.agentVersion.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Market header — pure reductions over what the API already returned. Floor
+  // is the cheapest 24h rate among listings actually offered for rent.
+  const market = useMemo(() => {
+    const priced = listings.filter(l => Number(l.priceLamports) > 0 && !!l.developerWallet);
+    const floor = priced.reduce<bigint | null>((min, l) => {
+      const p = BigInt(l.priceLamports);
+      return min === null || p < min ? p : min;
+    }, null);
+    return {
+      volumeLamports: listings.reduce((s, l) => s + BigInt(l.volumeLamports ?? "0"), 0n),
+      totalHires: listings.reduce((s, l) => s + (l.totalHires ?? 0), 0),
+      hires24h: listings.reduce((s, l) => s + (l.hires24h ?? 0), 0),
+      activeHires: listings.reduce((s, l) => s + l.activeHires, 0),
+      floorLamports: floor,
+    };
+  }, [listings]);
+
+  const filtered = listings
+    .filter(l => {
+      if (pricedOnly && Number(l.priceLamports) === 0) return false;
+      if (search && !l.agentVersion.name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === "hires") return (b.totalHires ?? 0) - (a.totalHires ?? 0);
+      if (sort === "volume") return Number(BigInt(b.volumeLamports ?? "0") - BigInt(a.volumeLamports ?? "0"));
+      if (sort === "rate") return Number(a.priceLamports) - Number(b.priceLamports);
+      return +new Date(b.createdAt) - +new Date(a.createdAt);
+    });
 
   return (
     <div className="route-page page-marketplace space-y-8">
@@ -845,28 +883,65 @@ function MarketplacePage() {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: color.textDim }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr("Search agents by name...")}
-            className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
-            style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text, caretColor: M }} />
+      {/* One wrapper so `.route-page`'s positional CSS still sees the intro as
+          :first-child and this whole toolbar cluster as :nth-child(2) — the
+          selector that lifts it above the route artwork. */}
+      <div className="space-y-4">
+        {/* Market header — every figure is a plain sum of what /listings
+            already returned, which the backend derived from hire rows and the
+            `listing.hired` audit events. No price feed. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: tr("Market volume"), value: `${fmtSol(market.volumeLamports.toString())} SOL`, sub: `${market.totalHires} ${tr("rentals")}`, accent: M },
+            { label: tr("All-time rentals"), value: String(market.totalHires), sub: `${market.hires24h} ${tr("in 24h")}`, accent: C },
+            { label: tr("Active now"), value: String(market.activeHires), sub: tr("active hire"), accent: A },
+            { label: tr("Floor rate"), value: market.floorLamports !== null ? `${fmtSol(market.floorLamports.toString())} SOL` : "—", sub: "/ 24h", accent: color.textDim },
+          ].map((t, i) => (
+            <div key={`mkt-stat-${i}`} className="rounded-xl px-4 py-3" style={{ ...glass() }}>
+              <div className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.textDim }}>{t.label}</div>
+              <div className="text-lg font-bold mt-1" style={{ ...mono, color: color.text }}>{t.value}</div>
+              <div className="text-[11px] mt-0.5" style={{ ...sans, color: t.accent }}>{t.sub}</div>
+            </div>
+          ))}
         </div>
-        <button type="button" onClick={() => setPricedOnly(p => !p)} aria-pressed={pricedOnly}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold transition-all shrink-0"
-          style={{ ...sans, background: pricedOnly ? `${M}12` : color.surface, border: `1px solid ${pricedOnly ? M + "35" : color.border}`, color: pricedOnly ? M : color.textDim }}>
-          <ShieldCheck size={13} />{tr("Rentable only")}
-          <div className="relative w-8 h-4 rounded-full ml-1" style={{ background: pricedOnly ? `${M}35` : color.border, border: `1px solid ${pricedOnly ? M + "50" : color.border}` }}>
-            <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: pricedOnly ? "calc(100% - 14px)" : 2, background: pricedOnly ? M : color.textDim }} />
-          </div>
-        </button>
-      </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs" style={{ ...sans, color: color.textDim }}>{tr("Showing")} <span style={{ color: color.text }}>{filtered.length}</span> {tr("listing")}{lang === "en" && filtered.length !== 1 ? "s" : ""}</span>
-        {error && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{error}</span>}
-        {notice && <span className="text-[13px]" style={{ ...mono, color: M }}>{notice}</span>}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: color.textDim }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr("Search agents by name...")}
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-xs outline-none transition-all"
+              style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text, caretColor: M }} />
+          </div>
+          <button type="button" onClick={() => setPricedOnly(p => !p)} aria-pressed={pricedOnly}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold transition-all shrink-0"
+            style={{ ...sans, background: pricedOnly ? `${M}12` : color.surface, border: `1px solid ${pricedOnly ? M + "35" : color.border}`, color: pricedOnly ? M : color.textDim }}>
+            <ShieldCheck size={13} />{tr("Rentable only")}
+            <div className="relative w-8 h-4 rounded-full ml-1" style={{ background: pricedOnly ? `${M}35` : color.border, border: `1px solid ${pricedOnly ? M + "50" : color.border}` }}>
+              <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: pricedOnly ? "calc(100% - 14px)" : 2, background: pricedOnly ? M : color.textDim }} />
+            </div>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="text-xs" style={{ ...sans, color: color.textDim }}>{tr("Showing")} <span style={{ color: color.text }}>{filtered.length}</span> {tr("listing")}{lang === "en" && filtered.length !== 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] uppercase tracking-widest mr-1" style={{ ...sans, color: color.textDim }}>{tr("Sort")}</span>
+            {([["new", tr("Newest")], ["hires", tr("Most rented")], ["volume", tr("Highest volume")], ["rate", tr("Lowest rate")]] as const).map(([key, label]) => (
+              <button type="button" key={key} onClick={() => setSort(key)} aria-pressed={sort === key}
+                className="px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-all"
+                style={{ ...sans, background: sort === key ? `${M}12` : color.surface, border: `1px solid ${sort === key ? M + "35" : color.border}`, color: sort === key ? M : color.textDim }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+      {(error || notice) && (
+        <div className="flex items-center flex-wrap gap-3">
+          {error && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{error}</span>}
+          {notice && <span className="text-[13px]" style={{ ...mono, color: M }}>{notice}</span>}
+        </div>
+      )}
 
       {/* A failed load must not read as "there is nothing here": telling
           someone to publish an agent when the API is unreachable sends them
@@ -919,6 +994,14 @@ function MarketplacePage() {
                 <div className="flex items-center gap-1.5">
                   <Clock size={10} style={{ color: color.textDim }} />
                   <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{tr("published")} {new Date(l.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 size={10} style={{ color: color.textDim }} />
+                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>
+                    {(l.totalHires ?? 0) > 0
+                      ? `${fmtSol(l.volumeLamports ?? "0")} SOL · ${l.totalHires} ${tr("rentals")} · ${tr("last")} ${agoShort(l.lastHiredAt)}`
+                      : tr("no rentals yet")}
+                  </span>
                 </div>
               </div>
               <div className="px-6 py-4 border-t flex flex-col gap-3" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
@@ -1572,7 +1655,7 @@ export default function App() {
             <span className="hidden sm:block text-[13px] font-bold tracking-[0.2em]" style={{ ...mono, color: color.text }}>REDLINE</span>
           </button>
 
-          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
+          <nav className="flex min-w-0 flex-1 items-center justify-start xl:justify-center gap-0.5 xl:gap-1 overflow-x-auto px-1 sm:px-2 whitespace-nowrap scrollbar-none" aria-label="Primary navigation">
             {FLOW_ORDER.map(index => {
               const item = NAV[index];
               const active = nav === index;
@@ -1582,11 +1665,11 @@ export default function App() {
                   key={item.slug}
                   onClick={() => navigate(index)}
                   aria-current={active ? "page" : undefined}
-                  className="relative shrink-0 rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
+                  className="relative shrink-0 rounded-full px-2 xl:px-2.5 py-1.5 text-[11.5px] xl:text-[12px] font-semibold transition-colors whitespace-nowrap"
                   style={{ ...sans, color: active ? color.primaryText : color.textDim, background: active ? "rgba(75,134,247,0.09)" : "transparent" }}
                 >
                   {tr(item.label)}
-                  {active && <motion.span layoutId="primary-nav-indicator" className="absolute inset-x-3 -bottom-[13px] h-px" style={{ background: M, boxShadow: `0 0 14px ${M}` }} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                  {active && <motion.span layoutId="primary-nav-indicator" className="absolute inset-x-2 xl:inset-x-2.5 -bottom-[13px] h-px" style={{ background: M, boxShadow: `0 0 14px ${M}` }} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                 </button>
               );
             })}
@@ -1594,9 +1677,6 @@ export default function App() {
 
           <button type="button" className="header-tool header-command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open command palette">
             <Search size={13} /><span>{tr("Find")}</span><kbd>⌘K</kbd>
-          </button>
-          <button type="button" className="header-tool header-density-trigger" onClick={toggleDensity} aria-label={`Use ${density === "comfortable" ? "compact" : "comfortable"} density`}>
-            <Rows3 size={13} /><span>{density === "comfortable" ? tr("Comfort") : tr("Compact")}</span>
           </button>
 
           <div

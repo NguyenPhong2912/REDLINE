@@ -7,6 +7,7 @@ import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
 import { requireWallet } from "../auth.js";
 import { json } from "./json.js";
+import { hireStatsByListing, listingStats, volumeByListing } from "./market-stats.js";
 
 // Real marketplace: a listing is the (already-existing) default AgentListing
 // row created when an agent is published. Hiring is a plain wallet-signed SOL
@@ -31,15 +32,28 @@ async function verifyPayment(signature: string, payer: string, payee: string, mi
 }
 
 export async function listingRoutes(app: FastifyInstance) {
-  // Real listings — the ones auto-created by POST /agents, enriched with a
-  // live count of active hires so the marketplace can show real demand.
+  // Real listings — the ones auto-created by POST /agents, enriched with hire
+  // stats so the marketplace can show real demand: active hires, all-time
+  // count, 24h count, and total lamports paid. The volume figure is summed
+  // from the `listing.hired` audit events, the one place the exact amount paid
+  // at hire time is written down.
   app.get("/listings", async () => {
-    const listings = await prisma.agentListing.findMany({
-      where: { status: "active" },
-      include: { agentVersion: true, hires: { where: { status: "active" } } },
-      orderBy: { createdAt: "desc" },
-    });
-    return json(listings.map(l => ({ ...l, activeHires: l.hires.length, hires: undefined })));
+    const [listings, hiredEvents] = await Promise.all([
+      prisma.agentListing.findMany({
+        where: { status: "active" },
+        include: { agentVersion: true, hires: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.auditEvent.findMany({ where: { eventType: "listing.hired" }, select: { payload: true } }),
+    ]);
+    const volumes = volumeByListing(hiredEvents);
+    const counts = hireStatsByListing(listings.flatMap(l => l.hires));
+    return json(listings.map(l => ({
+      ...l,
+      hires: undefined,
+      activeHires: l.hires.filter(h => h.status === "active").length,
+      ...listingStats(l.id, volumes, counts),
+    })));
   });
 
   // A publisher claims their listing by setting a price and the wallet that
