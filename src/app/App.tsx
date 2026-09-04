@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { GrantSignButton } from "./components/GrantSignButton";
+import { RatingBadge, RatingDetail, ReviewPanel } from "./components/AgentRating";
 import { GrantsPanel } from "./components/GrantsPanel";
 import { LiveFeed } from "./components/LiveFeed";
 import { VaultPanel } from "./components/VaultPanel";
@@ -36,7 +37,7 @@ import {
 import { address } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
-import { api, API_URL, checkHealth, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
+import { api, isSignedIn, loadSession, API_URL, checkHealth, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
 import { PROGRAM_ID } from "./solana/redline";
 import { useRealAgents } from "./lib/agents";
 import type { AppClient } from "./solana/client";
@@ -288,20 +289,30 @@ function AgentsPage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
+  // Connecting a wallet only names an address — the API cannot tell that apart
+  // from a typed one, and publishing is what puts a build on a marketplace
+  // under a name that gets paid. So the button waits for a signature.
+  const signedIn = isSignedIn(wallet);
+  const [onlyMine, setOnlyMine] = useState(false);
   const { agents, loading, error, reload } = useRealAgents();
   const [sel, setSel] = useState(0);
-  const [deploying, setDeploying] = useState(true);
+  const [publishing, setPublishing] = useState(true);
   const [name, setName] = useState("");
   const [strategy, setStrategy] = useState("");
   const [busy, setBusy] = useState(false);
-  const [deployError, setDeployError] = useState("");
+  const [publishError, setPublishError] = useState("");
 
-  const a = agents[Math.min(sel, agents.length - 1)];
+  const visibleAgents = onlyMine ? agents.filter(ag => ag.isMine) : agents;
+  // The detail panel follows the visible list. Without this, filtering to
+  // "mine" while a stranger's agent was selected left the panel showing an
+  // agent that is no longer in the list beside it.
+  const selected = agents[sel];
+  const a = (selected && visibleAgents.includes(selected)) ? selected : visibleAgents[0];
   const accent = (i: number) => AGENT_ACCENTS[i % AGENT_ACCENTS.length];
 
-  async function deploy() {
-    if (!wallet || !name.trim() || !strategy.trim()) return;
-    setBusy(true); setDeployError("");
+  async function publish() {
+    if (!signedIn || !name.trim() || !strategy.trim()) return;
+    setBusy(true); setPublishError("");
     try {
       // agentHash is sha256(modelRef|codeRef|config) — name and version are not
       // part of it. A dashboard-declared agent has no build artifact to point
@@ -311,41 +322,51 @@ function AgentsPage() {
         name: name.trim(), version: "v1.0.0", strategy: strategy.trim(),
         modelRef: "manual:dashboard", codeRef: `manual:${name.trim()}`, config: { strategy: strategy.trim() },
       });
-      setName(""); setStrategy(""); setDeploying(false);
+      setName(""); setStrategy(""); setPublishing(false);
       await reload();
-    } catch (e) { setDeployError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    } catch (e) { setPublishError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   }
 
   return (
     <div className="route-page page-agents space-y-8">
       <div className="route-local-heading flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>My Agents</h1>
-          <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Real agent versions and grants from the REDLINE API</p>
+          <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Agents</h1>
+          <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>
+            Published builds and the grants that authorise them. {signedIn ? "Yours are marked." : "Sign in to see which are yours."}
+          </p>
         </div>
-        <button type="button" onClick={() => setDeploying(d => !d)}
+        {signedIn && (
+          <button type="button" onClick={() => setOnlyMine(v => !v)} aria-pressed={onlyMine}
+            className="px-3 py-2 rounded-xl text-[11px] font-semibold"
+            style={{ ...sans, background: onlyMine ? `${M}18` : color.surfaceInset, border: `1px solid ${onlyMine ? M + "35" : color.border}`, color: onlyMine ? M : color.textMuted }}>
+            {onlyMine ? "Showing mine" : "Show only mine"}
+          </button>
+        )}
+        <button type="button" onClick={() => setPublishing(d => !d)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
           style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>
           <Plus size={13} />Publish Agent Version
         </button>
       </div>
 
-      {deploying && (
+      {publishing && (
         <div className="agent-publish-panel rounded-2xl p-5 flex flex-col gap-3" style={{ ...glass() }}>
           <div className="flex items-start justify-between gap-3">
             <div><div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Publish a new version</div><div className="text-[11px] mt-1 tracking-widest" style={{ ...mono, color: color.textDim }}>DRAFT · IMMUTABLE HASH</div></div>
-            <button type="button" onClick={() => setDeploying(false)} aria-label="Close publishing panel" className="p-1 rounded-md" style={{ color: color.textDim }}><X size={14} /></button>
+            <button type="button" onClick={() => setPublishing(false)} aria-label="Close publishing panel" className="p-1 rounded-md" style={{ color: color.textDim }}><X size={14} /></button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Agent name" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
             <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="Strategy description" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" disabled={!wallet || busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
+            <button type="button" disabled={!signedIn || busy || !name.trim() || !strategy.trim()} onClick={publish} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
               {busy ? "Publishing…" : "Publish"}
             </button>
             {!wallet && <span className="text-[13px]" style={{ ...mono, color: A }}>Connect a wallet to publish</span>}
-            {deployError && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{deployError}</span>}
+            {wallet && !signedIn && <span className="text-[13px]" style={{ ...mono, color: A }}>Sign in with your wallet — the publisher is taken from the signature, not from this form</span>}
+            {publishError && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{publishError}</span>}
           </div>
           <p className="text-[12px]" style={{ ...sans, color: color.textDim }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
         </div>
@@ -363,22 +384,28 @@ function AgentsPage() {
         <div className="agent-composition grid grid-cols-1 lg:grid-cols-[minmax(320px_.72fr)_minmax(0_1.45fr)] gap-7">
           {/* Agent list */}
           <div className="rounded-2xl overflow-hidden flex flex-col" style={{ ...glass() }}>
-            {agents.map((ag, i) => (
-              <button type="button" key={`ag-list-${ag.id}`} onClick={() => setSel(i)} aria-pressed={sel === i}
+            {visibleAgents.map((ag, i) => (
+              <button type="button" key={`ag-list-${ag.id}`} onClick={() => setSel(agents.indexOf(ag))} aria-pressed={a?.id === ag.id}
                 className="flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b"
                 style={{ borderColor: color.border, background: sel === i ? `${accent(i)}0c` : "transparent", borderLeft: sel === i ? `2px solid ${accent(i)}` : "2px solid transparent" }}>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent(i)}14`, border: `1px solid ${accent(i)}22` }}>
                   <Bot size={16} style={{ color: accent(i) }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold truncate" style={{ ...sans, color: color.text }}>{ag.name}</div>
-                  <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textDim }}>{ag.version}</div>
+                  <div className="text-xs font-semibold truncate flex items-center gap-1.5" style={{ ...sans, color: color.text }}>
+                    {ag.name}
+                    {ag.isMine && <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ ...mono, background: `${M}18`, color: M }}>MINE</span>}
+                  </div>
+                  <div className="text-[12px] mt-0.5 flex items-center gap-2" style={{ ...sans, color: color.textDim }}>
+                    {ag.version}
+                    <RatingBadge rating={ag.rating} />
+                  </div>
                 </div>
                 <Badge status={ag.status} />
               </button>
             ))}
-            {!deploying && (
-              <button type="button" onClick={() => setDeploying(true)} className="agent-publish-open">
+            {!publishing && (
+              <button type="button" onClick={() => setPublishing(true)} className="agent-publish-open">
                 <Plus size={13} />Publish agent version
               </button>
             )}
@@ -412,6 +439,11 @@ function AgentsPage() {
                     <Badge status={a.status} />
                   </div>
                   <div className="text-xs mt-1" style={{ ...mono, color: C }}>{short(a.agentHash, 8)}</div>
+                  <div className="text-[11px] mt-1" style={{ ...mono, color: a.isMine ? M : color.textDim }}>
+                    {a.isMine ? "published by you"
+                      : a.publisherWallet ? `published by ${short(a.publisherWallet, 4)}`
+                      : "unclaimed — published before publishing required a signature"}
+                  </div>
                   <p className="text-[13px] mt-1 max-w-md" style={{ ...sans, color: color.textMuted }}>{a.strategy}</p>
                 </div>
               </div>
@@ -428,6 +460,7 @@ function AgentsPage() {
                   </div>
                 ))}
               </div>
+              <div className="mt-4"><RatingDetail rating={a.rating} /></div>
             </div>
             )} />
 
@@ -571,6 +604,12 @@ function MarketplacePage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
+  // Renting moves SOL and creates a record in someone's name. The API refuses
+  // it without a signature, so the button waits for one rather than offering
+  // an action that is going to come back 401.
+  const signedIn = isSignedIn(wallet);
+  const [openReviews, setOpenReviews] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"newest" | "rating" | "demand" | "price">("newest");
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
   const [pricedOnly, setPricedOnly] = useState(false);
@@ -596,7 +635,7 @@ function MarketplacePage() {
 
   // The publisher claims a listing by naming the wallet that should be paid.
   async function savePrice(listing: Listing) {
-    if (!wallet) return;
+    if (!signedIn) return;
     setBusy(listing.id); setError(""); setNotice("");
     try {
       await api.setListingPrice(listing.id, { developerWallet: wallet, priceLamports: String(Math.round(Number(priceSol) * LAMPORTS_PER_SOL)) });
@@ -608,7 +647,7 @@ function MarketplacePage() {
   // Renting is a real SOL transfer to the publisher, then the backend verifies
   // that transaction on Devnet before recording the hire.
   async function rent(listing: Listing) {
-    if (!connected?.signer || !listing.developerWallet) return;
+    if (!connected?.signer || !signedIn || !listing.developerWallet) return;
     const durationHours = hoursFor(listing.id);
     const total = BigInt(listing.priceLamports) * BigInt(Math.ceil(durationHours / 24));
     setBusy(listing.id); setError(""); setNotice("");
@@ -625,6 +664,14 @@ function MarketplacePage() {
     if (pricedOnly && Number(l.priceLamports) === 0) return false;
     if (search && !l.agentVersion.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    // An unrated agent sorts last rather than first: `null` means "no evidence
+    // yet", and treating that as zero would rank a brand-new listing below a
+    // demonstrably bad one, which is not the same claim.
+    if (sortBy === "rating") return (b.rating?.score ?? -1) - (a.rating?.score ?? -1);
+    if (sortBy === "demand") return (b.totalHires ?? 0) - (a.totalHires ?? 0);
+    if (sortBy === "price") return Number(a.priceLamports) - Number(b.priceLamports);
+    return b.createdAt.localeCompare(a.createdAt);
   });
 
   return (
@@ -655,6 +702,18 @@ function MarketplacePage() {
             <div className="absolute top-0.5 w-3 h-3 rounded-full transition-all" style={{ left: pricedOnly ? "calc(100% - 14px)" : 2, background: pricedOnly ? M : color.textDim }} />
           </div>
         </button>
+        {/* Sorting by reputation or demand is the only reason to compute them.
+            "Newest" stays the default so a fresh listing is not buried by an
+            older one purely for having been around longer. */}
+        <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Sort listings">
+          {([["newest", "Newest"], ["rating", "Reputation"], ["demand", "Most rented"], ["price", "Cheapest"]] as const).map(([key, label]) => (
+            <button type="button" key={key} onClick={() => setSortBy(key)} aria-pressed={sortBy === key}
+              className="px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all"
+              style={{ ...sans, background: sortBy === key ? `${M}12` : color.surface, border: `1px solid ${sortBy === key ? M + "35" : color.border}`, color: sortBy === key ? M : color.textDim }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -680,11 +739,20 @@ function MarketplacePage() {
         </div>
       )}
 
+      {wallet && !signedIn && (
+        <div className="rounded-xl px-4 py-3 text-[12px]" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${A}30`, color: A }}>
+          Wallet connected, but not signed in. Renting, claiming and reviewing need a signature — the API cannot tell a connected wallet from a typed address. Use “Sign in” in the top bar.
+        </div>
+      )}
+
       <div className="market-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((l, idx) => {
           const accent = AGENT_ACCENTS[idx % AGENT_ACCENTS.length];
           const priced = Number(l.priceLamports) > 0 && !!l.developerWallet;
-          const mine = !!wallet && l.developerWallet === wallet;
+          // "Mine" means I published the build or I am already the payout
+          // wallet — either way renting from myself is not a thing.
+          const mine = Boolean(l.isMine) || (!!wallet && l.developerWallet === wallet);
+          const claimable = mine;
           return (
             <div key={`mkt-card-${l.id}`} id={`listing-${l.id}`}
               className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1"
@@ -699,6 +767,8 @@ function MarketplacePage() {
                     <span className="text-sm font-bold" style={{ ...sans, color: color.text }}>{l.agentVersion.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[12px]" style={{ ...mono, color: accent, opacity: 0.7 }}>{l.agentVersion.version}</span>
+                      <RatingBadge rating={l.rating} />
+                      {mine && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ ...mono, background: `${M}18`, color: M }}>YOURS</span>}
                       {l.activeHires > 0 && <span className="text-[12px] px-1.5 py-0.5 rounded-md" style={{ ...sans, background: `${M}10`, color: M, border: `1px solid ${M}18` }}>{l.activeHires} active hire{l.activeHires === 1 ? "" : "s"}</span>}
                     </div>
                   </div>
@@ -708,12 +778,34 @@ function MarketplacePage() {
                   <div className="flex items-center justify-between"><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Agent hash</span><span className="text-[11px] uppercase tracking-widest" style={{ ...sans, color: color.border }}>Publisher</span></div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px]" style={{ ...mono, color: C }}>{short(l.agentVersion.agentHash, 6)}</span>
-                    <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>{l.developerWallet ? short(l.developerWallet) : "unclaimed"}</span>
+                    <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>
+                      {l.publisherWallet ? short(l.publisherWallet) : l.developerWallet ? short(l.developerWallet) : "unclaimed"}
+                    </span>
                   </div>
+                </div>
+                {/* Demand, from records that already existed: hire rows and
+                    the `listing.hired` audit events carrying what was paid.
+                    The API has returned these since the marketplace shipped;
+                    nothing rendered them. */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Rentals", value: String(l.totalHires ?? 0), hint: `${l.hires24h ?? 0} in 24h` },
+                    { label: "Live now", value: String(l.activeHires), hint: l.activeHires ? "in term" : "none" },
+                    { label: "Paid out", value: `${fmtSol(l.volumeLamports ?? "0")} SOL`, hint: "all time" },
+                  ].map(cell => (
+                    <div key={cell.label} className="rounded-lg px-2 py-1.5" style={{ background: color.surfaceInset, border: `1px solid ${color.border}` }}>
+                      <div className="text-[9px] uppercase tracking-wider" style={{ ...mono, color: color.textDim }}>{cell.label}</div>
+                      <div className="text-[12px] font-bold" style={{ ...mono, color: color.text }}>{cell.value}</div>
+                      <div className="text-[9px]" style={{ ...sans, color: color.textMuted }}>{cell.hint}</div>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={10} style={{ color: color.textDim }} />
-                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>published {new Date(l.createdAt).toLocaleDateString()}</span>
+                  <span className="text-[12px]" style={{ ...mono, color: color.textDim }}>
+                    published {new Date(l.createdAt).toLocaleDateString()}
+                    {l.lastHiredAt && <> · last rented {new Date(l.lastHiredAt).toLocaleDateString()}</>}
+                  </span>
                 </div>
               </div>
               <div className="px-6 py-4 border-t flex flex-col gap-3" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
@@ -754,8 +846,8 @@ function MarketplacePage() {
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <button type="button" disabled={!connected?.signer || !priced || busy === l.id || mine} onClick={() => rent(l)}
-                      title={mine ? "You publish this agent" : !priced ? "The publisher has not set a price" : !connected?.signer ? "Connect a wallet to rent" : ""}
+                    <button type="button" disabled={!connected?.signer || !signedIn || !priced || busy === l.id || mine} onClick={() => rent(l)}
+                      title={mine ? "You publish this agent" : !priced ? "The publisher has not set a price" : !connected?.signer ? "Connect a wallet to rent" : !signedIn ? "Sign in with your wallet to rent" : ""}
                       className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
                       style={{ ...sans, background: `${C}14`, border: `1px solid ${C}30`, color: C }}>
                       {busy === l.id ? "Paying…" : `Rent ${hoursFor(l.id)}h`}
@@ -764,9 +856,9 @@ function MarketplacePage() {
                         payout wallet is write-once, so offering "Claim" there
                         would only lead to a 403. An unclaimed listing always
                         keeps the button so the card is never a dead end. */}
-                    {(mine || !l.developerWallet) && (
-                      <button type="button" disabled={!wallet}
-                        title={wallet ? "" : "Connect a wallet — it receives the rental payments"}
+                    {claimable && (
+                      <button type="button" disabled={!signedIn}
+                        title={!wallet ? "Connect a wallet — it receives the rental payments" : !signedIn ? "Sign in with your wallet to claim this listing" : ""}
                         onClick={() => { setEditing(l.id); setPriceSol(priced ? String(Number(l.priceLamports) / LAMPORTS_PER_SOL) : "0.05"); }}
                         className="px-3 py-2.5 rounded-xl text-[13px] font-semibold disabled:opacity-40" style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}28`, color: accent }}>
                         {mine ? "Edit price" : "Claim"}
@@ -774,6 +866,11 @@ function MarketplacePage() {
                     )}
                   </div>
                 )}
+                <button type="button" onClick={() => setOpenReviews(openReviews === l.id ? null : l.id)}
+                  className="text-[11px] text-left" style={{ ...sans, color: color.textDim }}>
+                  {openReviews === l.id ? "Hide reputation" : `Reputation & reviews${l.rating?.reviews.count ? ` (${l.rating.reviews.count})` : ""}`}
+                </button>
+                {openReviews === l.id && <ReviewPanel listingId={l.id} wallet={wallet} />}
               </div>
             </div>
           );
@@ -801,7 +898,7 @@ function MarketplacePage() {
 }
 
 /* ── 5. VAULT ── */
-function VaultPage() {
+function TreasuryPage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : "";
@@ -890,7 +987,7 @@ function VaultPage() {
 }
 
 /* ── 7. SESSIONS ── */
-function SessionsPage() {
+function GuardrailsPage() {
   const [step, setStep] = useState(0);
   const [tokens, setTokens] = useState(["SOL", "USDC"]);
   const [cap, setCap] = useState(500);
@@ -1006,7 +1103,7 @@ function SessionsPage() {
         <div className="px-6 py-4 border-b" style={{ borderColor: color.border, background: `${M}04` }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Key size={12} style={{ color: M }} /></div>
-            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Create Agent Policy</span>
+            <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Create a grant</span>
             <span className="ml-auto text-[12px] px-2 py-0.5 rounded-full font-semibold" style={{ ...mono, background: `${C}14`, color: C, border: `1px solid ${C}25` }}>SOLANA DEVNET</span>
           </div>
           <div className="flex gap-2">
@@ -1085,7 +1182,7 @@ function SessionsPage() {
             <div className="space-y-5">
               <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>Configure total spend ceiling and per-session transaction limits.</p>
               <SliderCtl label="Total Spend Cap" value={cap} onChange={setCap} min={10} max={10000} unit=" USDC" accent={A} />
-              <SliderCtl label="Max Transactions / Session" value={txn} onChange={setTxn} min={1} max={500} unit=" txns" accent={C} />
+              <SliderCtl label="Max transfers (whole permission)" value={txn} onChange={setTxn} min={1} max={500} unit=" txns" accent={C} />
               <div className="grid grid-cols-3 gap-2">
                 {[{ label: "Avg/Tx", value: `$${(cap / txn).toFixed(2)}`, color: A }, { label: "Risk", value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW", color: cap > 5000 ? color.danger : cap > 1000 ? A : M }, { label: "Tokens", value: String(tokens.length), color: C }].map((row, ri) => (
                   <div key={`wiz-row-${ri}`} className="rounded-xl p-3 text-center" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
@@ -1099,8 +1196,8 @@ function SessionsPage() {
           {step === 2 && (
             <div className="space-y-5">
               <p className="text-xs" style={{ ...sans, color: color.textSecondary }}>Set validity window and minimum cooldown between executions.</p>
-              <SliderCtl label="Session Duration" value={dur} onChange={setDur} min={1} max={168} unit="h" accent={M} />
-              <SliderCtl label="Execution Cooldown" value={cool} onChange={setCool} min={1} max={60} unit="m" accent={C} />
+              <SliderCtl label="Permission lifetime" value={dur} onChange={setDur} min={1} max={168} unit="h" accent={M} />
+              <SliderCtl label="Minimum gap between transfers" value={cool} onChange={setCool} min={1} max={60} unit="m" accent={C} />
               <div className="rounded-xl p-3.5 flex items-center gap-3" style={{ background: `${M}09`, border: `1px solid ${M}18` }}>
                 <Timer size={14} style={{ color: M, flexShrink: 0 }} />
                 <div>
@@ -1162,8 +1259,23 @@ function SettingsPage() {
   const [health, setHealth] = useState<Health | null>(null);
   const [healthState, setHealthState] = useState<"checking" | "healthy" | "offline">("checking");
   const [activeTab, setActiveTab] = useState(0);
-  const [depthEnabled, setDepthEnabled] = useState(true);
-  const [motionEnabled, setMotionEnabled] = useState(true);
+  // These two were useState with nothing behind them: flipping the switch did
+  // not change a pixel and the choice was gone on reload. Now they drive a
+  // root class and persist, so the control does what its label says.
+  const readPref = (key: string) => { try { return localStorage.getItem(key) !== "off"; } catch { return true; } };
+  const [depthEnabled, setDepthEnabled] = useState(() => readPref("redline.depth"));
+  const [motionEnabled, setMotionEnabled] = useState(() => readPref("redline.motion"));
+  const session = loadSession();
+  const signedIn = isSignedIn(wallet);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("no-depth", !depthEnabled);
+    try { localStorage.setItem("redline.depth", depthEnabled ? "on" : "off"); } catch { /* private mode */ }
+  }, [depthEnabled]);
+  useEffect(() => {
+    document.documentElement.classList.toggle("no-motion", !motionEnabled);
+    try { localStorage.setItem("redline.motion", motionEnabled ? "on" : "off"); } catch { /* private mode */ }
+  }, [motionEnabled]);
   const tabs = [
     { label: "Network", detail: "Cluster · program · executor", icon: Network },
     { label: "Wallet & demo assets", detail: "Owner · mints · destinations", icon: Wallet },
@@ -1227,10 +1339,17 @@ function SettingsPage() {
           {activeTab === 0 && (
             <>
               <header><div><span>NETWORK</span><h2>Network</h2></div><em className={health ? "is-live" : ""}><i />{healthLabel.toUpperCase()}</em></header>
-              <div className="settings-choice-row"><span>Cluster</span><div><button type="button" aria-pressed>Devnet</button><button type="button" disabled>Testnet</button><button type="button" disabled>Mainnet-beta</button></div></div>
+              {/* Cluster and commitment are properties of the deployed API, not
+                  switches this page owns. They are reported, not offered — the
+                  old three-button rows implied a choice that changed nothing. */}
+              <Row label="Cluster" value={health?.cluster ?? (health?.chain === "mock" ? "mock" : healthState === "checking" ? "checking…" : "unreachable")} accent={health ? C : A} />
+              <Row label="Chain adapter" value={health?.chain ?? "unknown"} accent={health?.chain === "solana" ? M : A} />
+              <Row label="Commitment" value="confirmed" accent={color.textMuted} />
               <Row label="Program" value={health?.programId ?? PROGRAM_ID} accent={C} />
               <Row label="Executor" value={health?.executor ?? (healthState === "checking" ? "checking…" : "unreachable")} accent={health ? C : healthState === "checking" ? color.textMuted : color.danger} />
-              <div className="settings-choice-row"><span>Commitment</span><div><button type="button">processed</button><button type="button" aria-pressed>confirmed</button><button type="button">finalized</button></div></div>
+              <Row label="Chain indexer" value={health?.indexer ?? "unknown"} accent={health?.indexer === "running" ? M : A} />
+              <Row label="API build" value={health?.version ?? "unknown"} accent={color.textMuted} />
+              <Row label="Rate limit" value={health?.rateLimitPerMinute ? `${health.rateLimitPerMinute} req/min per IP` : "unknown"} accent={color.textMuted} />
               <label className="settings-api-row"><span>API URL</span><div><input readOnly value={API_URL} /><button type="button" onClick={() => void testHealth()} disabled={healthState === "checking"}>{healthState === "checking" ? "Testing…" : "Test"}</button></div></label>
             </>
           )}
@@ -1239,9 +1358,26 @@ function SettingsPage() {
             <>
               <header><div><span>OWNER SESSION</span><h2>Wallet & demo assets</h2></div><em className={wallet ? "is-live" : ""}><i />{wallet ? "CONNECTED" : "NOT CONNECTED"}</em></header>
               <div className="settings-wallet-card"><span><Wallet size={22} /></span><div><strong>{wallet ? "Connected wallet" : "Wallet required"}</strong><code>{wallet || "Connect through Wallet Standard in the top bar"}</code></div>{wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer">Explorer <ExternalLink size={12} /></a>}</div>
-              <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? String(import.meta.env.VITE_DEMO_USDC_MINT) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? C : A} />
+              <Row
+                label="Wallet session"
+                value={signedIn && session ? `signed in · expires ${new Date(session.expiresAt).toLocaleString()}` : wallet ? "connected but not signed in" : "no wallet"}
+                accent={signedIn ? M : A} />
+              <Row
+                label="Writes require a signature"
+                value={health?.identityEnforced === undefined ? "unknown" : health.identityEnforced ? "yes — this is a public deployment" : "no — local/mock, writes are open"}
+                accent={health?.identityEnforced ? M : A} />
+              <Row label="Demo USDC mint (browser)" value={import.meta.env.VITE_DEMO_USDC_MINT ? String(import.meta.env.VITE_DEMO_USDC_MINT) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? C : A} />
+              <Row label="Demo USDC mint (API)" value={health?.demoMintConfigured === undefined ? "unknown" : health.demoMintConfigured ? "configured" : "not configured"} accent={health?.demoMintConfigured ? C : A} />
               <Row label="Demo destination" value={DEMO_OPS_DESTINATION || "not configured"} accent={DEMO_OPS_DESTINATION ? C : A} />
-              <Row label="Frontend write key" value={import.meta.env.VITE_API_KEY ? "configured" : "open (local/mock)"} accent={import.meta.env.VITE_API_KEY ? M : A} />
+              {/* This row used to read "configured", which sounded like a
+                  security control. It is not one: the key ships inside this
+                  page's JavaScript, so anyone can read it. It exists to keep
+                  drive-by traffic off the write routes; ownership is proved by
+                  the wallet signature above, not by this. */}
+              <Row
+                label="Bundled write key"
+                value={import.meta.env.VITE_API_KEY ? "present in this bundle — public, not a credential" : "none (local/mock)"}
+                accent={A} />
             </>
           )}
 
@@ -1262,7 +1398,7 @@ function SettingsPage() {
               <header><div><span>LOCAL PREFERENCES</span><h2>Experience</h2></div><em><i />THIS DEVICE</em></header>
               <button type="button" className="settings-toggle-row" onClick={() => setDepthEnabled(v => !v)} aria-pressed={depthEnabled}><span><strong>3D depth</strong><small>Perspective, stepped shadows and spatial panels</small></span><i /></button>
               <button type="button" className="settings-toggle-row" onClick={() => setMotionEnabled(v => !v)} aria-pressed={motionEnabled}><span><strong>Motion</strong><small>Page transitions, hover lift and live signals</small></span><i /></button>
-              <div className="settings-experience-note"><Sparkles size={16} /><p>Sound remains available from the global header so it follows you across every page.</p></div>
+              <div className="settings-experience-note"><Sparkles size={16} /><p>Depth and motion are stored on this device and applied immediately. Sound stays in the global header so it follows you across every page.</p></div>
             </>
           )}
         </section>
@@ -1274,7 +1410,7 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage, GuidePage, CopilotPage, ModelsPage, ProfilePage];
+const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, TreasuryPage, AuditPage, GuardrailsPage, SettingsPage, GuidePage, CopilotPage, ModelsPage, ProfilePage];
 
 export default function App() {
   const indexFromHash = () => {

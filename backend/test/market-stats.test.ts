@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hireStatsByListing, listingStats, volumeByListing } from "../src/routes/market-stats.js";
+import { hireStatsByListing, isLiveHire, listingStats, volumeByListing } from "../src/routes/market-stats.js";
 
 const ev = (payload: Record<string, unknown>) => ({ payload: JSON.stringify(payload) });
 
@@ -90,5 +90,29 @@ describe("listingStats", () => {
     expect(s.totalHires).toBe(1);
     expect(s.hires24h).toBe(1);
     expect(s.lastHiredAt).not.toBeNull();
+  });
+});
+
+describe("isLiveHire", () => {
+  const now = new Date("2026-08-27T12:00:00Z");
+  const at = (iso: string) => new Date(iso);
+
+  it("treats a rental whose term has passed as over, whatever the status column says", () => {
+    // HireAgreement.status defaults to "active" and nothing ever writes it
+    // again, so a listing rented once last month advertised "1 active hire"
+    // forever.
+    expect(isLiveHire({ endsAt: at("2026-08-01T00:00:00Z"), status: "active" }, now)).toBe(false);
+  });
+
+  it("treats a rental still inside its term as live", () => {
+    expect(isLiveHire({ endsAt: at("2026-08-28T00:00:00Z"), status: "active" }, now)).toBe(true);
+  });
+
+  it("honours an explicit cancellation even before the end date", () => {
+    expect(isLiveHire({ endsAt: at("2026-08-28T00:00:00Z"), status: "cancelled" }, now)).toBe(false);
+  });
+
+  it("is exclusive at the boundary — a term that ends now has ended", () => {
+    expect(isLiveHire({ endsAt: now, status: "active" }, now)).toBe(false);
   });
 });

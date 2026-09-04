@@ -10,7 +10,16 @@ export const API_URL = !configuredApi
 // Shared write key (see backend/src/auth.ts for what it does and does not protect).
 const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
-export interface Health { ok: boolean; chain: "mock" | "solana"; programId: string; executor: string; clockSpeed: number }
+export interface Health {
+  ok: boolean; chain: "mock" | "solana"; programId: string; executor: string; clockSpeed: number;
+  // Present on a current API build; optional so an older one still types.
+  version?: string;
+  identityEnforced?: boolean;      // do writes need a wallet signature?
+  indexer?: "running" | "off";     // is the chain log subscription live?
+  rateLimitPerMinute?: number;
+  demoMintConfigured?: boolean;
+  cluster?: string;
+}
 export interface SimulationPolicy { spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; durationSeconds: number }
 export interface SimulationInput { policy: SimulationPolicy; proposal: { amountUnits: string; attempts: number; intervalSeconds: number; destinationAllowed: boolean; mintAllowed: boolean; active: boolean; replayNonce: boolean } }
 export interface PolicyPreset { id: string; name: string; description: string; policy: SimulationPolicy; proposal: { amountUnits: string; attempts: number; intervalSeconds: number } }
@@ -19,7 +28,30 @@ export interface SimulationResult {
   summary: { allowed: number; blocked: number; spentUnits: string; remainingUnits: string; nextNonce: number };
   steps: { attempt: number; elapsedSeconds: number; nonce: number; verdict: { allow: boolean; reasonCode: string; gate: number; message: string }; gates: { id: number; status: "passed" | "blocked" | "skipped" }[]; spentUnits: string; remainingUnits: string }[];
 }
-export interface AgentVersion { id: string; name: string; version: string; strategy: string; agentHash: string }
+// Reputation has two halves that are reported apart on purpose: reliability is
+// derived from policy decisions and on-chain results and cannot be voted on;
+// reviews come only from wallets that paid to rent the agent.
+export interface ReviewSummary { count: number; average: number | null; distribution: Record<string, number>; latestAt: string | null }
+export interface ReliabilitySummary {
+  decisions: number; allowed: number; denied: number; complianceRate: number | null;
+  onChainAttempts: number; onChainSuccesses: number; onChainSuccessRate: number | null;
+  grants: number; completedRuns: number; failedRuns: number;
+}
+export interface AgentRating {
+  reviews: ReviewSummary; reliability: ReliabilitySummary;
+  score: number | null; basis: "reliability" | "reviews" | "both" | "insufficient";
+}
+export interface AgentReview { id: string; rating: number; comment: string | null; createdAt: string; updatedAt: string; reviewerWallet: string; isMine: boolean }
+export interface Reviewable { canReview: boolean; reason: string | null; hires: { id: string; startsAt: string; endsAt: string; status: string; reviewed: boolean; rating: number | null }[] }
+
+export interface AgentVersion {
+  id: string; name: string; version: string; strategy: string; agentHash: string;
+  // Who published this build, and whether that is the wallet looking at it.
+  // Absent on an older API build; `unclaimed` covers rows published before
+  // publishing required a signature.
+  publisherWallet?: string | null; isMine?: boolean; unclaimed?: boolean;
+  rating?: AgentRating | null;
+}
 export interface OnchainGrant { active: boolean; spentUnits: string; transactionCount: number; nextNonce: number; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: number; allowedMints: string[]; allowedDestinations: string[] }
 export interface Grant {
   id: string; grantPda: string; agentId: string; executorPubkey: string; createSignature: string | null;
@@ -42,12 +74,17 @@ export interface IntentPreview {
   ruleSnapshotHash: string;
   nonce: number;
 }
-export interface AuditRow { id: string; createdAt: string; actorType: string; eventType: string; subjectType: string; subjectId: string; chainSignature: string | null; payload: Record<string, unknown> }
+// `redacted` is set by the API when the caller is not the owner: identity and
+// linkage are masked server-side, the on-chain evidence is not. The UI says so
+// rather than presenting a masked row as if it were the whole record.
+export interface AuditRow { id: string; createdAt: string; actorType: string; eventType: string; subjectType: string; subjectId: string; chainSignature: string | null; payload: Record<string, unknown>; redacted?: boolean }
 export interface VaultView { owner: string; vaultPda: string; vaultAta: string; mint: string; balanceUnits: string | null; exists: boolean }
 export interface FeedEvent { id: string; at: string; eventType: string; actorType: string; payload: Record<string, unknown>; chainSignature?: string | null }
 export interface Listing {
   id: string; agentVersionId: string; priceLamports: string; developerWallet: string | null; status: string; createdAt: string;
   agentVersion: AgentVersion; activeHires: number;
+  publisherWallet?: string | null; isMine?: boolean; hiredByMe?: boolean;
+  rating?: AgentRating | null;
   // Market stats from the backend, all derived from real records (hire rows +
   // `listing.hired` audit events). Optional so an older API build still types.
   totalHires?: number; hires24h?: number; volumeLamports?: string; lastHiredAt?: string | null;
@@ -96,6 +133,20 @@ export function loadSession(): WalletSession | null {
   }
 }
 
+/**
+ * True when this browser holds a live session for `wallet`.
+ *
+ * Connecting a wallet only names an address; the API cannot tell a connected
+ * wallet from a typed one. Publishing, renting and reviewing all check this
+ * instead, because they are the actions the server will refuse without a
+ * signature — and offering a button that is going to 401 is worse than
+ * offering a prompt to sign in.
+ */
+export function isSignedIn(wallet: string | null | undefined): boolean {
+  const s = loadSession();
+  return Boolean(s && wallet && s.wallet === wallet);
+}
+
 export function storeSession(session: WalletSession | null): void {
   try {
     if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -136,7 +187,8 @@ export const api = {
   simulatePolicy: (input: SimulationInput) => req<SimulationResult>("/policy/simulate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(15_000) }, false),
   authNonce: (wallet: string) => req<{ nonce: string; message: string; expiresAt: string }>("/auth/nonce", { method: "POST", body: JSON.stringify({ wallet }) }),
   authVerify: (b: { wallet: string; nonce: string; signature: string }) => req<WalletSession>("/auth/verify", { method: "POST", body: JSON.stringify(b) }),
-  agents: () => req<AgentVersion[]>("/agents"),
+  agents: (opts?: { mine?: boolean }) => req<AgentVersion[]>(`/agents${opts?.mine ? "?mine=true" : ""}`),
+  agent: (id: string) => req<AgentVersion & { listings: Listing[]; identityEnforced: boolean }>(`/agents/${id}`),
   publishAgent: (a: { name: string; version: string; strategy: string; modelRef: string; codeRef: string; config?: Record<string, unknown> }) =>
     req<{ agent: AgentVersion }>("/agents", { method: "POST", body: JSON.stringify(a) }),
   grants: () => req<Grant[]>("/grants"),
@@ -168,6 +220,10 @@ export const api = {
   hires: (wallet?: string) => req<Hire[]>(`/hires${wallet ? `?wallet=${wallet}` : ""}`),
   hire: (b: { listingId: string; ownerWallet: string; durationHours: number; paymentSignature: string }) =>
     req<Hire>("/hires", { method: "POST", body: JSON.stringify(b) }),
+  reviews: (listingId: string) => req<{ rating: AgentRating; reviews: AgentReview[] }>(`/listings/${listingId}/reviews`),
+  reviewable: (listingId: string) => req<Reviewable>(`/listings/${listingId}/reviewable`),
+  submitReview: (listingId: string, b: { hireId: string; reviewerWallet: string; rating: number; comment?: string }) =>
+    req<{ review: AgentReview; rating: AgentRating }>(`/listings/${listingId}/reviews`, { method: "POST", body: JSON.stringify(b) }),
   analytics: (owner?: string) => req<Analytics>(`/analytics${owner ? `?owner=${owner}` : ""}`),
   ask: (question: string, owner?: string) =>
     req<AssistantReply>("/assistant", { method: "POST", body: JSON.stringify({ question, owner }) }),

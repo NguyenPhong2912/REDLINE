@@ -184,6 +184,8 @@ export function AuditPage() {
       describePayload(r).toLowerCase().includes(s)
     );
   });
+  // How much of what is on screen the API masked because it is not ours.
+  const redactedCount = filtered.filter(r => r.redacted).length;
 
   /* Stats */
   const totalEvents = rows.length;
@@ -315,6 +317,23 @@ export function AuditPage() {
           <span className="text-[12px] font-bold" style={{ ...mono, color: error ? R : M }}>{error ? "OFFLINE" : "LIVE"}</span>
         </div>
       </div>
+
+      {/* Redaction notice. The API masks identity for anyone who is not the
+          owner of the events, so the page has to say that rather than present
+          a partial record as the whole one. */}
+      {redactedCount > 0 && (
+        <div className="rounded-2xl p-4 flex items-start gap-4" style={{ background: `${A}09`, border: `1px solid ${A}20` }}>
+          <div className="p-2 rounded-xl shrink-0" style={{ background: `${A}14`, border: `1px solid ${A}25` }}><Eye size={14} style={{ color: A }} /></div>
+          <div className="flex-1">
+            <div className="text-xs font-semibold" style={{ ...sans, color: color.text }}>{tr("Redacted view")}</div>
+            <div className="text-[13px] mt-0.5" style={{ ...sans, color: color.textMuted }}>
+              {redactedCount === filtered.length
+                ? tr("Wallets, vaults and destinations are masked by the API because these events are not yours. The reason codes, amounts and on-chain signatures are complete — that is what makes the record checkable. Sign in with the owning wallet to see the rest.")
+                : tr("Some of these events belong to other wallets and are masked by the API. Your own are shown in full.")}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (

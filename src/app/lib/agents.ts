@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type AgentVersion, type Grant } from "./api";
+import { api, type AgentRating, type AgentVersion, type Grant } from "./api";
 
 // Real per-agent rollups computed from /agents + /grants. No win rate, APY or
 // uptime here — the platform never tracked those, so there is nothing honest
@@ -19,6 +19,12 @@ export interface AgentSummary {
   lastActiveAt: string | null;
   latestExpiresAt: string | null;
   grants: Grant[];
+  // Ownership, so the page can answer "which of these is mine?" instead of
+  // rendering every published build as if it belonged to whoever is looking.
+  publisherWallet: string | null;
+  isMine: boolean;
+  unclaimed: boolean;
+  rating: AgentRating | null;
 }
 
 export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentSummary[] {
@@ -34,6 +40,10 @@ export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentS
     const latestGrant = [...own].sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0];
     return {
       id: a.id, name: a.name, version: a.version, strategy: a.strategy, agentHash: a.agentHash,
+      publisherWallet: a.publisherWallet ?? null,
+      isMine: a.isMine ?? false,
+      unclaimed: a.unclaimed ?? a.publisherWallet == null,
+      rating: a.rating ?? null,
       status: own.length === 0 ? "IDLE" : active.length > 0 ? "ACTIVE" : "REVOKED",
       activeGrants: active.length, totalGrants: own.length, totalSpentUsdc, totalTx,
       lastActiveAt, latestExpiresAt: latestGrant?.policyVersion.expiresAt ?? null,

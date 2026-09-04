@@ -18,7 +18,7 @@ const M = color.primary, C = color.info, A = color.warn, R = color.danger;
 // English is the source language here too — every string below is written
 // in English and wrapped as `tr("...")`; this map supplies the Vietnamese side.
 const VI: Record<string, string> = {
-  "Active Policy Accounts": "Tài Khoản Chính Sách Đang Hoạt Động",
+  "Grants": "Tài Khoản Chính Sách Đang Hoạt Động",
   "active": "hoạt động",
   "api offline": "api mất kết nối",
   "No grants yet — create one in the wizard below.": "Chưa có grant nào — tạo một grant ở wizard bên dưới.",
@@ -138,7 +138,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
       <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
-        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Active Policy Accounts")}</span>
+        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Grants")}</span>
         <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
           {grants.filter(g => !g.revoked).length} {tr("active")} · {chain || tr("api offline")}
         </span>
