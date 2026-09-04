@@ -154,7 +154,10 @@
 .route-flow-track {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(7, minmax(18px, 1fr));
+  /* Column count follows FLOW_ORDER, which has grown to 9 steps. A hard-coded
+     repeat() silently wrapped the overflow onto a second row. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(14px, 1fr);
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -303,4 +306,27 @@
 /* ─── Wide desktop: use the extra width, don't inflate the type ─────────────*/
 @media (min-width: 1800px) {
   .app-main:not(.app-main-home) > div[data-route] { max-width: 1760px !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Layout corrections
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Audit is the only route whose masthead carries a third paragraph — the note
+   explaining the two writers. The art layer behind it is a fixed
+   var(--route-banner-height), so that paragraph spilled past the banner's
+   bottom edge onto the page. Set the variable on the route wrapper: the art
+   and the copy block are siblings, and both read it from there. Sized for the
+   Vietnamese string, which runs longer than the English. */
+[data-route="audit"] { --route-banner-height: clamp(248px, 32dvh, 330px); }
+.page-audit > :first-child { padding-bottom: clamp(18px, 2vw, 28px); }
+
+/* Treasury: the activity rail spans the two rows the vault and wallet cards
+   sit in, so its height was being split between them — which pushed the two
+   left cards apart by ~150px of dead space. Give the grid a fourth row that
+   absorbs the spare height instead, and let rows 2 and 3 size to their cards. */
+@media (min-width: 1181px) {
+  .page-treasury { grid-template-rows: auto auto auto 1fr; }
+  .page-treasury > :nth-child(4) { grid-row: 2 / span 3; }
 }
