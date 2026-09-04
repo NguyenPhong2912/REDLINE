@@ -36,7 +36,6 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
   const [stats, setStats] = useState<Analytics | null>(null);
   const [world, setWorld] = useState(0);
   const [showProtocolReturn, setShowProtocolReturn] = useState(false);
-  const [showChapterNav, setShowChapterNav] = useState(false);
   const factsRef = useRef<HTMLDivElement | null>(null);
   const reduced = useReducedMotion();
   const heroRef = useRef<HTMLElement | null>(null);
@@ -84,15 +83,6 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
       { threshold: 0.08 },
     );
     observer.observe(hero);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!factsRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      setShowChapterNav(!entry.isIntersecting && entry.boundingClientRect.top < 150);
-    }, { rootMargin: "-150px 0px 0px 0px" });
-    observer.observe(factsRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -185,7 +175,7 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           </div>
         </section>
         <PolicyLab />
-        <nav className={`protocol-chapter-nav ${showChapterNav ? "is-visible" : ""}`} inert={!showChapterNav} aria-hidden={!showChapterNav} aria-label="Protocol chapters">
+        <nav className="protocol-chapter-nav protocol-chapter-index" aria-label="Protocol chapters">
           {[
             ["01", "Enforcement", chaptersRef],
             ["02", "Evidence", evidenceRef],

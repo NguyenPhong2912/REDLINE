@@ -773,3 +773,212 @@
   .protocol-proof-layout,
   .protocol-console-layout { grid-template-columns: minmax(230px, .55fr) minmax(0, 1.45fr); }
 }
+
+/* Protocol clarity pass
+   All reading content remains in document flow. Crisp type and hard edges make
+   this destination feel like the same on-chain product as the routes after it. */
+.protocol-experience,
+.protocol-experience button,
+.protocol-experience input,
+.protocol-experience select {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.protocol-hero-art-layer,
+.protocol-hero-art-layer img,
+.world-feature > img,
+.protocol-hero-copy,
+.world-feature-copy {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.protocol-hero-art-layer {
+  transform: none !important;
+}
+
+.protocol-hero-art-layer img {
+  transform: none !important;
+  filter: brightness(.66) saturate(.88) contrast(1.12) !important;
+}
+
+.protocol-hero-wash {
+  background:
+    linear-gradient(90deg, rgba(5, 11, 22, .97), rgba(7, 16, 31, .80) 43%, rgba(7, 16, 31, .22) 72%, rgba(5, 10, 20, .08)),
+    linear-gradient(0deg, #050914 0%, transparent 36%) !important;
+}
+
+.astral-hero-grid {
+  opacity: .28;
+  background-size: 48px 48px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, .46), #000 45%, rgba(0, 0, 0, .78));
+}
+
+.protocol-kicker {
+  border: 1px solid rgba(196, 150, 58, .42) !important;
+  border-radius: 4px !important;
+  padding: 9px 12px !important;
+  background: rgba(12, 24, 42, .82) !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .62) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.astral-hero .protocol-hero-title,
+.astral-hero .protocol-hero-title .protocol-title-line,
+.worlds-heading h2,
+.worlds-heading h2 em,
+.world-feature-copy h3,
+.lab-heading h2,
+.lab-heading h2 em,
+.lab-empty h3 {
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-style: normal !important;
+}
+
+.astral-hero .protocol-hero-title {
+  font-weight: 720 !important;
+  letter-spacing: -.058em;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, .74), 0 0 24px rgba(196, 150, 58, .10);
+}
+
+.astral-hero .protocol-hero-title .protocol-title-accent {
+  width: fit-content;
+  margin-top: .2em;
+  padding: .08em .16em .1em;
+  border-left: 4px solid #dfc38c;
+  color: #f0d7a4 !important;
+  background: linear-gradient(90deg, rgba(223, 195, 140, .11), transparent);
+  font-size: .69em;
+  font-weight: 650 !important;
+  letter-spacing: -.035em;
+}
+
+.protocol-primary-action,
+.protocol-text-action,
+.astral-button,
+.world-feature-copy button,
+.protocol-proof-copy button,
+.protocol-next-chapter,
+.protocol-return-button {
+  border-radius: 4px !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .62) !important;
+}
+
+.protocol-primary-action:active,
+.protocol-text-action:active,
+.astral-button:active,
+.protocol-next-chapter:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: none !important;
+}
+
+.world-feature > img {
+  transform: none !important;
+  filter: brightness(.70) saturate(.88) contrast(1.13) !important;
+}
+
+.world-feature::after {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(187, 216, 255, .022) 6px 7px),
+    linear-gradient(90deg, rgba(5, 12, 24, .97), rgba(8, 18, 34, .70) 42%, transparent 82%) !important;
+}
+
+.worlds-heading h2,
+.lab-heading h2 {
+  font-weight: 680 !important;
+  letter-spacing: -.05em;
+}
+
+.worlds-heading h2 em,
+.lab-heading h2 em {
+  color: #dfc38c;
+  font-weight: 680 !important;
+}
+
+.world-feature-copy h3 {
+  font-weight: 700 !important;
+  letter-spacing: -.05em;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, .68);
+}
+
+.lab-empty h3 {
+  font-weight: 650 !important;
+}
+
+.protocol-chapter-nav.protocol-chapter-index,
+.protocol-chapter-nav.protocol-chapter-index.is-visible {
+  position: relative;
+  z-index: 4;
+  inset: auto;
+  display: grid;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 8px;
+  border: 2px solid rgba(84, 109, 149, .54);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(196, 150, 58, .05) 1px, transparent 1px),
+    #0e192bea;
+  background-size: 24px 24px;
+  box-shadow: 4px 4px 0 rgba(196, 150, 58, .11), 0 18px 36px rgba(0, 0, 0, .22);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.protocol-chapter-nav.protocol-chapter-index button {
+  min-height: 46px;
+  border-radius: 4px;
+}
+
+.protocol-chapter-nav.protocol-chapter-index button:hover,
+.protocol-chapter-nav.protocol-chapter-index button:focus-visible {
+  border-color: rgba(223, 195, 140, .52);
+  color: #f0d7a4;
+  background: rgba(223, 195, 140, .08);
+  transform: none;
+}
+
+.protocol-facts,
+.protocol-principles,
+.protocol-proof-copy,
+.lab-workspace,
+.world-feature {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (min-width: 1181px) {
+  .protocol-chapter-heading {
+    position: relative;
+    top: auto;
+    align-self: start;
+  }
+}
+
+@media (max-width: 1180px) {
+  .protocol-chapter-nav.protocol-chapter-index {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    overflow-x: auto;
+    transform: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .protocol-chapter-nav.protocol-chapter-index {
+    width: 100%;
+    grid-template-columns: repeat(4, max-content);
+  }
+
+  .protocol-chapter-nav.protocol-chapter-index button {
+    min-width: 132px;
+  }
+}
