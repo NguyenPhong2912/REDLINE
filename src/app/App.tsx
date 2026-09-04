@@ -285,6 +285,9 @@ function DashboardPage({ setNav }: { setNav?: (n: number) => void }) {
 const AGENT_ACCENTS = [M, C, A, color.info];
 
 function AgentsPage() {
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const wallet = connected ? String(connected.account.address) : "";
   const { agents, loading, error, reload } = useRealAgents();
   const [sel, setSel] = useState(0);
   const [deploying, setDeploying] = useState(true);
@@ -297,7 +300,7 @@ function AgentsPage() {
   const accent = (i: number) => AGENT_ACCENTS[i % AGENT_ACCENTS.length];
 
   async function deploy() {
-    if (!name.trim() || !strategy.trim()) return;
+    if (!wallet || !name.trim() || !strategy.trim()) return;
     setBusy(true); setDeployError("");
     try {
       // agentHash is sha256(modelRef|codeRef|config) — name and version are not
@@ -338,9 +341,10 @@ function AgentsPage() {
             <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="Strategy description" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" disabled={busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
+            <button type="button" disabled={!wallet || busy || !name.trim() || !strategy.trim()} onClick={deploy} className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40" style={{ ...sans, background: `${M}18`, border: `1px solid ${M}35`, color: M }}>
               {busy ? "Publishing…" : "Publish"}
             </button>
+            {!wallet && <span className="text-[13px]" style={{ ...mono, color: A }}>Connect a wallet to publish</span>}
             {deployError && <span className="text-[13px]" style={{ ...mono, color: color.danger }}>{deployError}</span>}
           </div>
           <p className="text-[12px]" style={{ ...sans, color: color.textDim }}>Registers a real AgentVersion via POST /agents — the agentHash is a real sha256 of the model/code/config refs. Create a grant for it from Guardrails afterward.</p>
