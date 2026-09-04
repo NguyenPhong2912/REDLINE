@@ -16,6 +16,7 @@ import treasuryArt from "../../assets/redline-treasury-core.webp";
 import evidenceArt from "../../assets/redline-evidence-observatory.webp";
 import { CelestialCore } from "./CelestialCore";
 import { PolicyLab } from "./PolicyLab";
+import { OpenBook, StoryDivider, WaterDivider } from "./depth";
 
 const worlds = [
   { title: "The Citadel", subtitle: "GUARDRAILS", description: "Define the boundary. Give every agent a budget, a destination and a deadline.", image: guardrailsArt, route: 6 },
@@ -130,6 +131,7 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
             </button>
           </div>
         </motion.div>
+        <WaterDivider height={150} />
         <div className="astral-hero-edition"><span>REDLINE UNIVERSE</span><b>01 — GENESIS</b><i />SOLANA DEVNET</div>
         {/* It looks like an affordance and reads like an instruction, so it has
             to behave like one. It was a decorative div that did nothing when
@@ -160,20 +162,22 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
       <div className="protocol-story">
         <section className="astral-worlds" id="protocol-worlds" aria-labelledby="worlds-title">
           <div className="section-eyebrow">THE REDLINE UNIVERSE / EXPLORE</div>
-          <div className="worlds-heading"><h2 id="worlds-title">One mission. <em>Three worlds.</em></h2><span>YOUR JOURNEY STARTS HERE ↗</span></div>
+          <div className="worlds-heading"><h2 id="worlds-title">One mission. <em>Three worlds.</em></h2><span>TURN THE PAGE ↗</span></div>
           <div className="world-tabs" aria-label="Choose a world">{worlds.map((item, index) => <button type="button" key={item.title} aria-pressed={world === index} onClick={() => setWorld(index)}><span>0{index + 1}</span>{item.title}<small>{item.subtitle}</small></button>)}</div>
-          <div className="world-feature">
-            <AnimatePresence initial={false}>
-              <motion.img key={world} src={worlds[world].image} alt="" aria-hidden="true"
-                initial={reduced ? false : { opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                transition={{ duration: reduced ? 0 : .4, ease: [0.22, 1, 0.36, 1] }} />
-            </AnimatePresence>
-            <motion.div key={`copy-${world}`} className="world-feature-copy"
-              initial={reduced ? false : { opacity: .4, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : .28 }}>
-              <span>0{world + 1} / {worlds[world].subtitle}</span><h3>{worlds[world].title}</h3><p>{worlds[world].description}</p><button type="button" onClick={() => setNav?.(worlds[world].route)}>Enter this world <ArrowUpRight size={17} /></button>
-            </motion.div>
-          </div>
+          <OpenBook
+            pageKey={world}
+            image={worlds[world].image}
+            imageCaption={`0${world + 1} / ${worlds[world].subtitle}`}
+            imageTitle={worlds[world].title}
+            eyebrow={`0${world + 1} / ${worlds[world].subtitle}`}
+            title={worlds[world].title}
+            folio={`p.0${world + 1}`}
+            action={<button type="button" className="wlink" onClick={() => setNav?.(worlds[world].route)}>Enter this world <ArrowUpRight size={17} /></button>}
+          >
+            <p>{worlds[world].description}</p>
+          </OpenBook>
         </section>
+        <StoryDivider colors={["133,219,192", "223,195,140", "141,204,237"]}>INTERACTIVE FIELD TEST</StoryDivider>
         <PolicyLab />
         <nav className="protocol-chapter-nav protocol-chapter-index" aria-label="Protocol chapters">
           {[

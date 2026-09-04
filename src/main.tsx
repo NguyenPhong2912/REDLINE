@@ -11,6 +11,7 @@ import "./styles/astral.css";
 import "./styles/layout.css";
 import "./styles/hoyoverse.css";
 import "./styles/pixel-onchain.css";
+import "./styles/astral-depth.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

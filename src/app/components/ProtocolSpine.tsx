@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, ArrowRight, Check, Cpu, Database, ShieldCheck } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { Activity, Check, ShieldCheck } from "lucide-react";
 import { api, short, type ProtocolOverview } from "../lib/api";
 import { color, mono, panel, sans } from "../theme";
 import { useT } from "../i18n/LanguageContext";
+import { GateChain } from "./depth";
 
 // English is the source language here too, same as the rest of the app —
 // every string below is written in English and wrapped as `tr("...")`.
@@ -33,6 +33,10 @@ const VI: Record<string, string> = {
 
   "Seven-gate transaction pipeline": "Quy trình giao dịch bảy cổng kiểm tra",
   "Policy gates": "Các gate policy",
+  "PROPOSAL": "ĐỀ XUẤT",
+  "GATE PASSED": "QUA CỔNG",
+  "GATE REFUSED · NOTHING MOVES": "BỊ CHẶN · KHÔNG GÌ DI CHUYỂN",
+  "LOOP · 24 S · TWO PROPOSALS": "VÒNG LẶP · 24 S · HAI ĐỀ XUẤT",
 
   "Scope": "Phạm vi",
   "Connected wallet": "Ví đã kết nối",
@@ -56,7 +60,6 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
   const tr = useT(VI);
   const [data, setData] = useState<ProtocolOverview | null>(null);
   const [offline, setOffline] = useState(false);
-  const reduced = useReducedMotion();
 
   const load = useCallback(async () => {
     try {
@@ -104,40 +107,7 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
           </div>
         </div>
 
-        <div className="redline-spine-stage">
-          <motion.div className="redline-endpoint" initial={false} animate={reduced ? undefined : { y: [0, -3, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-            <Cpu size={17} />
-            <span>AGENT</span>
-          </motion.div>
-
-          <div className="redline-gates" role="list" aria-label={tr("Policy gates")}>
-            {gates.map((gate, index) => (
-              <motion.div
-                key={gate.id}
-                role="listitem"
-                className="redline-gate group"
-                title={`${tr(gate.label)}: ${tr(gate.detail)}`}
-                initial={reduced ? false : { opacity: 0, z: -30, y: 8 }}
-                animate={{ opacity: 1, z: 0, y: 0 }}
-                transition={{ delay: reduced ? 0 : index * 0.055, duration: 0.4 }}
-                style={{ borderColor: gate.rejected ? `${color.danger}66` : color.border }}
-              >
-                <span className="redline-gate-index">0{gate.id}</span>
-                <span className="redline-gate-check" style={{ color: gate.rejected ? color.danger : color.primary }}>
-                  {gate.rejected ? gate.rejected : <Check size={11} />}
-                </span>
-                <span className="redline-gate-label">{tr(gate.label)}</span>
-              </motion.div>
-            ))}
-            {!reduced && <motion.span className="redline-transaction-pulse" animate={{ left: ["0%", "96%"], opacity: [0, 1, 1, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "linear", repeatDelay: 0.6 }} />}
-          </div>
-
-          <ArrowRight className="hidden xl:block" size={16} style={{ color: color.textDim }} />
-          <motion.div className="redline-endpoint redline-vault" initial={false} animate={reduced ? undefined : { boxShadow: ["0 0 0 rgba(45,212,191,0)", "0 0 28px rgba(45,212,191,.18)", "0 0 0 rgba(45,212,191,0)"] }} transition={{ duration: 3.2, repeat: Infinity }}>
-            <Database size={17} />
-            <span>VAULT</span>
-          </motion.div>
-        </div>
+        <GateChain gates={gates} tr={tr} />
 
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {[
