@@ -457,3 +457,319 @@
   .route-flow-home,
   .route-flow-pager button { transition: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Protocol desktop flow
+   The story uses the full viewport: a compact narrative rail on the left and
+   the working surface on the right. The rail repeats across every chapter so
+   the eye always knows where it is in the transaction journey.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1181px) {
+  .protocol-experience {
+    --protocol-rail: clamp(268px, 22vw, 360px);
+    --protocol-flow-gap: clamp(28px, 3vw, 56px);
+  }
+
+  .astral-hero.protocol-hero {
+    padding-right: clamp(32px, 4vw, 76px);
+    padding-left: clamp(32px, 4vw, 76px);
+  }
+
+  .astral-hero .protocol-hero-copy {
+    width: min(52%, 780px);
+  }
+
+  .astral-hero .protocol-hero-lede {
+    max-width: 560px;
+    font-size: clamp(14px, .95vw, 17px);
+  }
+
+  .celestial-scene {
+    width: 51%;
+  }
+
+  .protocol-story {
+    width: min(calc(100% - 48px), 1840px);
+    max-width: 1840px;
+    padding-inline: 0;
+  }
+
+  /* The world chooser acts as the first overview in the flow. */
+  .astral-worlds {
+    display: grid;
+    grid-template-columns: var(--protocol-rail) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    column-gap: var(--protocol-flow-gap);
+    padding-top: clamp(64px, 7vw, 112px);
+  }
+
+  .astral-worlds > .section-eyebrow {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .worlds-heading {
+    grid-column: 1;
+    grid-row: 2;
+    display: block;
+    margin: 22px 0 32px;
+  }
+
+  .worlds-heading h2 {
+    font-size: clamp(36px, 3vw, 52px);
+  }
+
+  .worlds-heading > span {
+    display: block;
+    margin-top: 22px;
+    line-height: 1.7;
+  }
+
+  .world-tabs {
+    grid-column: 1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-self: stretch;
+    border-top: 1px solid rgba(93, 120, 158, .55);
+    border-bottom: 1px solid rgba(93, 120, 158, .34);
+  }
+
+  .world-tabs button {
+    min-height: 76px;
+    padding: 18px 14px;
+    border-top: 0;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid rgba(77, 100, 136, .30);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .008));
+  }
+
+  .world-tabs button:last-child { border-bottom: 0; }
+
+  .world-tabs button[aria-pressed="true"] {
+    border-left-color: #dfc38c;
+    background: linear-gradient(90deg, rgba(223, 195, 140, .13), transparent 78%);
+    box-shadow: inset 8px 0 18px rgba(223, 195, 140, .035);
+  }
+
+  .world-feature {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    min-height: 560px;
+    height: 100%;
+    border-width: 2px;
+    border-radius: 6px;
+    box-shadow: 6px 6px 0 rgba(196, 150, 58, .13), 0 24px 48px rgba(0, 0, 0, .30);
+  }
+
+  .world-feature-copy {
+    display: flex;
+    min-height: 100%;
+    max-width: 520px;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(48px, 5vw, 84px);
+  }
+
+  .world-feature-copy h3 {
+    font-size: clamp(46px, 4.3vw, 72px);
+  }
+
+  .world-feature-copy p {
+    max-width: 410px;
+    font-size: 15px;
+  }
+
+  /* The lab continues the same rail/content rhythm. */
+  .policy-lab {
+    display: grid;
+    grid-template-columns: var(--protocol-rail) minmax(0, 1fr);
+    column-gap: var(--protocol-flow-gap);
+    align-items: start;
+    padding-block: clamp(88px, 8vw, 132px);
+    border-bottom: 1px solid rgba(74, 99, 136, .34);
+  }
+
+  .policy-lab > .section-eyebrow,
+  .policy-lab > .lab-heading {
+    grid-column: 1;
+  }
+
+  .policy-lab > .section-eyebrow { grid-row: 1; }
+
+  .policy-lab > .lab-heading {
+    grid-row: 2 / span 3;
+    display: block;
+    margin: 22px 0 0;
+  }
+
+  .lab-heading h2 {
+    font-size: clamp(34px, 2.8vw, 48px);
+  }
+
+  .lab-heading > p {
+    max-width: 300px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(77, 101, 139, .42);
+  }
+
+  .policy-lab > .lab-presets,
+  .policy-lab > .lab-workspace,
+  .policy-lab > [role="status"],
+  .policy-lab > .lab-error {
+    grid-column: 2;
+  }
+
+  .policy-lab > .lab-presets { grid-row: 1; align-self: start; margin: 0 0 18px; }
+  .policy-lab > .lab-workspace,
+  .policy-lab > [role="status"] { grid-row: 2 / span 2; }
+
+  .lab-workspace {
+    grid-template-columns: minmax(330px, .72fr) minmax(0, 1.28fr);
+    min-height: 610px;
+    border-width: 2px;
+    border-radius: 6px;
+    box-shadow: 5px 5px 0 rgba(196, 150, 58, .11), 0 22px 44px rgba(0, 0, 0, .25);
+  }
+
+  .lab-form,
+  .lab-results {
+    padding: clamp(26px, 2.4vw, 42px);
+  }
+
+  /* Wide metrics bridge the overview and the operational chapters. */
+  .protocol-story .protocol-facts {
+    margin-top: 0;
+    border-width: 1px 2px 2px;
+    border-radius: 0 0 6px 6px !important;
+    box-shadow: 4px 4px 0 rgba(196, 150, 58, .11), 0 18px 36px rgba(0, 0, 0, .22) !important;
+  }
+
+  .protocol-fact {
+    min-height: 112px;
+    padding-inline: clamp(22px, 2.5vw, 44px);
+  }
+
+  /* Every chapter aligns to the same two-column transaction path. */
+  .protocol-chapter {
+    display: grid;
+    grid-template-columns: var(--protocol-rail) minmax(0, 1fr);
+    column-gap: var(--protocol-flow-gap);
+    align-items: start;
+    padding-top: clamp(82px, 8vw, 132px);
+  }
+
+  .protocol-chapter::before {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: start;
+    width: 100%;
+    height: 1px;
+    content: "";
+    background: linear-gradient(90deg, rgba(223, 195, 140, .72), rgba(78, 103, 143, .46) 28%, transparent 88%);
+  }
+
+  .protocol-chapter-heading {
+    position: sticky;
+    top: 150px;
+    grid-column: 1;
+    grid-row: 2;
+    display: block;
+    margin: 0;
+    padding: 28px 0 28px 18px;
+    border-left: 4px solid #dfc38c;
+  }
+
+  .protocol-chapter-heading span {
+    display: block;
+    padding: 0;
+  }
+
+  .protocol-chapter-heading h2 {
+    max-width: 330px;
+    margin-top: 24px;
+    font-size: clamp(28px, 2.2vw, 40px);
+    line-height: 1.08;
+    letter-spacing: -.045em;
+  }
+
+  .protocol-chapter > .redline-spine,
+  .protocol-chapter > .protocol-proof-layout,
+  .protocol-chapter > .protocol-console-layout,
+  .protocol-live-chapter > .rounded-2xl {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    margin-top: 28px;
+  }
+
+  .protocol-chapter > .protocol-next-chapter {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .redline-spine {
+    min-height: 410px;
+  }
+
+  .protocol-principles {
+    margin-top: clamp(82px, 8vw, 132px);
+    border: 1px solid rgba(78, 103, 143, .48);
+    border-radius: 6px;
+    background: linear-gradient(115deg, rgba(18, 31, 52, .88), rgba(10, 20, 36, .72));
+    box-shadow: 5px 5px 0 rgba(196, 150, 58, .10), 0 20px 40px rgba(0, 0, 0, .22);
+  }
+
+  .protocol-principle {
+    min-height: 300px;
+    padding: 32px clamp(28px, 3vw, 54px) 38px;
+  }
+
+  .protocol-principle:first-child { padding-left: clamp(28px, 3vw, 54px); }
+
+  .protocol-proof-layout {
+    grid-template-columns: minmax(260px, .52fr) minmax(520px, 1.48fr);
+    gap: clamp(30px, 3vw, 56px);
+  }
+
+  .protocol-proof-copy {
+    padding: 28px;
+    border: 1px solid rgba(78, 103, 143, .42);
+    border-radius: 4px;
+    background: rgba(14, 27, 47, .72);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, .45);
+  }
+
+  .protocol-console-layout {
+    grid-template-columns: minmax(260px, .5fr) minmax(540px, 1.5fr);
+    gap: clamp(30px, 3vw, 56px);
+  }
+
+  .protocol-console-copy {
+    padding: 26px 0 0;
+  }
+
+  .protocol-live-chapter {
+    padding-bottom: clamp(88px, 8vw, 132px);
+  }
+
+  .protocol-footer {
+    margin-top: 0;
+    padding: 34px 0 42px;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1440px) {
+  .protocol-experience {
+    --protocol-rail: 270px;
+    --protocol-flow-gap: 28px;
+  }
+
+  .protocol-story { width: calc(100% - 36px); }
+  .world-feature { min-height: 520px; }
+  .lab-workspace { grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr); }
+  .protocol-proof-layout,
+  .protocol-console-layout { grid-template-columns: minmax(230px, .55fr) minmax(0, 1.45fr); }
+}
