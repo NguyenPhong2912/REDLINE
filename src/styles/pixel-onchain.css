@@ -1296,3 +1296,252 @@
     font-size: 13px;
   }
 }
+
+/* Pixel chapter stream
+   A numbered node and segmented data line connect all four sections. Titles
+   use the full row, preventing the narrow-column wrapping shown on wide PCs. */
+.protocol-enforcement-chapter { --chapter-rgb: 196, 150, 58; }
+.protocol-proof-chapter { --chapter-rgb: 76, 148, 224; }
+.protocol-live-chapter { --chapter-rgb: 35, 176, 137; }
+.protocol-console-chapter { --chapter-rgb: 151, 107, 232; }
+
+@media (min-width: 1181px) {
+  .protocol-chapter,
+  .protocol-enforcement-chapter,
+  .protocol-proof-chapter,
+  .protocol-live-chapter,
+  .protocol-console-chapter {
+    position: relative;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    column-gap: clamp(22px, 2vw, 38px);
+    row-gap: 42px;
+    padding-top: clamp(88px, 7vw, 124px);
+    border-top: 0;
+  }
+
+  .protocol-chapter::after {
+    position: absolute;
+    z-index: 0;
+    top: calc(clamp(88px, 7vw, 124px) + 68px);
+    bottom: calc(clamp(88px, 7vw, 124px) * -1);
+    left: 31px;
+    width: 2px;
+    content: "";
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(var(--chapter-rgb), .64) 0 12px,
+      rgba(var(--chapter-rgb), .12) 12px 16px,
+      transparent 16px 23px
+    );
+    box-shadow: 0 0 12px rgba(var(--chapter-rgb), .14);
+  }
+
+  .protocol-console-chapter::after {
+    bottom: 34px;
+    mask-image: linear-gradient(#000 0 78%, transparent);
+  }
+
+  .protocol-chapter > .protocol-chapter-heading,
+  .protocol-enforcement-chapter > .protocol-chapter-heading,
+  .protocol-console-chapter > .protocol-chapter-heading {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    grid-column: 1 / -1;
+    grid-row: 1;
+    gap: clamp(22px, 2vw, 38px);
+    align-items: start;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .protocol-chapter-number {
+    position: relative;
+    display: grid !important;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    padding: 0 !important;
+    border: 1px solid rgba(var(--chapter-rgb), .58);
+    border-radius: 5px;
+    color: rgb(var(--chapter-rgb)) !important;
+    background:
+      linear-gradient(135deg, rgba(var(--chapter-rgb), .14), rgba(var(--chapter-rgb), .035)),
+      #0b1526;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .22), inset 0 1px rgba(255, 255, 255, .035);
+    font: 680 25px/1 'JetBrains Mono', monospace !important;
+    letter-spacing: -.08em !important;
+    text-align: center;
+  }
+
+  .protocol-chapter-number::after {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid rgb(var(--chapter-rgb));
+    border-radius: 1px;
+    content: "";
+    background: #07101e;
+  }
+
+  .protocol-chapter-heading-copy {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(240px, .30fr) minmax(0, .70fr);
+    grid-template-rows: auto auto;
+    gap: 12px clamp(32px, 4vw, 76px);
+    min-width: 0;
+    padding: 3px 0 32px;
+  }
+
+  .protocol-chapter-heading-copy::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    content: "";
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(var(--chapter-rgb), .70) 0 20px,
+      rgba(var(--chapter-rgb), .16) 20px 25px,
+      transparent 25px 34px
+    );
+    mask-image: linear-gradient(90deg, #000, #000 72%, transparent 100%);
+  }
+
+  .protocol-chapter-kicker {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+    color: rgb(var(--chapter-rgb)) !important;
+    line-height: 1.55 !important;
+  }
+
+  .protocol-chapter-heading-copy > p {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 390px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .protocol-chapter-heading h2,
+  .protocol-enforcement-chapter .protocol-chapter-heading h2,
+  .protocol-console-chapter .protocol-chapter-heading h2 {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: 100%;
+    max-width: 1050px;
+    min-width: 0;
+    margin: 0;
+    font-size: clamp(34px, 2.7vw, 54px);
+    font-weight: 660;
+    line-height: 1.08;
+    letter-spacing: -.048em;
+    overflow-wrap: normal;
+    word-break: normal;
+    text-wrap: balance;
+  }
+
+  .protocol-chapter > .protocol-chapter-body,
+  .protocol-enforcement-chapter > .protocol-enforcement-layout,
+  .protocol-console-chapter > .protocol-chapter-body {
+    position: relative;
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    margin: 0;
+  }
+
+  .protocol-chapter > .protocol-next-chapter,
+  .protocol-enforcement-chapter > .protocol-next-chapter,
+  .protocol-console-chapter > .protocol-next-chapter {
+    grid-column: 2;
+    grid-row: 3;
+    margin: 0 0 0 auto;
+    border-color: rgba(var(--chapter-rgb), .34);
+    color: rgb(var(--chapter-rgb));
+    background: rgba(var(--chapter-rgb), .055);
+  }
+
+  .protocol-chapter > .protocol-next-chapter:hover,
+  .protocol-chapter > .protocol-next-chapter:focus-visible {
+    border-color: rgba(var(--chapter-rgb), .65);
+    color: #f2eee5;
+    background: rgba(var(--chapter-rgb), .11);
+  }
+
+  .protocol-proof-layout,
+  .protocol-console-layout {
+    grid-template-columns: minmax(280px, .42fr) minmax(0, 1.58fr);
+  }
+
+  .protocol-live-chapter {
+    padding-bottom: 0;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1500px) {
+  .protocol-chapter-heading-copy {
+    grid-template-columns: minmax(210px, .34fr) minmax(0, .66fr);
+    gap: 10px 32px;
+  }
+
+  .protocol-chapter-heading h2,
+  .protocol-enforcement-chapter .protocol-chapter-heading h2,
+  .protocol-console-chapter .protocol-chapter-heading h2 {
+    font-size: clamp(31px, 2.8vw, 43px);
+  }
+
+  .protocol-proof-layout,
+  .protocol-console-layout {
+    grid-template-columns: minmax(240px, .48fr) minmax(0, 1.52fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .protocol-chapter {
+    position: relative;
+  }
+
+  .protocol-chapter-heading {
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .protocol-chapter-number {
+    display: grid !important;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    padding: 0 !important;
+    border: 1px solid rgba(var(--chapter-rgb), .55);
+    border-radius: 4px;
+    color: rgb(var(--chapter-rgb)) !important;
+    background: rgba(var(--chapter-rgb), .07);
+    font-size: 20px !important;
+  }
+
+  .protocol-chapter-heading-copy {
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(var(--chapter-rgb), .34);
+  }
+
+  .protocol-chapter-kicker {
+    color: rgb(var(--chapter-rgb)) !important;
+  }
+
+  .protocol-chapter-heading-copy > p {
+    max-width: 620px;
+  }
+}
