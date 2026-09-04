@@ -1699,3 +1699,98 @@
     left: 18%;
   }
 }
+
+/* Full-bleed chapter stream
+   The story wrapper was wide, but legacy chapter widths still capped each
+   section at 1400px. Own width at the actual sections and use one continuous
+   channel colour so 01 follows the exact same rail language as 02–04. */
+.protocol-experience {
+  --protocol-stream-rgb: 86, 166, 220;
+}
+
+@media (min-width: 1181px) {
+  .protocol-story > .protocol-chapter,
+  .protocol-story > .protocol-principles,
+  .protocol-story > .protocol-footer {
+    width: 100% !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .protocol-story > .protocol-chapter {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .protocol-chapter-heading-copy::after {
+    background:
+      repeating-linear-gradient(90deg, rgba(var(--protocol-stream-rgb), .46) 0 18px, transparent 18px 27px),
+      linear-gradient(180deg,
+        transparent 0 18%,
+        rgba(var(--protocol-stream-rgb), .12) 18% 27%,
+        rgba(var(--protocol-stream-rgb), .72) 44% 50%,
+        rgba(230, 243, 255, .52) 50% 54%,
+        rgba(var(--protocol-stream-rgb), .19) 54% 72%,
+        transparent 72% 100%);
+    box-shadow: 0 8px 18px rgba(var(--protocol-stream-rgb), .12);
+  }
+
+  .protocol-chapter-heading-copy::before {
+    background: rgb(var(--protocol-stream-rgb));
+    box-shadow:
+      0 0 8px rgba(var(--protocol-stream-rgb), .95),
+      0 0 22px rgba(var(--protocol-stream-rgb), .65);
+  }
+
+  .protocol-chapter::after,
+  .protocol-enforcement-chapter::after,
+  .protocol-proof-chapter::after,
+  .protocol-live-chapter::after,
+  .protocol-console-chapter::after {
+    top: calc(clamp(88px, 7vw, 124px) + 62px);
+    bottom: calc(clamp(88px, 7vw, 124px) * -1);
+    left: 27px;
+    width: 12px;
+    background:
+      linear-gradient(90deg,
+        transparent 0 8%,
+        rgba(var(--protocol-stream-rgb), .12) 8% 24%,
+        rgba(var(--protocol-stream-rgb), .74) 42% 50%,
+        rgba(230, 243, 255, .46) 50% 56%,
+        rgba(var(--protocol-stream-rgb), .18) 56% 78%,
+        transparent 78% 100%),
+      repeating-linear-gradient(180deg, rgba(var(--protocol-stream-rgb), .38) 0 13px, transparent 13px 21px);
+    box-shadow: 0 0 16px rgba(var(--protocol-stream-rgb), .16);
+    transform: perspective(460px) rotateY(-34deg);
+  }
+
+  .protocol-console-chapter::after {
+    bottom: 34px;
+  }
+
+  .protocol-chapter > .protocol-chapter-body,
+  .protocol-enforcement-chapter > .protocol-enforcement-layout,
+  .protocol-console-chapter > .protocol-chapter-body {
+    max-width: none;
+  }
+
+  .protocol-experience .redline-spine,
+  .protocol-proof-layout,
+  .protocol-ownership-layout,
+  .protocol-console-layout {
+    width: 100%;
+    max-width: none;
+  }
+
+  .protocol-chapter-heading-copy {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  #protocol-worlds {
+    scroll-margin-top: calc(var(--app-header-height) + 12px);
+  }
+}

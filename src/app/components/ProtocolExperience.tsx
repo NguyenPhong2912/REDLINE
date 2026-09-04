@@ -125,8 +125,8 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
             <button type="button" onClick={() => setNav?.(6)} className="protocol-primary-action">
               Launch the protocol <ArrowUpRight size={16} />
             </button>
-            <button type="button" onClick={() => document.getElementById("policy-lab")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" })} className="protocol-text-action">
-              <Play size={13} fill="currentColor" /> Try Policy Lab
+            <button type="button" onClick={() => document.getElementById("protocol-worlds")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" })} className="protocol-text-action">
+              <Play size={13} fill="currentColor" /> Explore the flow
             </button>
           </div>
         </motion.div>
@@ -158,7 +158,7 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
       </AnimatePresence>
 
       <div className="protocol-story">
-        <section className="astral-worlds" aria-labelledby="worlds-title">
+        <section className="astral-worlds" id="protocol-worlds" aria-labelledby="worlds-title">
           <div className="section-eyebrow">THE REDLINE UNIVERSE / EXPLORE</div>
           <div className="worlds-heading"><h2 id="worlds-title">One mission. <em>Three worlds.</em></h2><span>YOUR JOURNEY STARTS HERE ↗</span></div>
           <div className="world-tabs" aria-label="Choose a world">{worlds.map((item, index) => <button type="button" key={item.title} aria-pressed={world === index} onClick={() => setWorld(index)}><span>0{index + 1}</span>{item.title}<small>{item.subtitle}</small></button>)}</div>
