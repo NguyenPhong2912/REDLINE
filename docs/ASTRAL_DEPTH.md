@@ -1,6 +1,6 @@
 # REDLINE Astral Depth — hệ thống chiều sâu, chuyển động và bố cục
 
-**Version:** 1.0 · **Date:** 2026-09-04 · **Status:** phase 1 in code (Protocol), phases 2–3 in design
+**Version:** 1.1 · **Date:** 2026-09-04 · **Status:** phases 1–2 in code (Protocol + 7 trang vận hành), phase 3 in design
 
 Astral Depth là lớp nâng cấp của thiết kế Astral hiện có: **giữ nguyên** palette (nền `#080d19`, panel `#121c30`, vàng champagne `#dfc38c`, Inter / JetBrains Mono / Georgia italic) và thêm bốn thứ mà bản trước còn thiếu — một thang bóng đổ thống nhất, chiều sâu 3D xếp lớp, nút bấm có xúc giác, và một bộ mô-típ 3D dùng chung (voxel · chain · water · open book) để trang Protocol kể được câu chuyện *"the agent proposes, the chain decides"* bằng chuyển động.
 
@@ -37,9 +37,16 @@ Quy tắc bất biến từ `DESIGN_SYSTEM_PROMPT.md` vẫn áp dụng: mono = s
 
 Mọi chuyển động là CSS keyframe (không JS trên main thread); `prefers-reduced-motion` biến tất cả thành khung tĩnh và ẩn runner.
 
-## 4. Bố cục theo trang (phase 2 — trong design, chưa vào code)
+## 4. Bố cục theo trang (phase 2 — đã vào code)
 
-Mỗi trang vận hành có một bố cục riêng thay cho công thức "journey bar → banner → panel":
+Mỗi trang vận hành có một bố cục riêng thay cho công thức "journey bar → banner → panel". Banner nghệ thuật của route bị ẩn, journey bar rút còn 44px, tiêu đề trang thành một dòng topline (`.route-page > :first-child`), phần còn lại là bố cục riêng của trang bằng CSS override trong `astral-depth.css` cộng bốn component mới trong `depth/`:
+
+| Component | Trang | Dữ liệu thật |
+|---|---|---|
+| `TransferLane` | Guardrails | `subscribeFeed("*")` — `intent.created` → coin bay, `tx.confirmed` → 7 cổng xanh + vault sáng, `tx.rejected`/`decision.precheck` → dừng ở cổng theo `reasonCode` |
+| `PolicyDeck` | Guardrails (trong `GrantsPanel`) | 3 grant mới nhất (grant còn sống lên trước); click đưa thẻ ra trước và mở danh sách proposal |
+| `VaultScene` | Treasury (trong `VaultPanel`) | `balanceUnits` on-chain; mỗi khối = 1,000 dUSDC, tối đa 12; refill → khối rơi, withdraw → khối bay ra |
+| `FlipCard` | Agents | mặt trước là thẻ agent hiện có, mặt sau là `agentHash` và công thức `sha256(modelRef\|codeRef\|config)` |
 
 | Trang | Bố cục | Hoạt cảnh giao dịch |
 |---|---|---|
@@ -56,8 +63,8 @@ Mỗi trang vận hành có một bố cục riêng thay cho công thức "journ
 
 ## 5. Lộ trình vào code
 
-1. **Phase 1 (commit này)** — `astral-depth.css`, 5 component depth, Protocol dùng `GateChain` + `OpenBook` + water dividers, nút xúc giác toàn app.
-2. **Phase 2** — bố cục riêng cho 7 trang vận hành theo bảng trên; gộp 5 lớp CSS (`index → astral → layout → hoyoverse → pixel-onchain → astral-depth`) thành hai file (`astral.css` màu/kiểu, `astral-depth.css` chiều sâu) và bỏ `!important`.
+1. **Phase 1 (đã commit)** — `astral-depth.css`, 5 component depth, Protocol dùng `GateChain` + `OpenBook` + water dividers, nút xúc giác toàn app.
+2. **Phase 2 (đã commit)** — bố cục riêng cho 7 trang vận hành theo bảng trên, `TransferLane` / `PolicyDeck` / `VaultScene` / `FlipCard` nối vào dữ liệu và feed SSE thật. Còn nợ: gộp 5 lớp CSS (`index → astral → layout → hoyoverse → pixel-onchain → astral-depth`) thành hai file và bỏ `!important`.
 3. **Phase 3** — Copilot (route chat SSE song song `askForJson`), Models, Profile.
 
 ## 6. Kiểm tra

@@ -9,6 +9,7 @@ import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
 import { CopyChip } from "./CopyChip";
+import { PolicyDeck } from "./depth";
 import { useT } from "../i18n/LanguageContext";
 import { playSound } from "../lib/soundscape";
 
@@ -143,6 +144,8 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         </span>
       </div>
       {error && <div className="px-5 py-2 text-[13px]" style={{ ...mono, color: R }}>{error}</div>}
+      {/* The same grants as physical policy cards — click one to open its proposals below */}
+      <PolicyDeck grants={grants} selected={openGrant} onSelect={id => void toggleIntents(id)} tr={tr} />
       {grants.length === 0 && !error && <div className="px-5 py-6 text-[13px]" style={{ ...mono, color: color.textDim }}>{tr("No grants yet — create one in the wizard below.")}</div>}
       {grants.map(g => {
         const oc = g.onchain;

@@ -25,6 +25,7 @@ import { CommandPalette, type CommandItem } from "./components/CommandPalette";
 import { RouteScene } from "./components/RouteScene";
 import { SoundControl } from "./components/SoundControl";
 import { GuidePage } from "./components/GuidePage";
+import { FlipCard, TransferLane } from "./components/depth";
 import { playSound } from "./lib/soundscape";
 import {
   requestRiskAssessment,
@@ -367,6 +368,19 @@ function AgentsPage() {
 
           {/* Agent detail */}
           <div className="space-y-4">
+            <FlipCard hint="CLICK THE CARD · SEE HOW THE HASH IS BUILT" back={(
+              <>
+                <small>AGENT HASH · SHA-256</small>
+                <h3>{a.name} · {a.version}</h3>
+                <code>{a.agentHash}</code>
+                <div className="formula">
+                  <span>sha256(</span>
+                  <b>modelRef</b><i>|</i><b>codeRef</b><i>|</i><b>config</b>
+                  <span>)</span>
+                </div>
+                <p>Name and version are labels; the hash is the identity. Every grant records it, so a policy binds to exactly this build — change one byte and it is a different agent.</p>
+              </>
+            )} front={(
             <div className="rounded-2xl p-6 relative overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent(sel)}60, transparent)` }} />
               <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 0% 0%, ${accent(sel)}08, transparent 60%)` }} />
@@ -397,6 +411,7 @@ function AgentsPage() {
                 ))}
               </div>
             </div>
+            )} />
 
             {/* Grants for this agent */}
             <div className="rounded-2xl overflow-hidden" style={{ ...glass() }}>
@@ -947,6 +962,9 @@ function SessionsPage() {
 
       {/* Real grants from the REDLINE API (on-chain state via /grants/:id) */}
       <GrantsPanel refreshKey={grantsKey} />
+
+      {/* Live transfer lane — replays the program's verdict for every proposal (SSE) */}
+      <TransferLane />
 
       {/* New session wizard */}
       <div className="rounded-2xl overflow-hidden" style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>

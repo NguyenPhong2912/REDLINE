@@ -4,3 +4,7 @@ export { ChainLinks, ChainConnector } from "./ChainLinks";
 export { WaterDivider, StoryDivider } from "./WaterDivider";
 export { GateChain } from "./GateChain";
 export { OpenBook } from "./OpenBook";
+export { TransferLane } from "./TransferLane";
+export { VaultScene } from "./VaultScene";
+export { PolicyDeck } from "./PolicyDeck";
+export { FlipCard } from "./FlipCard";

@@ -9,6 +9,7 @@ import { explorerAddressUrl, explorerTransactionUrl } from "../solana/client";
 import { withdrawInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
 import { CopyChip } from "./CopyChip";
+import { VaultScene } from "./depth";
 import { useT } from "../i18n/LanguageContext";
 
 const M = color.primary, C = color.info, A = color.warn, R = color.danger;
@@ -83,8 +84,9 @@ export function VaultPanel() {
 
   const balance = view?.balanceUnits ? fmtUsdc(view.balanceUnits) : "—";
   return (
-    <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
+    <div className="rounded-2xl p-6 relative overflow-hidden vault-panel" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
       <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
+      {owner && <VaultScene balanceUnits={view?.balanceUnits} busy={busy} exists={view?.exists} label={tr("Program vault · live from Devnet")} />}
       <div className="flex items-start gap-4 flex-wrap">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${M}14`, border: `1px solid ${M}25` }}><Vault size={18} style={{ color: M }} /></div>
         <div className="flex-1 min-w-[220px]">
