@@ -1,0 +1,459 @@
+/* REDLINE pixel on-chain theme
+   Crisp ledger geometry and stepped depth, while preserving the readable
+   application layout owned by layout.css. */
+
+:root {
+  --px-ink: #050914;
+  --px-surface: #101b2e;
+  --px-surface-hi: #16243a;
+  --px-surface-low: #0b1424;
+  --px-edge: rgba(92, 119, 158, .58);
+  --px-edge-soft: rgba(92, 119, 158, .28);
+  --px-text: #edf3fb;
+  --px-muted: #91a2bb;
+  --px-grid: rgba(105, 139, 188, .055);
+  --px-step-shadow: 4px 4px 0 rgba(1, 5, 13, .92);
+  --px-panel-shadow: 4px 4px 0 rgba(var(--pg), .13), 0 18px 38px rgba(0, 0, 0, .28);
+}
+
+/* Ledger ground: a quiet 12px/48px grid reads as on-chain infrastructure. */
+.redline-app {
+  background-color: var(--px-ink) !important;
+  background-image:
+    linear-gradient(rgba(105, 139, 188, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(105, 139, 188, .035) 1px, transparent 1px),
+    linear-gradient(rgba(105, 139, 188, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(105, 139, 188, .055) 1px, transparent 1px),
+    radial-gradient(ellipse 76% 48% at 88% -4%, rgba(68, 129, 226, .16), transparent 62%),
+    radial-gradient(ellipse 58% 42% at 2% 94%, rgba(146, 92, 220, .10), transparent 60%) !important;
+  background-position: 0 0, 0 0, 0 0, 0 0, center, center !important;
+  background-size: 12px 12px, 12px 12px, 48px 48px, 48px 48px, auto, auto !important;
+}
+
+.app-main {
+  scrollbar-color: rgba(104, 136, 182, .76) rgba(5, 9, 20, .5);
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  border-radius: 0;
+  background: repeating-linear-gradient(180deg, #6c87ad 0 7px, #263750 7px 10px);
+}
+
+/* Chrome */
+.app-header {
+  border-bottom: 2px solid rgba(83, 109, 147, .48) !important;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .58), 0 18px 34px rgba(0, 0, 0, .18) !important;
+}
+
+.app-header:not(.header-scrolled),
+.app-header.header-scrolled {
+  background:
+    linear-gradient(90deg, rgba(19, 31, 51, .97), rgba(8, 15, 28, .97)),
+    #0b1424 !important;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.app-header nav button,
+.header-tool,
+.mobile-nav-toggle {
+  border-radius: 4px !important;
+}
+
+.app-header nav button {
+  letter-spacing: .02em;
+}
+
+.app-header nav button:hover,
+.header-tool:hover,
+.mobile-nav-toggle:hover {
+  background: rgba(92, 130, 188, .11) !important;
+  box-shadow: inset 0 -2px rgba(132, 172, 229, .18);
+}
+
+.app-header nav button > .absolute {
+  height: 3px !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 0 0 currentColor, -6px 0 0 currentColor, 0 0 14px currentColor !important;
+}
+
+.header-tool,
+.mobile-nav-toggle {
+  border-width: 1px !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .65);
+}
+
+.app-header .mobile-nav-panel {
+  border-width: 2px;
+  border-radius: 6px;
+  background:
+    linear-gradient(rgba(106, 141, 190, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(106, 141, 190, .045) 1px, transparent 1px),
+    #0d1728f7;
+  background-size: 12px 12px;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, .72), 0 26px 60px rgba(0, 0, 0, .52);
+}
+
+/* Product journey */
+.app-main:not(.app-main-home) .route-flow-bar {
+  border: 2px solid var(--px-edge);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(var(--pg), .055) 1px, transparent 1px),
+    linear-gradient(rgba(var(--pg), .045) 1px, transparent 1px),
+    linear-gradient(110deg, rgba(19, 32, 54, .98), rgba(10, 19, 34, .97));
+  background-size: 24px 24px, 24px 24px, auto;
+  box-shadow: 4px 4px 0 rgba(var(--pg), .13), 0 18px 36px rgba(0, 0, 0, .26);
+}
+
+.route-flow-home,
+.route-flow-pager button {
+  border-radius: 4px;
+  border-color: var(--px-edge);
+  background: linear-gradient(180deg, rgba(37, 54, 81, .92), rgba(22, 36, 59, .92));
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .68), inset 0 1px rgba(255, 255, 255, .055);
+}
+
+.route-flow-home:active,
+.route-flow-pager button:not(:disabled):active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: none;
+}
+
+.route-flow-current::before {
+  width: 4px;
+  box-shadow: 0 6px 0 rgba(var(--pg), .48), 0 -6px 0 rgba(var(--pg), .48), 0 0 15px rgba(var(--pg), .62);
+}
+
+.route-flow-current > span,
+.route-flow-home small,
+.route-flow-pager small {
+  text-transform: uppercase;
+}
+
+.route-flow-track {
+  gap: 5px;
+}
+
+.route-flow-track button > span {
+  height: 5px;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, rgba(105, 129, 164, .5) 0 8px, transparent 8px 11px);
+}
+
+.route-flow-track button[data-complete="true"] > span {
+  background: repeating-linear-gradient(90deg, rgba(var(--pg), .58) 0 8px, transparent 8px 11px);
+}
+
+.route-flow-track button.is-active > span {
+  background: rgb(var(--pg));
+  box-shadow: 0 0 0 2px rgba(var(--pg), .17), 0 0 15px rgba(var(--pg), .75);
+  transform: none;
+}
+
+/* Route art becomes a framed data scene, with a restrained scan line texture. */
+.route-page-stage > .route-scene-has-art {
+  overflow: hidden;
+  border: 2px solid rgba(var(--pg), .38);
+  border-radius: 6px;
+  box-shadow: 5px 5px 0 rgba(var(--pg), .13), 0 22px 46px rgba(0, 0, 0, .28);
+}
+
+.route-page-stage > .route-scene-has-art::after {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(177, 211, 255, .025) 5px 6px),
+    linear-gradient(90deg, rgba(var(--pg), .9) 0 16px, transparent 16px) top 12px left 12px / 42px 3px no-repeat,
+    linear-gradient(rgba(var(--pg), .9) 0 16px, transparent 16px) top 12px left 12px / 3px 42px no-repeat,
+    linear-gradient(270deg, rgba(var(--pg), .9) 0 16px, transparent 16px) bottom 12px right 12px / 42px 3px no-repeat,
+    linear-gradient(0deg, rgba(var(--pg), .9) 0 16px, transparent 16px) bottom 12px right 12px / 3px 42px no-repeat;
+}
+
+.route-scene-art {
+  image-rendering: auto;
+  filter: brightness(.68) saturate(.86) contrast(1.06);
+}
+
+.route-scene-core {
+  border-radius: 4px !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .52), 0 0 22px rgba(var(--pg), .32) !important;
+}
+
+.route-page > :first-child::before {
+  width: 4px;
+  background: rgb(var(--pg)) !important;
+  box-shadow: 0 10px 0 rgba(var(--pg), .4), 0 -10px 0 rgba(var(--pg), .4), 0 0 16px rgba(var(--pg), .44) !important;
+}
+
+.route-page > :first-child h1 {
+  color: var(--px-text) !important;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, .78), 0 0 22px rgba(var(--pg), .12);
+}
+
+.route-page > :first-child p {
+  color: #afbdd1 !important;
+}
+
+/* Cards: short corners and two-stage shadows give depth without soft blobs. */
+.route-page .rounded-2xl,
+.market-grid > :first-child,
+.redline-spine,
+.protocol-facts,
+.policy-lab,
+.redline-console,
+.analytics-ledger {
+  border-color: var(--px-edge) !important;
+  border-radius: 6px !important;
+  background-color: var(--px-surface) !important;
+  box-shadow: var(--px-panel-shadow) !important;
+}
+
+.route-page .rounded-2xl {
+  background-image:
+    linear-gradient(135deg, rgba(var(--pg), .045), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, .018), transparent 42%) !important;
+  transition: transform .14s steps(2, end), border-color .14s linear, box-shadow .14s steps(2, end);
+}
+
+.route-page .rounded-2xl:hover,
+.route-page .rounded-2xl:focus-within {
+  border-color: rgba(var(--pg), .68) !important;
+  box-shadow: 6px 6px 0 rgba(var(--pg), .18), 0 22px 44px rgba(0, 0, 0, .34) !important;
+  transform: translate(-2px, -2px);
+}
+
+.route-page .rounded-xl,
+.route-page .rounded-lg,
+.route-page .rounded-md {
+  border-radius: 4px !important;
+}
+
+.route-page .rounded-full {
+  border-radius: 3px !important;
+}
+
+.route-page .absolute.inset-0.rounded-2xl,
+.route-page .absolute.rounded-2xl {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Data surfaces */
+.page-agents .agent-metrics {
+  background:
+    linear-gradient(90deg, rgba(var(--pg), .045) 1px, transparent 1px),
+    var(--px-surface-low);
+  background-size: 24px 24px;
+}
+
+.page-agents .agent-metrics > div,
+.analytics-ledger > div,
+.page-audit > :nth-child(2) > div {
+  border-color: rgba(100, 128, 168, .42) !important;
+}
+
+.analytics-ledger {
+  background-image:
+    linear-gradient(90deg, rgba(var(--pg), .055) 1px, transparent 1px),
+    linear-gradient(rgba(var(--pg), .045) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+}
+
+.analytics-ledger [class*="text-3xl"],
+.analytics-ledger [class*="text-2xl"],
+.agent-metrics [class*="font-bold"],
+.page-treasury [class*="font-bold"] {
+  text-shadow: 0 0 14px rgba(var(--pg), .22);
+}
+
+.route-page table,
+.route-page [role="table"] {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.route-page tr:hover,
+.route-page [role="row"]:hover {
+  background: rgba(var(--pg), .045);
+}
+
+/* Actions and inputs feel like hardware controls. */
+.route-page button:not(.recharts-layer),
+.redline-console-prompts button,
+.redline-console-input button {
+  border-radius: 4px !important;
+  transition: transform .12s steps(2, end), box-shadow .12s steps(2, end), border-color .12s linear, color .12s linear, background .12s linear;
+}
+
+.route-page button:not(:disabled):not(.recharts-layer) {
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .52);
+}
+
+.route-page button:not(:disabled):not(.recharts-layer):active,
+.redline-console-prompts button:not(:disabled):active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: none !important;
+}
+
+.route-page input,
+.route-page select,
+.route-page textarea {
+  min-height: 42px;
+  border-radius: 4px !important;
+  border-width: 1px !important;
+  background-color: #091322 !important;
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .24), inset 0 -1px rgba(142, 172, 213, .08);
+}
+
+.route-page input:focus,
+.route-page select:focus,
+.route-page textarea:focus {
+  border-color: rgb(var(--pg)) !important;
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .24), 3px 3px 0 rgba(var(--pg), .22) !important;
+}
+
+.route-page input::placeholder,
+.route-page textarea::placeholder {
+  color: #6f8098 !important;
+  opacity: 1;
+}
+
+/* Protocol AI console */
+.redline-console {
+  overflow: hidden;
+  border-width: 2px;
+  background:
+    linear-gradient(rgba(87, 125, 180, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(87, 125, 180, .04) 1px, transparent 1px),
+    #081322 !important;
+  background-size: 12px 12px !important;
+}
+
+.redline-console-bar,
+.redline-console-input {
+  border-color: var(--px-edge) !important;
+  background: #132039 !important;
+}
+
+.redline-console-bar {
+  box-shadow: inset 0 -2px rgba(0, 0, 0, .3);
+}
+
+.redline-console-bar::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  box-shadow: 11px 0 0 rgba(var(--pg), .46), 22px 0 0 rgba(var(--pg), .22);
+}
+
+.redline-console-body {
+  background: linear-gradient(90deg, rgba(var(--pg), .035), transparent 42%);
+}
+
+.redline-console-caret,
+.redline-console-good {
+  color: rgb(var(--pg)) !important;
+  text-shadow: 0 0 10px rgba(var(--pg), .5);
+}
+
+.redline-console-prompts {
+  border-color: var(--px-edge-soft);
+  background: rgba(12, 24, 42, .94);
+}
+
+.redline-console-prompts button {
+  border-color: rgba(var(--pg), .28);
+  background: rgba(var(--pg), .07);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .48);
+}
+
+.redline-console-input:focus-within {
+  outline: 2px solid rgba(var(--pg), .6);
+  outline-offset: -2px;
+}
+
+/* Menus and feedback */
+[data-sonner-toaster] [data-sonner-toast] {
+  border-radius: 4px !important;
+  border: 2px solid #4d6486 !important;
+  background: #101b2e !important;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, .72), 0 18px 38px rgba(0, 0, 0, .34) !important;
+}
+
+.command-palette,
+[role="dialog"] {
+  border-radius: 6px !important;
+}
+
+.page-transition-streak {
+  height: 4px;
+  background: repeating-linear-gradient(90deg, transparent 0 14px, rgb(var(--pg)) 14px 38px, rgba(var(--pg), .28) 38px 44px) !important;
+  box-shadow: 0 0 15px rgba(var(--pg), .58) !important;
+}
+
+.page-transition-content {
+  animation: px-page-in .22s steps(4, end) both;
+}
+
+@keyframes px-page-in {
+  from { opacity: .45; transform: translateY(8px); filter: brightness(.75); }
+  to { opacity: 1; transform: translateY(0); filter: brightness(1); }
+}
+
+@media (hover: hover) {
+  .route-page button:not(:disabled):hover { transform: translate(-1px, -1px); }
+}
+
+@media (max-width: 760px) {
+  :root { --px-panel-shadow: 3px 3px 0 rgba(var(--pg), .12), 0 14px 28px rgba(0, 0, 0, .24); }
+
+  .redline-app {
+    background-size: 16px 16px, 16px 16px, 64px 64px, 64px 64px, auto, auto !important;
+  }
+
+  .app-main:not(.app-main-home) .route-flow-bar {
+    box-shadow: 3px 3px 0 rgba(var(--pg), .12), 0 12px 24px rgba(0, 0, 0, .22);
+  }
+
+  .route-page-stage > .route-scene-has-art {
+    box-shadow: 3px 3px 0 rgba(var(--pg), .12), 0 15px 28px rgba(0, 0, 0, .22);
+  }
+
+  .route-page .rounded-2xl:hover,
+  .route-page .rounded-2xl:focus-within {
+    transform: none;
+    box-shadow: var(--px-panel-shadow) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-main:not(.app-main-home) .route-flow-bar {
+    border-radius: 4px;
+  }
+
+  .route-flow-track button > span {
+    height: 3px;
+    background: rgba(105, 129, 164, .5);
+  }
+
+  .route-flow-track button[data-complete="true"] > span {
+    background: rgba(var(--pg), .58);
+  }
+
+  .route-page-stage > .route-scene-has-art::after {
+    background: repeating-linear-gradient(0deg, transparent 0 7px, rgba(177, 211, 255, .02) 7px 8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition-content { animation: none; }
+  .route-page .rounded-2xl,
+  .route-page button,
+  .route-flow-home,
+  .route-flow-pager button { transition: none; }
+}
