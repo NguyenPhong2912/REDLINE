@@ -198,12 +198,18 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
         {!owner && <div className="protocol-facts-note">Connect a wallet to scope these figures to your policies.</div>}
         </div>
 
-      <section className="protocol-chapter" ref={chaptersRef}>
+      <section className="protocol-chapter protocol-enforcement-chapter" ref={chaptersRef}>
         <div className="protocol-chapter-heading">
-          <span>Chapter 01 / Enforcement</span>
-          <h2>A transaction is a journey with seven possible exits.</h2>
+          <span className="protocol-chapter-number">01</span>
+          <div className="protocol-chapter-heading-copy">
+            <span className="protocol-chapter-kicker">Enforcement / transaction boundary</span>
+            <h2>A transaction is a journey with seven possible exits.</h2>
+            <p>Every proposal advances in order. The first failed gate closes the path before value can move.</p>
+          </div>
         </div>
-        <ProtocolSpine owner={owner || undefined} />
+        <div className="protocol-chapter-body protocol-enforcement-layout">
+          <ProtocolSpine owner={owner || undefined} />
+        </div>
         <button type="button" className="protocol-next-chapter" onClick={() => scrollToChapter(evidenceRef)}>
           <span>Continue the protocol</span>
           Chapter 02 / Evidence <ArrowDown size={14} />
@@ -229,10 +235,14 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
 
       <section className="protocol-chapter protocol-proof-chapter" ref={evidenceRef}>
         <div className="protocol-chapter-heading">
-          <span>Chapter 02 / Evidence</span>
-          <h2>What the chain decided, while it is happening.</h2>
+          <span className="protocol-chapter-number">02</span>
+          <div className="protocol-chapter-heading-copy">
+            <span className="protocol-chapter-kicker">Evidence / chain record</span>
+            <h2>What the chain decided, while it is happening.</h2>
+            <p>Each result stays connected to its reason code, event and transaction signature.</p>
+          </div>
         </div>
-        <div className="protocol-proof-layout">
+        <div className="protocol-chapter-body protocol-proof-layout">
           <div className="protocol-proof-copy">
             <Fingerprint size={24} />
             <p>Runtime logs are not the source of truth. REDLINE re-reads program events and attaches transaction signatures so every claim can be followed back to the chain.</p>
@@ -250,10 +260,16 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
 
       <section className="protocol-chapter protocol-live-chapter" ref={ownershipRef}>
         <div className="protocol-chapter-heading">
-          <span>Chapter 03 / Ownership</span>
-          <h2>Signed boundaries currently in force.</h2>
+          <span className="protocol-chapter-number">03</span>
+          <div className="protocol-chapter-heading-copy">
+            <span className="protocol-chapter-kicker">Ownership / active authority</span>
+            <h2>Signed boundaries currently in force.</h2>
+            <p>Inspect who can act, what remains available and which permissions the owner has revoked.</p>
+          </div>
         </div>
-        <DashboardLiveGrants onNavigate={() => setNav?.(6)} />
+        <div className="protocol-chapter-body protocol-ownership-layout">
+          <DashboardLiveGrants onNavigate={() => setNav?.(6)} />
+        </div>
         <button type="button" className="protocol-next-chapter" onClick={() => scrollToChapter(consoleRef)}>
           <span>Continue the protocol</span>
           Chapter 04 / Interrogate <ArrowDown size={14} />
@@ -264,10 +280,14 @@ export function ProtocolExperience({ setNav }: { setNav?: (index: number) => voi
           then ask it yourself. */}
       <section className="protocol-chapter protocol-console-chapter" ref={consoleRef}>
         <div className="protocol-chapter-heading">
-          <span>Chapter 04 / Interrogate</span>
-          <h2>Ask it what it did, and why.</h2>
+          <span className="protocol-chapter-number">04</span>
+          <div className="protocol-chapter-heading-copy">
+            <span className="protocol-chapter-kicker">Interrogate / grounded answers</span>
+            <h2>Ask it what it did, and why.</h2>
+            <p>End the journey by querying the same recorded state shown across the protocol.</p>
+          </div>
         </div>
-        <div className="protocol-console-layout">
+        <div className="protocol-chapter-body protocol-console-layout">
           <div className="protocol-console-copy">
             <p>
               Every figure this protocol holds is queryable. Type <code>gates</code> to see which

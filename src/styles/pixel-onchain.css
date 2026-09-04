@@ -1070,3 +1070,229 @@
     grid-template-columns: minmax(360px, .62fr) minmax(0, 1.38fr);
   }
 }
+
+/* Four-chapter composition
+   Each chapter has a distinct silhouette, but every one shares the same
+   number, eyebrow, body and continuation rhythm. */
+.protocol-chapter-heading-copy {
+  min-width: 0;
+}
+
+.protocol-chapter-number {
+  color: rgba(223, 195, 140, .78) !important;
+  font: 650 clamp(36px, 4vw, 64px)/.9 'JetBrains Mono', monospace !important;
+  letter-spacing: -.08em !important;
+}
+
+.protocol-chapter-kicker {
+  display: block;
+  color: #dfc38c !important;
+  font: 650 10px/1.4 'JetBrains Mono', monospace !important;
+  letter-spacing: .16em !important;
+  text-transform: uppercase;
+}
+
+.protocol-chapter-heading-copy > p {
+  max-width: 430px;
+  margin: 18px 0 0;
+  color: #93a5bd;
+  font: 400 14px/1.75 'Inter', system-ui, sans-serif;
+}
+
+.protocol-chapter-body {
+  min-width: 0;
+}
+
+@media (min-width: 1181px) {
+  .protocol-chapter {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(18px, 1.55vw, 30px);
+    row-gap: 28px;
+    align-items: start;
+    padding-top: clamp(82px, 7vw, 124px);
+    border-top: 1px solid rgba(78, 103, 143, .36);
+  }
+
+  .protocol-chapter::before {
+    display: none;
+  }
+
+  .protocol-chapter-heading {
+    position: relative;
+    top: auto;
+    display: grid;
+    grid-template-columns: minmax(58px, .26fr) minmax(0, 1fr);
+    grid-column: 1 / span 4;
+    grid-row: 1;
+    gap: clamp(18px, 1.6vw, 28px);
+    margin: 0;
+    padding: 8px 0 0;
+    border: 0;
+  }
+
+  .protocol-chapter-heading h2 {
+    max-width: 420px;
+    margin: 16px 0 0;
+    font-size: clamp(29px, 2.3vw, 43px);
+    line-height: 1.06;
+  }
+
+  .protocol-chapter-number {
+    padding-top: 2px !important;
+    text-align: right;
+  }
+
+  .protocol-chapter > .protocol-chapter-body {
+    grid-column: 5 / -1;
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .protocol-chapter > .protocol-next-chapter {
+    grid-column: 5 / -1;
+    grid-row: 2;
+    margin-top: 2px;
+  }
+
+  /* Enforcement is the anchor: headline above, pipeline across the canvas. */
+  .protocol-enforcement-chapter .protocol-chapter-heading {
+    grid-column: 1 / span 8;
+    grid-template-columns: minmax(68px, 1fr) minmax(0, 7fr);
+  }
+
+  .protocol-enforcement-chapter .protocol-chapter-heading h2 {
+    max-width: 820px;
+    font-size: clamp(34px, 3vw, 55px);
+  }
+
+  .protocol-enforcement-chapter .protocol-chapter-heading-copy > p {
+    max-width: 650px;
+  }
+
+  .protocol-enforcement-chapter > .protocol-enforcement-layout {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 12px;
+  }
+
+  .protocol-enforcement-chapter > .protocol-next-chapter {
+    grid-column: 7 / -1;
+    grid-row: 3;
+  }
+
+  /* Evidence pairs the explanation and live record inside the working side. */
+  .protocol-proof-layout {
+    grid-template-columns: minmax(250px, .48fr) minmax(0, 1.52fr);
+    gap: clamp(22px, 2.3vw, 46px);
+    align-items: stretch;
+  }
+
+  .protocol-proof-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(24px, 2.2vw, 38px);
+  }
+
+  .protocol-proof-copy p {
+    margin: 28px 0;
+  }
+
+  .protocol-proof-layout > .rounded-2xl {
+    min-height: 390px;
+  }
+
+  /* Ownership keeps the narrative light so current permissions own the page. */
+  .protocol-ownership-layout > .rounded-2xl {
+    min-height: 300px;
+  }
+
+  /* The final chapter reverses direction and lets the console lead. */
+  .protocol-console-chapter .protocol-chapter-heading {
+    grid-column: 9 / -1;
+  }
+
+  .protocol-console-chapter .protocol-chapter-body {
+    grid-column: 1 / span 8;
+  }
+
+  .protocol-console-chapter > .protocol-next-chapter {
+    grid-column: 1 / span 8;
+  }
+
+  .protocol-console-layout {
+    grid-template-columns: minmax(240px, .46fr) minmax(0, 1.54fr);
+    gap: clamp(22px, 2.3vw, 46px);
+  }
+
+  .protocol-console-copy {
+    padding: 24px 0 0;
+  }
+
+  .protocol-console-layout > .redline-console {
+    min-height: 440px;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1500px) {
+  .protocol-chapter-heading {
+    grid-column: 1 / span 5;
+  }
+
+  .protocol-chapter > .protocol-chapter-body,
+  .protocol-chapter > .protocol-next-chapter {
+    grid-column: 6 / -1;
+  }
+
+  .protocol-console-chapter .protocol-chapter-heading {
+    grid-column: 9 / -1;
+  }
+
+  .protocol-console-chapter .protocol-chapter-body,
+  .protocol-console-chapter > .protocol-next-chapter {
+    grid-column: 1 / span 8;
+  }
+
+  .protocol-proof-layout,
+  .protocol-console-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .protocol-chapter-heading {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 18px;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .protocol-chapter-number {
+    font-size: 38px !important;
+    text-align: right;
+  }
+
+  .protocol-chapter-heading h2 {
+    margin-top: 12px;
+  }
+
+  .protocol-chapter-body {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  .protocol-chapter-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .protocol-chapter-number {
+    text-align: left;
+  }
+
+  .protocol-chapter-heading-copy > p {
+    font-size: 13px;
+  }
+}
