@@ -112,7 +112,12 @@ function describePayload(row: AuditRow): string {
     case "chain.policy_decision": return `nonce ${p.nonce} · spent ${fmtUsdc(String(p.spentUnits ?? 0))} USDC`;
     case "chain.grant_revoked": return "grant revoked on-chain";
     case "chain.tx_failed": return `${p.variant ?? p.code ?? "unknown error"}`;
-    default: return JSON.stringify(p).slice(0, 120);
+    case "chain.grant_created": return `grant ${short(String(p.grantPda ?? ""))} · owner ${short(String(p.owner ?? ""))}`;
+    case "agent.published": return `agent ${String(p.name ?? "")} ${String(p.version ?? "")} · ${short(String(p.agentHash ?? ""))}`;
+    default: {
+      const s = JSON.stringify(p);
+      return s.replace(/[a-zA-Z0-9]{32,64}/g, match => short(match)).slice(0, 120);
+    }
   }
 }
 
