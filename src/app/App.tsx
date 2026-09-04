@@ -25,6 +25,7 @@ import { CommandPalette, type CommandItem } from "./components/CommandPalette";
 import { RouteScene } from "./components/RouteScene";
 import { SoundControl } from "./components/SoundControl";
 import { GuidePage } from "./components/GuidePage";
+import { CopilotPage, ModelsPage, ProfilePage } from "./components/ArtifactPages";
 import { FlipCard, TransferLane } from "./components/depth";
 import { playSound } from "./lib/soundscape";
 import {
@@ -35,7 +36,7 @@ import {
 import { address } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
-import { api, API_URL, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
+import { api, API_URL, checkHealth, fmtUsdc, short, type AgentVersion, type Analytics, type AuditRow, type Health, type Hire, type Listing } from "./lib/api";
 import { PROGRAM_ID } from "./solana/redline";
 import { useRealAgents } from "./lib/agents";
 import type { AppClient } from "./solana/client";
@@ -87,11 +88,15 @@ const NAV = [
   { icon: Layers, label: "Guardrails", slug: "guardrails" },
   { icon: Settings, label: "Settings", slug: "settings" },
   { icon: BookOpen, label: "Guide", slug: "guide" },
+  { icon: Sparkles, label: "Copilot", slug: "copilot" },
+  { icon: Cpu, label: "Models", slug: "models" },
+  { icon: Wallet, label: "Profile", slug: "profile" },
 ];
 
-// Product journey, separate from the stable page indexes used by existing
-// actions and hashes: discover → configure → fund → verify → understand.
-const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7, 8] as const;
+// Keep the long-lived page indexes stable because protocol actions navigate by
+// index. The artifact defines a separate reading order and top-navigation order.
+const FLOW_ORDER = [0, 3, 1, 6, 4, 5, 2, 7, 9, 10, 11] as const;
+const HEADER_ORDER = [0, 3, 1, 6, 4, 5, 2, 9, 10, 7] as const;
 
 /* ── reusable components ── */
 function Badge({ status }: { status: string }) {
@@ -282,7 +287,7 @@ const AGENT_ACCENTS = [M, C, A, color.info];
 function AgentsPage() {
   const { agents, loading, error, reload } = useRealAgents();
   const [sel, setSel] = useState(0);
-  const [deploying, setDeploying] = useState(false);
+  const [deploying, setDeploying] = useState(true);
   const [name, setName] = useState("");
   const [strategy, setStrategy] = useState("");
   const [busy, setBusy] = useState(false);
@@ -310,7 +315,7 @@ function AgentsPage() {
 
   return (
     <div className="route-page page-agents space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="route-local-heading flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>My Agents</h1>
           <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Real agent versions and grants from the REDLINE API</p>
@@ -323,7 +328,11 @@ function AgentsPage() {
       </div>
 
       {deploying && (
-        <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ ...glass() }}>
+        <div className="agent-publish-panel rounded-2xl p-5 flex flex-col gap-3" style={{ ...glass() }}>
+          <div className="flex items-start justify-between gap-3">
+            <div><div className="text-sm font-semibold" style={{ ...sans, color: color.text }}>Publish a new version</div><div className="text-[11px] mt-1 tracking-widest" style={{ ...mono, color: color.textDim }}>DRAFT · IMMUTABLE HASH</div></div>
+            <button type="button" onClick={() => setDeploying(false)} aria-label="Close publishing panel" className="p-1 rounded-md" style={{ color: color.textDim }}><X size={14} /></button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Agent name" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
             <input value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="Strategy description" className="px-3.5 py-2.5 rounded-xl text-xs outline-none" style={{ ...sans, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.text }} />
@@ -364,6 +373,11 @@ function AgentsPage() {
                 <Badge status={ag.status} />
               </button>
             ))}
+            {!deploying && (
+              <button type="button" onClick={() => setDeploying(true)} className="agent-publish-open">
+                <Plus size={13} />Publish agent version
+              </button>
+            )}
           </div>
 
           {/* Agent detail */}
@@ -472,7 +486,7 @@ function AnalyticsPage() {
 
   return (
     <div className="route-page page-analytics space-y-7">
-      <div>
+      <div className="route-local-heading">
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Analytics</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Computed from your grants' real audit trail — no price feed, so no P&L or APY</p>
       </div>
@@ -611,7 +625,7 @@ function MarketplacePage() {
 
   return (
     <div className="route-page page-marketplace space-y-8">
-      <div>
+      <div className="route-local-heading">
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><Sparkles size={12} style={{ color: M }} /></div>
           <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>Agent Marketplace · Devnet</span>
@@ -668,7 +682,7 @@ function MarketplacePage() {
           const priced = Number(l.priceLamports) > 0 && !!l.developerWallet;
           const mine = !!wallet && l.developerWallet === wallet;
           return (
-            <div key={`mkt-card-${l.id}`}
+            <div key={`mkt-card-${l.id}`} id={`listing-${l.id}`}
               className="group relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1"
               style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}70, transparent)` }} />
@@ -761,6 +775,23 @@ function MarketplacePage() {
           );
         })}
       </div>
+
+      {filtered.length > 0 && (
+        <section className="market-list-table" style={{ ...glass() }}>
+          <header><div><strong>All published versions</strong><span>{filtered.length} listing{filtered.length === 1 ? "" : "s"}</span></div><code>IMMUTABLE · agent hash = SHA-256(model | code | config)</code></header>
+          <div className="market-list-head"><span>Agent</span><span>Hash</span><span>Publisher</span><span>Hires</span><span>Price</span><span /></div>
+          {filtered.map((listing, index) => (
+            <div className="market-list-row" key={`market-row-${listing.id}`}>
+              <span><i style={{ color: AGENT_ACCENTS[index % AGENT_ACCENTS.length] }}><Bot size={13} /></i><b>{listing.agentVersion.name}</b><small>{listing.agentVersion.version}</small></span>
+              <code>{short(listing.agentVersion.agentHash, 6)}</code>
+              <code>{listing.developerWallet ? short(listing.developerWallet, 5) : "unclaimed"}</code>
+              <span>{listing.activeHires || "new"}</span>
+              <strong>{Number(listing.priceLamports) > 0 ? `${fmtSol(listing.priceLamports)} SOL` : "—"}</strong>
+              <button type="button" onClick={() => document.getElementById(`listing-${listing.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>View</button>
+            </div>
+          ))}
+        </section>
+      )}
     </div>
   );
 }
@@ -793,7 +824,7 @@ function VaultPage() {
 
   return (
     <div className="route-page page-treasury space-y-8">
-      <div>
+      <div className="route-local-heading">
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Treasury</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Solana Devnet · your wallet and the program-owned vault</p>
       </div>
@@ -955,7 +986,7 @@ function SessionsPage() {
 
   return (
     <div className="route-page page-guardrails space-y-8">
-      <div>
+      <div className="route-local-heading">
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Agent Guardrails</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Design bounded Solana policies, run AI risk checks, and publish verifiable proofs</p>
       </div>
@@ -1125,14 +1156,40 @@ function SettingsPage() {
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
   const [health, setHealth] = useState<Health | null>(null);
+  const [healthState, setHealthState] = useState<"checking" | "healthy" | "offline">("checking");
   const [activeTab, setActiveTab] = useState(0);
-  const tabs = ["Network", "Environment"];
+  const [depthEnabled, setDepthEnabled] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(true);
+  const tabs = [
+    { label: "Network", detail: "Cluster · program · executor", icon: Network },
+    { label: "Wallet & demo assets", detail: "Owner · mints · destinations", icon: Wallet },
+    { label: "Policy invariants", detail: "What the program enforces", icon: Lock },
+    { label: "Experience", detail: "Sound · depth · motion · language", icon: Sparkles },
+  ];
+
+  const testHealth = useCallback(async () => {
+    setHealthState("checking");
+    try {
+      const result = await checkHealth();
+      setHealth(result);
+      setHealthState("healthy");
+    } catch {
+      setHealth(null);
+      setHealthState("offline");
+    }
+  }, []);
 
   useEffect(() => {
     let live = true;
-    api.health().then(h => { if (live) setHealth(h); }).catch(() => { if (live) setHealth(null); });
+    checkHealth().then(h => {
+      if (live) { setHealth(h); setHealthState("healthy"); }
+    }).catch(() => {
+      if (live) { setHealth(null); setHealthState("offline"); }
+    });
     return () => { live = false; };
   }, []);
+
+  const healthLabel = healthState === "checking" ? "checking" : healthState;
 
   function Row({ label, value, accent = M }: { label: string; value: string; accent?: string }) {
     return (
@@ -1144,77 +1201,67 @@ function SettingsPage() {
   }
 
   return (
-    <div className="route-page page-settings space-y-8">
-      <div>
+    <div className="route-page page-settings">
+      <div className="route-local-heading">
         <h1 className="text-2xl font-bold" style={{ ...sans, color: color.text }}>Settings</h1>
         <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>Live configuration of this REDLINE deployment</p>
       </div>
+      <div className="settings-artifact-shell">
+        <aside className="settings-artifact-nav" style={{ ...glass() }}>
+          {tabs.map((tab, index) => {
+            const Icon = tab.icon;
+            return (
+              <button type="button" role="tab" key={tab.label} onClick={() => setActiveTab(index)} aria-selected={activeTab === index}>
+                <span><Icon size={16} /></span><span><strong>{tab.label}</strong><small>{tab.detail}</small></span><ChevronRight size={14} />
+              </button>
+            );
+          })}
+          <div className="settings-backend-anchor"><i className={health ? "is-live" : ""} /><span>Backend anchor · devnet · {healthLabel}</span></div>
+        </aside>
 
-      {/* Connected wallet */}
-      <div className="rounded-2xl p-6 flex items-center gap-5 relative overflow-hidden" style={{ ...glass() }}>
-        <div className="absolute top-0 left-8 right-8 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}40, transparent)` }} />
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${M}22, ${C}18)`, border: `1px solid ${M}28`, color: M }}>
-          <Wallet size={22} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold" style={{ ...sans, color: color.text }}>{wallet ? "Connected wallet" : "No wallet connected"}</div>
-          <div className="text-[13px] mt-0.5 break-all" style={{ ...mono, color: C }}>{wallet || "Connect a Wallet Standard account to sign grants"}</div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${M}12`, color: M, border: `1px solid ${M}22` }}>Devnet</span>
-            <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...sans, background: `${C}12`, color: C, border: `1px solid ${C}22` }}>Wallet Standard</span>
-          </div>
-        </div>
-        {wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ ...sans, background: `${M}12`, border: `1px solid ${M}28`, color: M }}>View on Explorer</a>}
-      </div>
+        <section className="settings-artifact-panel" style={{ ...glass() }}>
+          {activeTab === 0 && (
+            <>
+              <header><div><span>NETWORK</span><h2>Network</h2></div><em className={health ? "is-live" : ""}><i />{healthLabel.toUpperCase()}</em></header>
+              <div className="settings-choice-row"><span>Cluster</span><div><button type="button" aria-pressed>Devnet</button><button type="button" disabled>Testnet</button><button type="button" disabled>Mainnet-beta</button></div></div>
+              <Row label="Program" value={health?.programId ?? PROGRAM_ID} accent={C} />
+              <Row label="Executor" value={health?.executor ?? (healthState === "checking" ? "checking…" : "unreachable")} accent={health ? C : healthState === "checking" ? color.textMuted : color.danger} />
+              <div className="settings-choice-row"><span>Commitment</span><div><button type="button">processed</button><button type="button" aria-pressed>confirmed</button><button type="button">finalized</button></div></div>
+              <label className="settings-api-row"><span>API URL</span><div><input readOnly value={API_URL} /><button type="button" onClick={() => void testHealth()} disabled={healthState === "checking"}>{healthState === "checking" ? "Testing…" : "Test"}</button></div></label>
+            </>
+          )}
 
-      {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-        {tabs.map((t, i) => (
-          <button type="button" role="tab" key={`set-tab-${i}`} onClick={() => setActiveTab(i)} aria-selected={activeTab === i}
-            className="px-4 py-2 rounded-lg text-xs font-semibold transition-all"
-            style={{ ...sans, background: activeTab === i ? `${M}18` : "transparent", color: activeTab === i ? M : color.textDim, border: activeTab === i ? `1px solid ${M}28` : "1px solid transparent" }}>
-            {t}
-          </button>
-        ))}
-      </div>
+          {activeTab === 1 && (
+            <>
+              <header><div><span>OWNER SESSION</span><h2>Wallet & demo assets</h2></div><em className={wallet ? "is-live" : ""}><i />{wallet ? "CONNECTED" : "NOT CONNECTED"}</em></header>
+              <div className="settings-wallet-card"><span><Wallet size={22} /></span><div><strong>{wallet ? "Connected wallet" : "Wallet required"}</strong><code>{wallet || "Connect through Wallet Standard in the top bar"}</code></div>{wallet && <a href={explorerAddressUrl(wallet)} target="_blank" rel="noreferrer">Explorer <ExternalLink size={12} /></a>}</div>
+              <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? String(import.meta.env.VITE_DEMO_USDC_MINT) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? C : A} />
+              <Row label="Demo destination" value={DEMO_OPS_DESTINATION || "not configured"} accent={DEMO_OPS_DESTINATION ? C : A} />
+              <Row label="Frontend write key" value={import.meta.env.VITE_API_KEY ? "configured" : "open (local/mock)"} accent={import.meta.env.VITE_API_KEY ? M : A} />
+            </>
+          )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {activeTab === 0 && (<>
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>Chain</div>
-            <Row label="Cluster" value="Solana Devnet" />
-            <Row label="Backend adapter" value={health?.chain ?? "unreachable"} accent={health ? C : color.danger} />
-            <Row label="Program" value={health ? short(health.programId, 8) : "—"} accent={C} />
-            <Row label="Executor" value={health ? short(health.executor, 8) : "—"} accent={C} />
-            <Row label="Commitment" value="confirmed" accent={M} />
-          </div>
-          <div className="rounded-2xl p-5" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-4" style={{ ...sans, color: color.text }}>Policy Enforcement</div>
-            <Row label="Gates enforced on-chain" value="7" accent={M} />
-            <Row label="Policy digest" value="SHA-256" accent={M} />
-            <Row label="Allowlist size limit" value="4 mints · 4 destinations" accent={C} />
-            <Row label="Mock clock speed" value={health ? `${health.clockSpeed}×` : "—"} accent={A} />
-          </div>
-        </>)}
-        {activeTab === 1 && (
-          <div className="rounded-2xl p-5 col-span-full" style={{ ...glass() }}>
-            <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.text }}>Environment</div>
-            <p className="text-[13px] mb-4" style={{ ...sans, color: color.textDim }}>Set at build/deploy time. Secrets never reach the browser — the OpenAI key and executor keypair live only on the server.</p>
-            <Row label="API URL" value={API_URL} accent={C} />
-            <Row label="Program ID (frontend)" value={short(PROGRAM_ID, 8)} accent={C} />
-            <Row label="Demo USDC mint" value={import.meta.env.VITE_DEMO_USDC_MINT ? short(String(import.meta.env.VITE_DEMO_USDC_MINT), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_USDC_MINT ? M : A} />
-            <Row label="Demo destination" value={import.meta.env.VITE_DEMO_OPS_DESTINATION ? short(String(import.meta.env.VITE_DEMO_OPS_DESTINATION), 8) : "not configured"} accent={import.meta.env.VITE_DEMO_OPS_DESTINATION ? M : A} />
-            <Row label="Write key" value={import.meta.env.VITE_API_KEY ? "configured" : "open (local/mock)"} accent={import.meta.env.VITE_API_KEY ? M : A} />
-          </div>
-        )}
-      </div>
+          {activeTab === 2 && (
+            <>
+              <header><div><span>PROGRAM BOUNDARY</span><h2>Policy invariants</h2></div><em className="is-live"><i />ON-CHAIN</em></header>
+              <Row label="Gates enforced in order" value="7" />
+              <Row label="Policy digest" value="SHA-256" />
+              <Row label="Allowlist ceiling" value="4 mints · 4 destinations" accent={C} />
+              <Row label="Revocation authority" value="owner signature" accent={C} />
+              <Row label="Execution behavior" value="first failed gate stops atomically" accent={A} />
+              <div className="settings-policy-note"><ShieldCheck size={16} /><p>Each grant is revoked separately because the on-chain program accepts one owner-signed revocation per policy account.</p></div>
+            </>
+          )}
 
-      {/* Danger zone */}
-      <div className="rounded-2xl p-5" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
-        <div className="text-sm font-semibold mb-1" style={{ ...sans, color: color.danger }}>Revoking access</div>
-        <p className="text-xs" style={{ ...sans, color: color.textMuted }}>
-          Grants are revoked one at a time from Guardrails → Active Policy Accounts, because each revocation is a transaction the owner signs in their own wallet. There is no bulk switch: the program only accepts a signature per grant.
-        </p>
+          {activeTab === 3 && (
+            <>
+              <header><div><span>LOCAL PREFERENCES</span><h2>Experience</h2></div><em><i />THIS DEVICE</em></header>
+              <button type="button" className="settings-toggle-row" onClick={() => setDepthEnabled(v => !v)} aria-pressed={depthEnabled}><span><strong>3D depth</strong><small>Perspective, stepped shadows and spatial panels</small></span><i /></button>
+              <button type="button" className="settings-toggle-row" onClick={() => setMotionEnabled(v => !v)} aria-pressed={motionEnabled}><span><strong>Motion</strong><small>Page transitions, hover lift and live signals</small></span><i /></button>
+              <div className="settings-experience-note"><Sparkles size={16} /><p>Sound remains available from the global header so it follows you across every page.</p></div>
+            </>
+          )}
+        </section>
       </div>
     </div>
   );
@@ -1223,7 +1270,7 @@ function SettingsPage() {
 /* ════════════════════════════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════════════════════════════ */
-const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage, GuidePage];
+const PAGES = [ProtocolExperience, AgentsPage, AnalyticsPage, MarketplacePage, VaultPage, AuditPage, SessionsPage, SettingsPage, GuidePage, CopilotPage, ModelsPage, ProfilePage];
 
 export default function App() {
   const indexFromHash = () => {
@@ -1306,6 +1353,9 @@ export default function App() {
     audit: "Verify every intent, decision and signature",
     analytics: "Understand execution volume and policy outcomes",
     settings: "Inspect network and deployment configuration",
+    copilot: "Ask grounded questions about grants, gates and evidence",
+    models: "Measure the configured assistant and its trust boundary",
+    profile: "Review the connected owner's on-chain operating identity",
   };
   const commandItems: CommandItem[] = FLOW_ORDER.map((pageIndex, position) => {
     const item = NAV[pageIndex];
@@ -1320,6 +1370,7 @@ export default function App() {
   const flowPosition = FLOW_ORDER.indexOf(nav as (typeof FLOW_ORDER)[number]);
   const previousPage = flowPosition > 0 ? FLOW_ORDER[flowPosition - 1] : null;
   const nextPage = flowPosition >= 0 && flowPosition < FLOW_ORDER.length - 1 ? FLOW_ORDER[flowPosition + 1] : null;
+  const CurrentRouteIcon = NAV[nav].icon;
 
   return (
     <div data-density={density} className={`redline-app ${nav === 0 ? "redline-app-home" : ""} min-h-screen w-full flex flex-col overflow-hidden`} style={{ background: BG, fontFamily: "'Inter', sans-serif" }}>
@@ -1348,11 +1399,11 @@ export default function App() {
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}<span>Explore</span>
           </button>
           {mobileMenuOpen && <nav id="mobile-navigation" className="mobile-nav-panel" aria-label="Mobile navigation">
-            {FLOW_ORDER.map(index => <button type="button" key={NAV[index].slug} onClick={() => navigate(index)} aria-current={nav === index ? "page" : undefined}>{NAV[index].label}<ArrowRight size={14} /></button>)}
+            {HEADER_ORDER.map(index => <button type="button" key={NAV[index].slug} onClick={() => navigate(index)} aria-current={nav === index ? "page" : undefined}>{NAV[index].label}<ArrowRight size={14} /></button>)}
           </nav>}
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 sm:px-3" aria-label="Primary navigation">
-            {FLOW_ORDER.map(index => {
+            {HEADER_ORDER.map(index => {
               const item = NAV[index];
               const active = nav === index;
               return (
@@ -1384,6 +1435,9 @@ export default function App() {
             Solana devnet
           </div>
           <SolanaWalletControl />
+          <button type="button" className="header-profile-link" onClick={() => navigate(11)} aria-label="Open owner profile" aria-current={nav === 11 ? "page" : undefined}>
+            <Wallet size={15} />
+          </button>
         </header>
 
         {/* Page content */}
@@ -1391,25 +1445,24 @@ export default function App() {
           <div data-route={NAV[nav].slug} className={nav === 0 ? "w-full" : "mx-auto w-full max-w-[1600px]"}>
             {nav !== 0 && (
               <div className="route-flow-bar" aria-label="Product journey navigation">
-                <button type="button" className="route-flow-home" onClick={() => navigate(0)}>
-                  <ArrowLeft size={14} />
-                  <span><small>RETURN TO</small>Protocol</span>
-                </button>
+                <div className="route-flow-index" aria-hidden="true">
+                  <CurrentRouteIcon size={18} />
+                  <span>{String(flowPosition + 1).padStart(2, "0")}<b>/</b>{String(FLOW_ORDER.length).padStart(2, "0")}</span>
+                </div>
                 <div className="route-flow-context">
                   <div className="route-flow-current">
-                    <span>PRODUCT JOURNEY</span>
-                    <strong><b>{String(flowPosition).padStart(2, "0")}</b>{NAV[nav].label}</strong>
-                    <small>{String(flowPosition).padStart(2, "0")} / {String(FLOW_ORDER.length - 1).padStart(2, "0")}</small>
+                    <strong>{NAV[nav].label}</strong>
+                    <p>{commandDescriptions[NAV[nav].slug]}</p>
                   </div>
                   <div className="route-flow-track" aria-label="Journey steps">
-                    {FLOW_ORDER.slice(1).map((pageIndex, position) => (
+                    {FLOW_ORDER.map((pageIndex, position) => (
                       <button
                         type="button"
                         key={NAV[pageIndex].slug}
                         className={nav === pageIndex ? "is-active" : ""}
-                        data-complete={position < flowPosition - 1}
+                        data-complete={position < flowPosition}
                         onClick={() => navigate(pageIndex)}
-                        aria-label={`Step ${position + 1}: ${NAV[pageIndex].label}`}
+                        aria-label={`Artboard ${position + 1}: ${NAV[pageIndex].label}`}
                         aria-current={nav === pageIndex ? "step" : undefined}
                         title={NAV[pageIndex].label}
                       >

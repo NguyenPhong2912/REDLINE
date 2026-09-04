@@ -209,7 +209,7 @@ export function AuditPage() {
   return (
     <div className="route-page page-audit space-y-8">
       {/* Header */}
-      <div>
+      <div className="route-local-heading">
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg" style={{ background: `${M}14`, border: `1px solid ${M}20` }}><ScrollText size={12} style={{ color: M }} /></div>
           <span className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ ...mono, color: M }}>{tr("Verifiable Audit Trail")}</span>

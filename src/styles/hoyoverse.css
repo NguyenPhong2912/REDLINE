@@ -19,6 +19,9 @@
 [data-route="audit"]      { --pg: 196,124,14; }
 [data-route="guardrails"] { --pg: 214,68,96; }
 [data-route="settings"]   { --pg: 96,116,142; }
+[data-route="copilot"]    { --pg: 14,145,205; }
+[data-route="models"]     { --pg: 151,107,232; }
+[data-route="profile"]    { --pg: 196,150,58; }
 
 /* ─── Ambient ground ──────────────────────────────────────────────────────── */
 .redline-app {

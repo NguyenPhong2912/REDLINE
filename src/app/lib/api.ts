@@ -114,6 +114,22 @@ async function req<T>(path: string, init?: RequestInit, authenticated = true): P
   return res.json() as Promise<T>;
 }
 
+// Render services can need a moment to wake and occasionally reject the first
+// probe. UI status indicators use this bounded retry so a transient cold start
+// is not presented as a broken deployment.
+export async function checkHealth(attempts = 3, delayMs = 700): Promise<Health> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await req<Health>("/health", { signal: AbortSignal.timeout(12_000) }, false);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("API unreachable");
+}
+
 export const api = {
   health: () => req<Health>("/health"),
   policyPresets: () => req<{ version: number; presets: PolicyPreset[] }>("/policy/presets", { signal: AbortSignal.timeout(15_000) }, false),
