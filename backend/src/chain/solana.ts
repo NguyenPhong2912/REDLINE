@@ -40,12 +40,22 @@ type Ix = Instruction<string, readonly (AccountMeta | AccountSignerMeta)[]>;
 // call does not kill an agent run. A dedicated RPC (Helius/QuickNode) makes
 // this path rare; it is not a substitute for one.
 function isTransient(e: unknown): boolean {
-  // SolanaError.context can hold BigInts; a plain JSON.stringify would throw
-  // inside the error handler and mask the real failure.
-  const safe = (v: unknown) => { try { return JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)); } catch { return ""; } };
+  // Structured first: @solana/kit puts the HTTP status of a failed RPC call in
+  // `context.statusCode`. The text scan below is the fallback for errors that
+  // arrive as plain strings (undici's "fetch failed", socket codes).
+  const ctx = (e as { context?: { statusCode?: unknown; __code?: unknown } } | null)?.context;
+  const status = Number(ctx?.statusCode);
+  if (status === 429 || status === 502 || status === 503 || status === 504) return true;
+  // 8100002 is SolanaError "RPC transport HTTP error" — a transport failure
+  // regardless of the status it wraps.
+  if (Number(ctx?.__code) === 8100002) return true;
+  // Only the message is scanned, never the whole context: it carries slots,
+  // lamport amounts and base58 signatures, and a bare /429/ matched those —
+  // a program rejection at slot 300429111 was retried six times, then the
+  // runtime treated it as throttling and looped on it for good.
   let text = "";
-  try { text = e instanceof Error ? `${e.message} ${safe((e as { context?: unknown }).context ?? {})}` : String(e); } catch { return false; }
-  return /429|Too Many Requests|8100002|ECONNRESET|ETIMEDOUT|fetch failed|HTTP error \(50[23]\)/i.test(text);
+  try { text = e instanceof Error ? e.message : String(e); } catch { return false; }
+  return /\bHTTP error \(429\)|\b429 Too Many Requests\b|\bToo Many Requests\b|\bstatus(?: code)?:? 429\b|\bECONNRESET\b|\bETIMEDOUT\b|\bECONNREFUSED\b|\bEAI_AGAIN\b|\bfetch failed\b|\bsocket hang up\b|\bHTTP error \(50[234]\)/i.test(text);
 }
 export const isTransientChainError = isTransient;
 

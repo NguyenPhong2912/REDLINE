@@ -41,7 +41,7 @@ import { PolicyLab } from "../components/PolicyLab";
 import { ProtocolSpine } from "../components/ProtocolSpine";
 import { OpenBook, VoxelCube, WaterDivider } from "../components/depth";
 import { useRealAgents } from "../lib/agents";
-import { api, fmtUsdc, short, type Analytics, type AuditRow } from "../lib/api";
+import { api, fmtUsdc, grantExpiresAt, short, type Analytics, type AuditRow } from "../lib/api";
 import { useSignedIn } from "../lib/useSignedIn";
 import { explorerTransactionUrl, type AppClient } from "../solana/client";
 
@@ -692,8 +692,7 @@ export function ArtifactAgents() {
                     >
                       {g.revoked
                         ? "REVOKED"
-                        : new Date(g.policyVersion.expiresAt).getTime() <=
-                            Date.now()
+                        : grantExpiresAt(g) <= Date.now()
                           ? "EXPIRED"
                           : "GRANTED"}{" "}
                       · {fmtUsdc(g.spentUnits)} /{" "}

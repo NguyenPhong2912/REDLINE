@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { fmtUsdc, short, type Grant } from "../../lib/api";
+import { fmtUsdc, grantExpiresAt, short, type Grant } from "../../lib/api";
 
 // The owner's grants as physical policy cards fanned in 3D: the active grant
 // in front, revoked or expired ones behind. Click a card to bring it forward
@@ -12,7 +12,7 @@ export function PolicyDeck({ grants, selected, onSelect, tr = (s: string) => s }
 }) {
   const now = Date.now();
   const ranked = [...grants].sort((a, b) => {
-    const live = (g: Grant) => (g.revoked || new Date(g.policyVersion.expiresAt).getTime() < now ? 1 : 0);
+    const live = (g: Grant) => (g.revoked || grantExpiresAt(g) < now ? 1 : 0);
     return live(a) - live(b) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   }).slice(0, 3);
   if (ranked.length === 0) return null;
@@ -25,9 +25,9 @@ export function PolicyDeck({ grants, selected, onSelect, tr = (s: string) => s }
         const spent = Number(g.onchain?.spentUnits ?? g.spentUnits);
         const cap = Number(g.onchain?.spendCapUnits ?? g.policyVersion.spendCapUnits);
         const pct = cap > 0 ? Math.min(100, Math.round((spent / cap) * 100)) : 0;
-        const expired = new Date(g.policyVersion.expiresAt).getTime() < now;
+        const expired = grantExpiresAt(g) < now;
         const dead = g.revoked || expired;
-        const left = Math.max(0, new Date(g.policyVersion.expiresAt).getTime() - now);
+        const left = Math.max(0, grantExpiresAt(g) - now);
         const leftText = dead ? (g.revoked ? tr("revoked") : tr("expired")) : left > 36e5 ? `${Math.round(left / 36e5)}h ${tr("left")}` : `${Math.max(1, Math.round(left / 6e4))}m ${tr("left")}`;
         return (
           <button type="button" key={g.id} className={`gcard c${i}${dead ? " dead" : ""}`} onClick={() => onSelect?.(g.id)} aria-pressed={g.id === front}

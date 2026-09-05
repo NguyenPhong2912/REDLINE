@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConnectedWallet, useSignMessage } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { ChevronRight, ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
-import { api, fmtUsdc, short, subscribeFeed, type Grant, type IntentRow } from "../lib/api";
+import { api, fmtUsdc, grantExpiresAt, short, subscribeFeed, type Grant, type IntentRow } from "../lib/api";
 import { sessionFor, signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
@@ -47,7 +47,7 @@ const VI: Record<string, string> = {
 
 // Real grants from the API with the three demo controls:
 //   Start agent  → POST /runs (scripted: 3 compliant transfers + 1 over cap)
-//   Force over-cap → POST /intents submitEvenIfDenied (program rejects on-chain)
+//   Force over-cap → POST /intents with (remaining + 1) units; the precheck refuses it at gate 6
 //   Revoke → owner signs revoke_grant in the wallet, API records the signature
 export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const tr = useT(VI);
@@ -157,7 +157,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         // Gate 2 is EXPIRED, and until now nothing on this page said when that
         // would happen. An agent that stops because its window closed looks
         // exactly like an agent that broke.
-        const expiresAt = new Date(oc ? oc.expiresAt * 1000 : g.policyVersion.expiresAt);
+        const expiresAt = new Date(oc ? oc.expiresAt * 1000 : grantExpiresAt(g));
         const msLeft = expiresAt.getTime() - Date.now();
         const expired = msLeft <= 0;
         const expiry = expired ? tr("expired")
@@ -238,8 +238,13 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                     {/* Isolated Destructive / Danger Actions Zone */}
                     <div className="flex items-center gap-2 pl-3 border-l" style={{ borderColor: color.border }}>
                       <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">{tr("Stress Test & Revoke:")}</span>
-                      <Btn icon={Zap} label={`${tr("Force")} ${fmtUsdc(cap)} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
-                        onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(cap), destination: dest, reason: "Manual over-cap attempt from dashboard", submitEvenIfDenied: true }), g.owner.wallet)} />
+                      {/* Gate 6 is `spent + amount > cap`, so exactly `cap` on a
+                          fresh grant is *inside* the cap: the old button sent
+                          `cap` and, before the agent had spent anything, made a
+                          real transfer of the whole budget. One unit past what
+                          is left is the smallest amount the program must refuse. */}
+                      <Btn icon={Zap} label={`${tr("Force")} ${fmtUsdc(Math.max(cap - spent, 0) + 1)} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
+                        onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(Math.max(cap - spent, 0) + 1), destination: dest, reason: "Manual over-cap attempt from dashboard" }), g.owner.wallet)} />
                       <Btn icon={ShieldOff} label={tr("Revoke")} accent={color.blocked} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                     </div>
                   </>

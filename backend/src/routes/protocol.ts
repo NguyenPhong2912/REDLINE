@@ -27,7 +27,7 @@ export async function protocolRoutes(app: FastifyInstance) {
     const { owner } = z.object({ owner: z.string().min(32).max(44).optional() }).parse(req.query);
     const grants = await prisma.agentGrant.findMany({
       where: owner ? { owner: { wallet: owner } } : undefined,
-      select: { id: true, revoked: true, spentUnits: true, transactionCount: true, policyVersion: { select: { expiresAt: true } } },
+      select: { id: true, revoked: true, spentUnits: true, transactionCount: true, expiresAt: true, policyVersion: { select: { expiresAt: true } } },
     });
     const grantIds = grants.map(grant => grant.id);
     const decisions = grantIds.length
@@ -61,7 +61,9 @@ export async function protocolRoutes(app: FastifyInstance) {
         rejected: rejectionCount.get(gate.id) ?? 0,
       })),
       activity: {
-        activeGrants: grants.filter(grant => !grant.revoked && grant.policyVersion.expiresAt.getTime() > nowSeconds() * 1000).length,
+        // The grant's own expiry; the policy's is a fallback for rows written
+        // before grants carried one (it is shared across same-policy grants).
+        activeGrants: grants.filter(grant => !grant.revoked && (grant.expiresAt ?? grant.policyVersion.expiresAt).getTime() > nowSeconds() * 1000).length,
         totalGrants: grants.length,
         transactions: grants.reduce((sum, grant) => sum + grant.transactionCount, 0),
         spentUnits: grants.reduce((sum, grant) => sum + grant.spentUnits, 0n),

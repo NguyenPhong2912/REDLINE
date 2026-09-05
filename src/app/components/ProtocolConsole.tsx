@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerDownLeft, Sparkles, TerminalSquare } from "lucide-react";
-import { api, fmtUsdc, short } from "../lib/api";
+import { api, fmtUsdc, grantExpiresAt, short } from "../lib/api";
 import { mono, sans, term } from "../theme";
 import { useT } from "../i18n/LanguageContext";
 
@@ -152,7 +152,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
           for (const g of gs) {
             const cap = Number(g.policyVersion.spendCapUnits);
             const spent = Number(g.spentUnits);
-            const ms = new Date(g.policyVersion.expiresAt).getTime() - Date.now();
+            const ms = grantExpiresAt(g) - Date.now();
             const state = g.revoked ? "REVOKED" : ms <= 0 ? "EXPIRED" : "ACTIVE";
             push(line(state === "ACTIVE" ? "good" : "warn",
               `${short(g.grantPda, 5)}  ${state.padEnd(8)} ${fmtUsdc(String(spent))}/${fmtUsdc(String(cap))} USDC  tx ${g.transactionCount}/${g.policyVersion.maxTransactions}  ${g.agentVersion.name}`));

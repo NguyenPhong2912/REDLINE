@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Signature } from "@solana/kit";
 import { z } from "zod";
 import { getChain } from "../chain/index.js";
-import { SolanaChain } from "../chain/solana.js";
+import { SolanaChain, withRetry } from "../chain/solana.js";
 import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
 import { callerWallet, identityEnforced, requireSession, requireWallet } from "../auth.js";
@@ -17,11 +17,23 @@ import { emptyRating, invalidateRatings, ratingsForListings } from "./ratings.js
 // transaction is fetched from Devnet and checked before the hire is recorded;
 // on CHAIN=mock (no real RPC) the signature is trusted, matching how the rest
 // of the mock adapter treats owner-signed instructions.
-async function verifyPayment(signature: string, payer: string, payee: string, minLamports: bigint) {
+//
+// Returns the lamports the payee actually received, so the record says what
+// was paid rather than what was owed.
+async function verifyPayment(signature: string, payer: string, payee: string, minLamports: bigint): Promise<bigint> {
   const chain = getChain();
-  if (!(chain instanceof SolanaChain)) return; // mock: nothing to verify against
-  const tx = await chain.rpc.getTransaction(signature as Signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 }).send();
-  if (!tx) throw new Error("payment transaction not found on Devnet");
+  if (!(chain instanceof SolanaChain)) return minLamports; // mock: nothing to verify against
+  // The wallet's send resolves when *its* RPC sees the transaction; ours can
+  // trail it by a slot or two, and the public endpoint by more. A payment
+  // that is not visible yet is not a payment that failed — and the SOL has
+  // already left the renter's wallet, so failing fast here left them paid up
+  // with nothing to show for it and no way to retry except paying again.
+  let tx: Awaited<ReturnType<ReturnType<typeof chain.rpc.getTransaction>["send"]>> = null;
+  for (let attempt = 0; attempt < 12 && !tx; attempt += 1) {
+    tx = await withRetry(() => chain.rpc.getTransaction(signature as Signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 }).send(), "getTransaction");
+    if (!tx && attempt < 11) await new Promise(r => setTimeout(r, 2_500));
+  }
+  if (!tx) throw new Error("payment transaction not found on Devnet after 30s — if your wallet shows it confirmed, wait a moment and rent again with the same signature");
   if (tx.meta?.err) throw new Error(`payment transaction failed on-chain: ${JSON.stringify(tx.meta.err)}`);
   const keys = tx.transaction.message.accountKeys as unknown as string[];
   if (keys[0] !== payer) throw new Error("payment was not signed by the renting wallet");
@@ -30,6 +42,7 @@ async function verifyPayment(signature: string, payer: string, payee: string, mi
   const pre = BigInt(tx.meta?.preBalances?.[payeeIndex] ?? 0);
   const post = BigInt(tx.meta?.postBalances?.[payeeIndex] ?? 0);
   if (post - pre < minLamports) throw new Error(`payment of ${post - pre} lamports is below the listing price of ${minLamports}`);
+  return post - pre;
 }
 
 export async function listingRoutes(app: FastifyInstance) {
@@ -161,8 +174,9 @@ export async function listingRoutes(app: FastifyInstance) {
     // period it covers — otherwise one day's payment would buy thirty.
     const periods = BigInt(Math.ceil(body.durationHours / 24));
     const required = listing.priceLamports * periods;
+    let paidLamports = required;
     try {
-      await verifyPayment(body.paymentSignature, body.ownerWallet, listing.developerWallet, required);
+      paidLamports = await verifyPayment(body.paymentSignature, body.ownerWallet, listing.developerWallet, required);
     } catch (err) {
       // A payment that does not check out is the caller's problem, not a
       // server fault — 400 so the UI can show the reason as-is.
@@ -183,7 +197,7 @@ export async function listingRoutes(app: FastifyInstance) {
     await audit({
       actorType: "owner", actorId: body.ownerWallet, eventType: "listing.hired", subjectType: "hire", subjectId: hire.id,
       chainSignature: body.paymentSignature,
-      payload: { listingId: listing.id, agentVersionId: listing.agentVersionId, rateLamportsPer24h: listing.priceLamports.toString(), paidLamports: required.toString(), durationHours: body.durationHours },
+      payload: { listingId: listing.id, agentVersionId: listing.agentVersionId, rateLamportsPer24h: listing.priceLamports.toString(), paidLamports: paidLamports.toString(), requiredLamports: required.toString(), durationHours: body.durationHours },
     });
     return reply.code(201).send(json(hire));
   });

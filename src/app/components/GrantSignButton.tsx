@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { address } from "@solana/kit";
-import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { useConnectedWallet, useSignMessage } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { CheckCircle2, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { AgentPolicyInput, RiskAssessment } from "../lib/risk-engine";
-import { api, type Health } from "../lib/api";
+import { api, isSignedIn, type Health } from "../lib/api";
+import { signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
 import { createGrantInstruction, findVaultPda, initVaultInstruction, policyHashHex, randomAgentId, toHex } from "../solana/redline";
@@ -56,6 +57,10 @@ const VI: Record<string, string> = {
     ": công cụ đánh giá rủi ro yêu cầu một người phê duyệt trước khi ký. Tôi đã đọc các phát hiện ở trên và chấp nhận rủi ro này. Việc chấp nhận của bạn được ghi lại trong audit trail của grant này.",
 
   "Connecting to REDLINE API…": "Đang kết nối tới REDLINE API…",
+  "Sign in with wallet…": "Đang đăng nhập bằng ví…",
+  "Checking eligibility…": "Đang kiểm tra điều kiện…",
+  "Sign in, then sign & create on-chain grant": "Đăng nhập, rồi ký & tạo Grant on-chain",
+  "Lifetime clamped to the rental:": "Thời hạn được rút ngắn theo hợp đồng thuê:",
 };
 
 const ACCENT = color.primary;
@@ -71,9 +76,11 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
   const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
+  const signMessage = useSignMessage(client);
   const [health, setHealth] = useState<Health | null>(null);
   const [apiError, setApiError] = useState("");
-  const [phase, setPhase] = useState<"idle" | "vault" | "grant" | "register" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "signin" | "preflight" | "vault" | "grant" | "register" | "done">("idle");
+  const [clampedHours, setClampedHours] = useState<number | null>(null);
   const [signature, setSignature] = useState("");
   const [grantId, setGrantId] = useState("");
   const [error, setError] = useState("");
@@ -96,8 +103,33 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
   async function sign() {
     if (!connected?.signer || blocked || held || destinationsInvalid || configurationError || !health) return;
     setError("");
+    setClampedHours(null);
     const owner = String(connected.account.address);
     try {
+      // 0. identity and eligibility, before the wallet is asked to sign
+      //    anything on-chain. Every call below needs a session on a public
+      //    deployment; without one they came back 401 *after* create_grant
+      //    had landed, leaving an orphan grant nobody could register.
+      if (!isSignedIn(owner)) {
+        setPhase("signin");
+        await signIn(m => signMessage.dispatchAsync(m), owner);
+      }
+      setPhase("preflight");
+      const allowedMints = [USDC_MINT];
+      // The owner's list, capped at what the Grant account can hold.
+      const allowedDestinations = destinations.slice(0, 4);
+      // Bind the grant to the version the owner chose. Falling back to
+      // whichever agent happened to be published first would record a policy
+      // against a build nobody authorised.
+      const agentVersion = agentVersionId
+        ?? (await api.publishAgent({ name: policy.agentName, version: "v0.1.0", strategy: policy.strategy, modelRef: "openai:gpt-5.4-mini", codeRef: "git:redline-runtime@main" })).agent.id;
+      const preflight = await api.preflightGrant({ ownerWallet: owner, agentVersionId: agentVersion, hireId: hireId ?? undefined, policy: { ...policy, allowedMints, allowedDestinations } });
+      // A rented agent's authority ends with the rental, so the window the
+      // wallet signs is the requested lifetime clamped to what is left of it.
+      const durationHours = preflight.durationHours;
+      if (durationHours !== policy.durationHours) setClampedHours(durationHours);
+      const full = { ...policy, durationHours, allowedMints, allowedDestinations };
+
       // 1. vault
       setPhase("vault");
       const vaultPda = await findVaultPda(owner);
@@ -115,17 +147,13 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
       // 2. grant
       setPhase("grant");
       const agentId = randomAgentId();
-      const allowedMints = [USDC_MINT];
-      // The owner's list, capped at what the Grant account can hold.
-      const allowedDestinations = destinations.slice(0, 4);
-      const full = { ...policy, allowedMints, allowedDestinations };
       const hash = await policyHashHex(full);
       const now = Math.floor(Date.now() / 1000);
       const { instruction, grantPda } = await createGrantInstruction({
         owner, executor: health.executor, agentId, policyHashHex: hash,
         spendCapUnits: BigInt(Math.round(policy.spendCapUsdc * 1_000_000)),
         maxTransactions: policy.maxTransactions,
-        expiresAt: now + policy.durationHours * 3600,
+        expiresAt: now + durationHours * 3600,
         cooldownSeconds: policy.cooldownMinutes * 60,
         allowedMints, allowedDestinations,
       });
@@ -135,12 +163,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
 
       // 3. register
       setPhase("register");
-      // Bind the grant to the version the owner chose. Falling back to
-      // whichever agent happened to be published first would record a policy
-      // against a build nobody authorised.
-      const agentVersion = agentVersionId
-        ?? (await api.publishAgent({ name: policy.agentName, version: "v0.1.0", strategy: policy.strategy, modelRef: "openai:gpt-5.4-mini", codeRef: "git:redline-runtime@main" })).agent.id;
-      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agentVersion, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined, hireId: hireId ?? undefined });
+      const created = await api.createGrant({ ownerWallet: owner, vaultPda, agentVersionId: agentVersion, grantPda, createSignature: sig, agentId: toHex(agentId), policy: full, riskAcknowledged: needsAcceptance ? accepted : undefined, hireId: preflight.hireId ?? hireId ?? undefined });
       setGrantId(created.grant.id);
       setPhase("done");
       playSound("success");
@@ -173,8 +196,9 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
     : blocked ? tr("Blocked by risk policy")
     : destinationsInvalid ? tr("Add a valid destination address")
     : held ? tr("Accept the flagged risk to continue")
+    : phase === "signin" ? tr("Sign in with wallet…") : phase === "preflight" ? tr("Checking eligibility…")
     : phase === "vault" ? tr("Creating vault…") : phase === "grant" ? tr("Sign create_grant…") : phase === "register" ? tr("Registering…")
-    : tr("Sign & create on-chain grant"));
+    : isSignedIn(String(connected.account.address)) ? tr("Sign & create on-chain grant") : tr("Sign in, then sign & create on-chain grant"));
   const busy = phase !== "idle";
 
   return (
@@ -212,6 +236,11 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
       <p className="text-[12px] text-center" style={{ color: color.textDim }}>
         {health ? `Program ${health.programId.slice(0, 6)}… · executor ${health.executor.slice(0, 6)}… · ${health.chain}` : apiError ? `API: ${apiError}` : tr("Connecting to REDLINE API…")}
       </p>
+      {clampedHours !== null && (
+        <p role="status" className="text-[12px] text-center" style={{ color: color.warn }}>
+          {tr("Lifetime clamped to the rental:")} {clampedHours}h
+        </p>
+      )}
       {error && <p role="alert" className="text-[12px] text-center" style={{ color: color.danger }}>{error}</p>}
     </div>
   );

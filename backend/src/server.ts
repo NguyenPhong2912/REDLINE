@@ -14,6 +14,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { vaultRoutes } from "./routes/vaults.js";
 import { devnetRoutes } from "./routes/devnet.js";
 import { grantRoutes } from "./routes/grants.js";
+import { reconcileOrphanedRuns } from "./runtime/runner.js";
 import { intentRoutes } from "./routes/intents.js";
 import { riskRoutes } from "./routes/risk.js";
 import { runRoutes } from "./routes/runs.js";
@@ -29,6 +30,13 @@ const app = Fastify({
     level: process.env.LOG_LEVEL ?? "info",
     // never echo secrets or wallet keys into logs
     redact: ["req.headers.authorization", "req.headers['x-redline-key']"],
+    // The SSE feed accepts the session token as ?access_token= (EventSource
+    // cannot send headers), so the request line has to be scrubbed too.
+    serializers: {
+      req(req) {
+        return { method: req.method, url: String(req.url).replace(/([?&])access_token=[^&]*/g, "$1access_token=[redacted]"), remoteAddress: req.ip };
+      },
+    },
   },
 });
 
@@ -42,17 +50,32 @@ await app.register(cors, { origin: true });
 await app.register(rateLimit, { max: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120), timeWindow: "1 minute", allowList: (req) => req.url.endsWith("/feed") });
 registerAuth(app);
 
+// Solana errors carry BigInts in `context`; logging the raw object makes pino
+// throw and the client would see "Do not know how to serialize a BigInt"
+// instead of the real failure. Log and return a safe projection.
+const safe = (v: unknown) => { try { return JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x))); } catch { return String(v); } };
+
 // Sweep intents that never reached a decision (crashed mid-request).
 {
   const cutoff = new Date(Date.now() - 10 * 60 * 1000);
   const { count } = await prisma.transactionIntent.deleteMany({ where: { decision: null, createdAt: { lt: cutoff } } });
   if (count) app.log.info({ count }, "swept intents without a decision");
 }
+// Runs live in process memory; rows left at `running` by the previous process
+// describe loops that no longer exist and would keep the dashboard's Start
+// button disabled for good.
+{
+  const count = await reconcileOrphanedRuns();
+  if (count) app.log.info({ count }, "closed runs orphaned by the previous process");
+}
 
-// Solana errors carry BigInts in `context`; logging the raw object makes pino
-// throw and the client would see "Do not know how to serialize a BigInt"
-// instead of the real failure. Log and return a safe projection.
-const safe = (v: unknown) => { try { return JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x))); } catch { return String(v); } };
+// Last line of defence for anything the code above lets slip: log it, keep
+// serving. The default (Node ≥ 15) is to exit the process, which turns one
+// stray rejection in a background loop into an outage for every client.
+process.on("unhandledRejection", (reason) => {
+  app.log.error({ err: safe(reason instanceof Error ? { message: reason.message, stack: reason.stack } : reason) }, "unhandled promise rejection");
+});
+
 app.setErrorHandler((err, _req, reply) => {
   if (err instanceof ZodError) return reply.code(400).send({ error: "Invalid input", details: err.issues });
   const context = safe((err as { context?: unknown }).context ?? null);

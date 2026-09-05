@@ -56,6 +56,9 @@ export interface OnchainGrant { active: boolean; spentUnits: string; transaction
 export interface Grant {
   id: string; grantPda: string; agentId: string; executorPubkey: string; createSignature: string | null;
   spentUnits: string; transactionCount: number; nextNonce: number; revoked: boolean; createdAt: string; lastExecutionAt: string | null;
+  // This grant's own expiry. Optional because rows written by an older API
+  // build carry only the policy's (shared) expiry — see grantExpiresAt().
+  expiresAt?: string | null;
   agentVersion: AgentVersion;
   // Present when this grant runs under a marketplace rental.
   hire?: { id: string; endsAt: string; status: string } | null;
@@ -211,14 +214,24 @@ export const api = {
     // The API re-checks it against the listing, the wallet and the end date.
     hireId?: string;
   }) => req<{ grant: Grant; policyHash: string; chain: string }>("/grants", { method: "POST", body: JSON.stringify(b) }),
+  // Same refusals as createGrant, answered before the wallet signs anything —
+  // a 402 "rent it first" is only useful while create_grant is still unsigned.
+  preflightGrant: (b: {
+    ownerWallet: string; agentVersionId: string; hireId?: string;
+    policy: { agentName: string; strategy: string; tokens: string[]; spendCapUsdc: number; maxTransactions: number; durationHours: number; cooldownMinutes: number; allowedMints: string[]; allowedDestinations: string[] };
+  }) => req<{ ok: boolean; hireId: string | null; hireEndsAt: string | null; maxDurationHours: number | null; durationHours: number; risk: { decision: string; score: number; acknowledgementRequired: boolean }; executor: string }>("/grants/preflight", { method: "POST", body: JSON.stringify(b) }),
   revoke: (id: string, signature?: string) => req<{ ok: boolean; signature: string }>(`/grants/${id}/revoke`, { method: "POST", body: JSON.stringify({ signature }) }),
   intents: (grantId: string) => req<IntentRow[]>(`/grants/${grantId}/intents`),
   previewIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
     req<IntentPreview>("/intents/preview", { method: "POST", body: JSON.stringify(b) }),
-  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number; submitEvenIfDenied?: boolean }) =>
+  // (`submitEvenIfDenied` used to be offered here; the API never read it — a
+  // denied precheck is never submitted — so the type no longer promises it.)
+  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
     req<{ intentId: string; precheck: { reasonCode: string; message: string }; submitted: boolean; signature?: string; onchainSuccess?: boolean; onchainReason?: string }>("/intents", { method: "POST", body: JSON.stringify(b) }),
   startRun: (grantId: string, mode: "scripted" | "llm" = "scripted") => req<{ id: string }>("/runs", { method: "POST", body: JSON.stringify({ grantId, mode }) }),
-  stopRun: (runId: string) => req<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST" }),
+  // Fastify rejects a JSON content-type with an empty body (400), and req()
+  // always sends that header — so a bodyless POST needs an explicit `{}`.
+  stopRun: (runId: string) => req<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST", body: "{}" }),
   audit: (grantId?: string) => req<AuditRow[]>(`/audit${grantId ? `?grant=${grantId}` : ""}`),
   vault: (owner: string) => req<VaultView>(`/vaults/${owner}`),
   fundVault: (ownerWallet: string) => req<{ vaultPda: string; vaultAta: string; signature: string; balance: string }>("/devnet/fund", { method: "POST", body: JSON.stringify({ ownerWallet }) }),
@@ -239,14 +252,34 @@ export const api = {
 };
 
 // Server-sent events. grantId "*" streams every grant.
+//
+// EventSource cannot send an Authorization header, so the session token rides
+// in the query string — the API accepts it there for this one route only.
+// Without it a signed-in owner's initial audit load arrived in full while every
+// live event appended to it came back masked.
 export function subscribeFeed(grantId: string, onEvent: (e: FeedEvent) => void): () => void {
-  const es = new EventSource(`${API_URL}/grants/${encodeURIComponent(grantId)}/feed`);
+  const session = loadSession();
+  const auth = session ? `?access_token=${encodeURIComponent(session.token)}` : "";
+  const es = new EventSource(`${API_URL}/grants/${encodeURIComponent(grantId)}/feed${auth}`);
   const handler = (ev: MessageEvent) => { try { onEvent(JSON.parse(ev.data) as FeedEvent); } catch { /* ignore malformed */ } };
   for (const t of ["grant.created", "grant.revoked", "run.started", "run.ended", "intent.created", "decision.precheck", "tx.confirmed", "tx.rejected", "chain.policy_decision", "chain.grant_revoked", "chain.grant_created", "chain.tx_failed", "agent.published"]) {
     es.addEventListener(t, handler as EventListener);
   }
   return () => es.close();
 }
+
+/**
+ * When a grant's window closes, as an epoch-ms number.
+ *
+ * Prefers the grant's own `expiresAt` (mirrored from the program), then the
+ * on-chain state if the caller has it, then the policy's date — that last one
+ * is shared by every grant with the same policy shape, so it is only right for
+ * the first grant that created the row.
+ */
+export const grantExpiresAt = (g: Pick<Grant, "expiresAt" | "policyVersion"> & { onchain?: OnchainGrant | null }): number =>
+  g.expiresAt ? new Date(g.expiresAt).getTime()
+    : g.onchain?.expiresAt ? g.onchain.expiresAt * 1000
+      : new Date(g.policyVersion.expiresAt).getTime();
 
 export const fmtUsdc = (units: string | number | bigint, decimals = 6) => (Number(units) / 10 ** decimals).toLocaleString("en-US", { maximumFractionDigits: 2 });
 export const short = (s: string, n = 4) => (s.length > n * 2 + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s);

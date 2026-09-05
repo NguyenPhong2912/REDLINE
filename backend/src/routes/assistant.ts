@@ -54,9 +54,13 @@ async function gather(owner?: string): Promise<Grounding> {
   }
 
   const now = Date.now();
-  const live = grants.filter(g => !g.revoked);
+  // "Active" means the executor could still act on it: not revoked and not
+  // past its window. An expired grant counted here told owners an agent was
+  // live when gate 2 would refuse everything it proposed.
+  const expiryOf = (g: { expiresAt: Date | null; policyVersion: { expiresAt: Date } }) => (g.expiresAt ?? g.policyVersion.expiresAt).getTime();
+  const live = grants.filter(g => !g.revoked && expiryOf(g) > now);
   const soonest = live
-    .map(g => g.policyVersion.expiresAt.getTime() - now)
+    .map(g => expiryOf(g) - now)
     .filter(ms => ms > 0)
     .sort((a, b) => a - b)[0];
 
@@ -131,12 +135,16 @@ export function isOperationalQuestion(question: string, g: Grounding): boolean {
 }
 
 function gateAdvice(gateId: number, vi: boolean): Suggestion {
+  // Keyed by POLICY_GATES id: 1 active, 2 expiry, 3 nonce, 4 mint,
+  // 5 destination, 6 budget, 7 cooldown. Gates 3–5 were once listed in a
+  // different order here, so a NONCE_REPLAY spike told the owner to pick
+  // another token.
   const advice: Record<number, [string, string, string, string]> = {
     1: ["Restore an active grant", "The grant is revoked or inactive. Review the owner intent and sign a new grant if the agent should run again.", "Khôi phục grant đang hoạt động", "Grant đã bị thu hồi hoặc không còn hoạt động. Hãy kiểm tra ý định của chủ ví và ký grant mới nếu agent cần chạy lại."],
     2: ["Renew the time window", "The grant has expired. Create a new grant with an expiry that covers the intended task window.", "Gia hạn thời gian", "Grant đã hết hạn. Hãy tạo grant mới với thời hạn đủ cho tác vụ dự kiến."],
-    3: ["Use an allowed token", "The requested mint is outside the grant allowlist. Choose an allowed mint or review and sign a new policy.", "Dùng token được cho phép", "Mint được yêu cầu không nằm trong allowlist. Hãy chọn mint hợp lệ hoặc rà soát và ký policy mới."],
-    4: ["Use an allowed destination", "The recipient is outside the destination allowlist. Correct the address or review a new policy before signing it.", "Dùng địa chỉ được cho phép", "Địa chỉ nhận không nằm trong allowlist. Hãy sửa địa chỉ hoặc rà soát policy mới trước khi ký."],
-    5: ["Refresh the transaction state", "The nonce is stale or out of order. Reload the latest grant state before submitting the next transfer.", "Làm mới trạng thái giao dịch", "Nonce đã cũ hoặc sai thứ tự. Hãy tải lại trạng thái grant mới nhất trước khi gửi giao dịch tiếp theo."],
+    4: ["Use an allowed token", "The requested mint is outside the grant allowlist. Choose an allowed mint or review and sign a new policy.", "Dùng token được cho phép", "Mint được yêu cầu không nằm trong allowlist. Hãy chọn mint hợp lệ hoặc rà soát và ký policy mới."],
+    5: ["Use an allowed destination", "The recipient is outside the destination allowlist. Correct the address or review a new policy before signing it.", "Dùng địa chỉ được cho phép", "Địa chỉ nhận không nằm trong allowlist. Hãy sửa địa chỉ hoặc rà soát policy mới trước khi ký."],
+    3: ["Refresh the transaction state", "The nonce is stale or out of order. Reload the latest grant state before submitting the next transfer.", "Làm mới trạng thái giao dịch", "Nonce đã cũ hoặc sai thứ tự. Hãy tải lại trạng thái grant mới nhất trước khi gửi giao dịch tiếp theo."],
     6: ["The budget envelope is where work is stopping", "Reduce the requested amount, split the task into valid transfers, or sign a reviewed grant with a suitable cap.", "Hạn mức ngân sách đang chặn tác vụ", "Hãy giảm số tiền, chia tác vụ thành các giao dịch hợp lệ, hoặc ký grant mới với hạn mức đã được rà soát."],
     7: ["Respect the cooldown", "Wait for the cooldown to finish or reduce transfer frequency. The agent should not retry continuously.", "Tuân thủ thời gian chờ", "Hãy chờ cooldown kết thúc hoặc giảm tần suất chuyển. Agent không nên thử lại liên tục."],
   };

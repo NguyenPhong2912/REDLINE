@@ -9,6 +9,20 @@ import { ratingsForListings, ratingsForVersions } from "./ratings.js";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
+// Deterministic JSON: object keys sorted at every depth, so the same config
+// always hashes the same. `JSON.stringify(value, sortedTopLevelKeys)` looked
+// like this but is not — a replacer *array* is a whitelist applied at every
+// level, so nested keys absent from the top level were dropped and
+// `{a:{b:1}}` and `{a:{b:2}}` both hashed as `{"a":{}}`.
+export function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(",")}}`;
+}
+
 // Immutable agent builds. agentHash binds model + code + config; a change to
 // any of them is a new row, never an update.
 //
@@ -35,7 +49,7 @@ export async function agentRoutes(app: FastifyInstance) {
 
     const modelHash = sha(body.modelRef);
     const codeHash = sha(body.codeRef);
-    const configHash = sha(JSON.stringify(body.config, Object.keys(body.config).sort()));
+    const configHash = sha(canonicalJson(body.config));
     const agentHash = sha(`${modelHash}|${codeHash}|${configHash}`);
 
     // Re-publishing the identical build from the same wallet is idempotent —

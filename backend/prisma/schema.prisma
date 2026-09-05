@@ -154,6 +154,13 @@ model AgentGrant {
   agentId          String // 16-byte PDA seed, hex
   executorPubkey   String
   createSignature  String?
+  // When this grant's window closes, mirrored from the program at creation.
+  // Lives here and not only on PolicyVersion because that row is shared by
+  // every grant with the same policy shape: a 24h policy signed on Monday and
+  // again on Wednesday are one PolicyVersion but two expiries. Nullable only
+  // for rows written before the column existed; readers fall back to the
+  // policy's value for those.
+  expiresAt        DateTime?
   // Mirror of on-chain counters, refreshed by the indexer. Chain is the truth.
   spentUnits       BigInt              @default(0)
   transactionCount Int                 @default(0)

@@ -21,6 +21,8 @@ import { audit } from "./db/audit.js";
 const NONCE_TTL_MS = 5 * 60_000;
 const SESSION_TTL_MS = 12 * 60 * 60_000;
 const PUBLIC_WRITES = new Set(["/risk-assess", "/auth/nonce", "/auth/verify", "/assistant", "/policy/simulate"]);
+/** GET /grants/:id/feed — the SSE route, the only one that may carry a token in the query string. */
+export const FEED_PATH = /^\/grants\/[^/]+\/feed$/;
 
 const addressEncoder = getAddressEncoder();
 
@@ -193,8 +195,18 @@ export function registerAuth(app: FastifyInstance) {
     if ((req.method === "POST" && path === "/policy/simulate") ||
         ((req.method === "GET" || req.method === "HEAD") && path === "/policy/presets")) return;
     const header = req.headers.authorization;
-    if (header?.startsWith("Bearer ")) {
-      const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(header.slice(7).trim()) } });
+    let token = header?.startsWith("Bearer ") ? header.slice(7).trim() : null;
+    // The live feed is an EventSource, and the browser's EventSource cannot
+    // send an Authorization header. For that one route — a GET that only ever
+    // streams the caller's own audit rows — the token may travel as a query
+    // parameter instead. Nowhere else: a token in a URL ends up in logs and
+    // referrers, and the feed is the only route that has no other way.
+    if (!token && req.method === "GET" && FEED_PATH.test(path)) {
+      const q = (req.query ?? {}) as { access_token?: unknown };
+      if (typeof q.access_token === "string" && q.access_token.length >= 16 && q.access_token.length <= 128) token = q.access_token;
+    }
+    if (token) {
+      const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) } });
       if (session && session.expiresAt > new Date()) {
         (req as FastifyRequest & { walletSession?: string }).walletSession = session.wallet;
       }

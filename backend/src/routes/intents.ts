@@ -5,7 +5,8 @@ import { nowSeconds } from "../clock.js";
 import { prisma } from "../db/client.js";
 import { evaluateIntent, intentHash, ruleSnapshotHash } from "../policy/engine.js";
 import { processIntent } from "../runtime/executor.js";
-import { requireGrantOwner } from "../auth.js";
+import { callerWallet, identityEnforced, requireGrantOwner } from "../auth.js";
+import { redactPayload } from "../redact.js";
 import { json } from "./json.js";
 import { PositiveU64StringSchema, SolanaAddressSchema } from "../validation.js";
 
@@ -41,9 +42,24 @@ export async function intentRoutes(app: FastifyInstance) {
     return reply.code(201).send(json(result));
   });
 
-  app.get("/grants/:id/intents", async (req) => {
+  // The same rule as GET /grants/:id and /audit: a stranger sees the
+  // evidence (amounts, nonces, verdicts, signatures) but not the linkage
+  // (where the money went). This route returned every destination in full to
+  // anyone holding a grant id.
+  app.get("/grants/:id/intents", async (req, reply) => {
     const { id } = req.params as { id: string };
+    const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { owner: true } });
+    if (!grant) return reply.code(404).send({ error: "grant not found" });
+    const caller = callerWallet(req);
+    const mine = !identityEnforced() || (caller !== null && grant.owner.wallet === caller);
     const intents = await prisma.transactionIntent.findMany({ where: { grantId: id }, include: { decision: { include: { chainTx: true } } }, orderBy: { createdAt: "desc" } });
-    return json(intents);
+    if (mine) return json(intents);
+    return json(intents.map(row => {
+      const masked = redactPayload({ ...row }) as unknown as typeof row;
+      // The on-chain signature is the evidence a stranger is meant to follow
+      // to Explorer; the generic scan would mask it as address-shaped.
+      if (masked.decision?.chainTx && row.decision?.chainTx) masked.decision.chainTx.signature = row.decision.chainTx.signature;
+      return { ...masked, redacted: true };
+    }));
   });
 }

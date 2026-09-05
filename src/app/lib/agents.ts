@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type AgentRating, type AgentVersion, type Grant } from "./api";
+import { api, grantExpiresAt, type AgentRating, type AgentVersion, type Grant } from "./api";
 
 // Real per-agent rollups computed from /agents + /grants. No win rate, APY or
 // uptime here — the platform never tracked those, so there is nothing honest
@@ -30,7 +30,7 @@ export interface AgentSummary {
 export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentSummary[] {
   return agents.map(a => {
     const own = grants.filter(g => g.agentVersion.id === a.id);
-    const active = own.filter(g => !g.revoked && new Date(g.policyVersion.expiresAt).getTime() > Date.now());
+    const active = own.filter(g => !g.revoked && grantExpiresAt(g) > Date.now());
     const totalSpentUsdc = own.reduce((s, g) => s + Number(g.spentUnits) / 1_000_000, 0);
     const totalTx = own.reduce((s, g) => s + g.transactionCount, 0);
     const lastActiveAt = own.reduce<string | null>((latest, g) => {
@@ -48,7 +48,7 @@ export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentS
       // not revoked — the two words mean different things to the owner.
       status: own.length === 0 ? "IDLE" : active.length > 0 ? "ACTIVE" : own.every(g => g.revoked) ? "REVOKED" : "IDLE",
       activeGrants: active.length, totalGrants: own.length, totalSpentUsdc, totalTx,
-      lastActiveAt, latestExpiresAt: latestGrant?.policyVersion.expiresAt ?? null,
+      lastActiveAt, latestExpiresAt: latestGrant ? new Date(grantExpiresAt(latestGrant)).toISOString() : null,
       grants: own,
     };
   });

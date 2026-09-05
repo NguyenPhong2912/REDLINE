@@ -50,6 +50,10 @@ const EVIDENCE_KEYS = new Set([
 function redactValue(key: string, value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map(v => redactValue(key, v));
+  // A Date is a timestamp, not a bag of keys: spreading it through the object
+  // branch produced `{}` and the dashboard rendered "Invalid Date" for every
+  // redacted grant's expiry. Same for anything else with its own toJSON.
+  if (value instanceof Date) return value;
   if (typeof value === "object") return redactPayload(value as Record<string, unknown>);
   if (typeof value !== "string") return value;
   if (IDENTITY_KEYS.has(key) || LINKAGE_KEYS.has(key)) return maskValue(value);

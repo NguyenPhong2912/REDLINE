@@ -15,7 +15,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const { owner } = req.query as { owner?: string };
     const grants = await prisma.agentGrant.findMany({
       where: owner ? { owner: { wallet: owner } } : undefined,
-      include: { agentVersion: true },
+      include: { agentVersion: true, policyVersion: { select: { expiresAt: true } } },
     });
     const grantIds = grants.map(g => g.id);
 
@@ -69,8 +69,12 @@ export async function analyticsRoutes(app: FastifyInstance) {
       byAgent.set(g.agentVersionId, entry);
     }
 
+    // Active = the executor could still act: not revoked, window still open.
+    // The grant's own expiry, with the (shared) policy expiry as the fallback
+    // for rows written before grants carried one.
+    const nowMs = now.getTime();
     return json({
-      activeGrants: grants.filter(g => !g.revoked).length,
+      activeGrants: grants.filter(g => !g.revoked && (g.expiresAt ?? g.policyVersion.expiresAt).getTime() > nowMs).length,
       totalGrants: grants.length,
       totalVolumeUsdc: Math.round(totalVolumeUsdc * 100) / 100,
       totalTransactions: confirmed,

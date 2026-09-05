@@ -18,8 +18,14 @@ import { audit } from "./db/audit.js";
 const BACKFILL_LIMIT = 1_000;
 
 async function backfill(chain: SolanaChain, log: (msg: string) => void) {
+  // Anchor on the newest signature *this indexer* wrote, not on any
+  // `actorType: "chain"` row: the executor also writes chain-actor rows
+  // (tx.confirmed / tx.rejected) for transactions it sent itself. Anchoring on
+  // one of those made `until` exclude that very transaction, so its
+  // chain.policy_decision row — the corroboration the audit page shows — was
+  // never written after a restart.
   const last = await prisma.auditEvent.findFirst({
-    where: { actorType: "chain", chainSignature: { not: null } },
+    where: { actorType: "chain", eventType: { startsWith: "chain." }, chainSignature: { not: null } },
     orderBy: { createdAt: "desc" },
     select: { chainSignature: true },
   });
@@ -27,16 +33,27 @@ async function backfill(chain: SolanaChain, log: (msg: string) => void) {
   // program's entire history on a fresh database is not the same thing.
   if (!last?.chainSignature) return;
 
-  const missed = await withRetry(
-    () => chain.rpc
-      .getSignaturesForAddress(chain.programId as Address, {
-        until: last.chainSignature as Signature,
-        limit: BACKFILL_LIMIT,
-        commitment: "confirmed",
-      })
-      .send(),
-    "getSignaturesForAddress",
-  );
+  // Page backwards with `before` until the anchor is reached. One page of
+  // 1,000 silently truncated any longer outage and left the oldest part of
+  // the gap unfilled.
+  const missed: { signature: Signature }[] = [];
+  let before: Signature | undefined;
+  for (let page = 0; page < 20; page += 1) {
+    const batch = await withRetry(
+      () => chain.rpc
+        .getSignaturesForAddress(chain.programId as Address, {
+          until: last.chainSignature as Signature,
+          before,
+          limit: BACKFILL_LIMIT,
+          commitment: "confirmed",
+        })
+        .send(),
+      "getSignaturesForAddress",
+    );
+    missed.push(...batch);
+    if (batch.length < BACKFILL_LIMIT) break;
+    before = batch[batch.length - 1].signature;
+  }
   if (!missed.length) return;
   log(`indexer: backfilling ${missed.length} transaction(s) missed since ${last.chainSignature.slice(0, 8)}`);
 
