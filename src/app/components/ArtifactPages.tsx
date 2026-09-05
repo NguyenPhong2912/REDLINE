@@ -64,7 +64,7 @@ export function CopilotPage() {
         <div className="artifact-grounding-list">
           <span>Ledger events</span><b>LIVE</b>
           <span>Gate registry</span><b>7</b>
-          <span>Owner scope</span><b>{owner ? "WALLET" : "PROTOCOL"}</b>
+          <span>Scope</span><b>{owner ? "THIS WALLET" : "ALL WALLETS"}</b>
         </div>
       </aside>
 
@@ -84,7 +84,7 @@ export function CopilotPage() {
           <div><small>API</small><strong>{healthState.toUpperCase()}</strong></div>
           <div><small>CHAIN</small><strong>{health?.chain ?? "—"}</strong></div>
           <div><small>GATES</small><strong>7</strong></div>
-          <div><small>SCOPE</small><strong>{owner ? "OWNER" : "GLOBAL"}</strong></div>
+          <div><small>SCOPE</small><strong>{owner ? "THIS WALLET" : "ALL WALLETS"}</strong></div>
         </div>
         <div className="artifact-connection-card">
           <Server size={14} />

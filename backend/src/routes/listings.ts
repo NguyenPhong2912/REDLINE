@@ -5,9 +5,10 @@ import { getChain } from "../chain/index.js";
 import { SolanaChain } from "../chain/solana.js";
 import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
-import { requireWallet } from "../auth.js";
+import { callerWallet, identityEnforced, requireSession, requireWallet } from "../auth.js";
 import { json } from "./json.js";
-import { hireStatsByListing, listingStats, volumeByListing } from "./market-stats.js";
+import { hireStatsByListing, isLiveHire, listingStats, volumeByListing } from "./market-stats.js";
+import { emptyRating, invalidateRatings, ratingsForListings } from "./ratings.js";
 
 // Real marketplace: a listing is the (already-existing) default AgentListing
 // row created when an agent is published. Hiring is a plain wallet-signed SOL
@@ -37,7 +38,7 @@ export async function listingRoutes(app: FastifyInstance) {
   // count, 24h count, and total lamports paid. The volume figure is summed
   // from the `listing.hired` audit events, the one place the exact amount paid
   // at hire time is written down.
-  app.get("/listings", async () => {
+  app.get("/listings", async (req) => {
     const [listings, hiredEvents] = await Promise.all([
       prisma.agentListing.findMany({
         where: { status: "active" },
@@ -48,10 +49,23 @@ export async function listingRoutes(app: FastifyInstance) {
     ]);
     const volumes = volumeByListing(hiredEvents);
     const counts = hireStatsByListing(listings.flatMap(l => l.hires));
+    const ratings = await ratingsForListings(listings.map(l => l.id));
+    const caller = callerWallet(req);
     return json(listings.map(l => ({
       ...l,
       hires: undefined,
-      activeHires: l.hires.filter(h => h.status === "active").length,
+      // Live means "the term has not ended", not "the status column still
+      // says active" — nothing ever updates that column.
+      activeHires: l.hires.filter(h => isLiveHire(h)).length,
+      // Who published the build, and whether that is the person looking. The
+      // marketplace used to render every listing identically, so an operator
+      // could not tell their own agent from a stranger's.
+      publisherWallet: l.agentVersion.publisherWallet,
+      isMine: Boolean(caller && l.agentVersion.publisherWallet === caller),
+      // True once this wallet has rented it, which is what unlocks reviewing.
+      hiredByMe: Boolean(caller && l.hires.some(h => h.ownerWallet === caller)),
+      rentedByMeNow: Boolean(caller && l.hires.some(h => h.ownerWallet === caller && isLiveHire(h))),
+      rating: ratings.get(l.id) ?? emptyRating(),
       ...listingStats(l.id, volumes, counts),
     })));
   });
@@ -69,9 +83,24 @@ export async function listingRoutes(app: FastifyInstance) {
       developerWallet: z.string().min(32).max(44),
       priceLamports: z.coerce.bigint().min(0n),
     }).parse(req.body);
-    const listing = await prisma.agentListing.findUnique({ where: { id } });
+    const listing = await prisma.agentListing.findUnique({ where: { id }, include: { agentVersion: true } });
     if (!listing) return reply.code(404).send({ error: "listing not found" });
     requireWallet(req, body.developerWallet);
+    // The build's publisher is the only wallet that may put it up for rent.
+    // Without this a stranger could price someone else's agent and point the
+    // payouts at their own wallet — the listing row was the only thing being
+    // checked, and on an unclaimed listing that check passed for anyone.
+    const publisher = listing.agentVersion.publisherWallet;
+    // A build with no recorded publisher cannot be priced by anyone: the
+    // inputs to its hash are visible in the listing, so "first signed-in
+    // caller wins" would let a stranger reconstruct and take it. Republish
+    // the build from the owning wallet to get a claimable listing.
+    if (!publisher) {
+      return reply.code(403).send({ error: "this build was published before ownership was recorded; republish it from your wallet to offer it for rent" });
+    }
+    if (publisher !== body.developerWallet) {
+      return reply.code(403).send({ error: "only the wallet that published this agent can offer it for rent" });
+    }
     if (listing.developerWallet && listing.developerWallet !== body.developerWallet) {
       return reply.code(403).send({ error: "this listing is already claimed by another wallet" });
     }
@@ -79,11 +108,20 @@ export async function listingRoutes(app: FastifyInstance) {
     return json(updated);
   });
 
-  app.get("/hires", async (req) => {
+  // Rentals are scoped to the caller. Reading them used to need only a wallet
+  // address in the query string, which is public information — anyone could
+  // enumerate what any treasury had rented and when.
+  app.get("/hires", async (req, reply) => {
     const { wallet } = req.query as { wallet?: string };
+    const caller = callerWallet(req);
+    if (identityEnforced()) {
+      if (!caller) return reply.code(401).send({ error: "Sign in with your wallet to see rentals" });
+      if (wallet && wallet !== caller) return reply.code(403).send({ error: "you can only list your own rentals" });
+    }
+    const scope = identityEnforced() ? caller! : wallet;
     const hires = await prisma.hireAgreement.findMany({
-      where: wallet ? { ownerWallet: wallet } : undefined,
-      include: { listing: { include: { agentVersion: true } } },
+      where: scope ? { ownerWallet: scope } : undefined,
+      include: { listing: { include: { agentVersion: true } }, review: true },
       orderBy: { startsAt: "desc" },
     });
     return json(hires);
@@ -96,6 +134,12 @@ export async function listingRoutes(app: FastifyInstance) {
       durationHours: z.number().int().min(1).max(24 * 30),
       paymentSignature: z.string().min(1),
     }).parse(req.body);
+
+    // Paying for a rental in someone else's name is not a thing. The payment
+    // signature is checked against `ownerWallet` further down, but on a mock
+    // adapter that check is a no-op, and even on Solana this stops a caller
+    // recording a hire for a wallet that never asked for one.
+    requireWallet(req, body.ownerWallet);
 
     const listing = await prisma.agentListing.findUnique({ where: { id: body.listingId } });
     if (!listing) return reply.code(404).send({ error: "listing not found" });
@@ -133,6 +177,9 @@ export async function listingRoutes(app: FastifyInstance) {
         endsAt: new Date(Date.now() + body.durationHours * 3600_000),
       },
     });
+    // A rental is new evidence: it is what makes this agent's runs count
+    // towards its published reliability, so the memo has to go.
+    invalidateRatings([listing.agentVersionId]);
     await audit({
       actorType: "owner", actorId: body.ownerWallet, eventType: "listing.hired", subjectType: "hire", subjectId: hire.id,
       chainSignature: body.paymentSignature,

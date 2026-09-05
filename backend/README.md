@@ -47,7 +47,23 @@ The backend speaks Anchor's wire format without a generated client: `src/chain/a
 
 ## API
 
-Reads are public. A write needs either a **wallet session** or the shared key.
+Identity, in one paragraph. The shared `REDLINE_API_KEY` ships inside the public
+frontend bundle, so **anyone can read it** — it keeps drive-by traffic off the
+write routes and proves nothing about who is calling. Anything that acts on
+someone's property (publishing a build, pricing a listing, renting, reviewing,
+granting or revoking authority, starting or stopping a run, topping up a vault)
+requires a **wallet session**: the wallet signs a server-issued challenge and the
+API checks the signature against the address, which is a raw ed25519 public key.
+
+Reads are scoped the same way. A route that returns one wallet's activity returns
+*the caller's*; a stranger gets either an empty set or a redacted projection —
+never someone else's wallets, vaults and destinations. See `src/redact.ts` for
+what redaction keeps (event type, reason code, amount, on-chain signature — the
+evidence) and what it removes (identity and linkage).
+
+A deployment with **no** `REDLINE_API_KEY` has declared itself local or mock:
+writes stay open and reads stay unscoped, so `scripts/demo.sh` runs the whole
+six-beat demo with no headers.
 
 A session is the real credential: `POST /auth/nonce` returns a challenge naming the wallet and a one-time nonce, the wallet signs those bytes, and `POST /auth/verify` exchanges the signature for a bearer token. A Solana address *is* an ed25519 public key, so the signature verifies against the address itself. Nonces are single-use and expire in 5 minutes; sessions last 12 hours and are stored as a SHA-256 of the token, never the token.
 
@@ -62,27 +78,32 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | chain kind, program id, executor pubkey, build version |
+| GET | `/health` | chain kind, cluster, program id, executor, build version, indexer state, rate limit, and whether writes require a signature |
 | POST | `/auth/nonce` · `/auth/verify` | wallet sign-in: issue a challenge, exchange a signature for a session |
 | GET | `/auth/me` | the wallet behind the current session |
-| POST | `/agents` · GET `/agents` | publish / list immutable agent versions (`agent_hash`) |
+| POST | `/agents` | publish an immutable build. **Needs a wallet session** — the publisher is taken from the signature, never from the body. Re-publishing the same bytes from the same wallet is idempotent; a different wallet gets its own row (`agentHash` is unique per publisher) |
+| GET | `/agents` · `?mine=true` · `?publisher=` | the catalogue, each row carrying `publisherWallet`, `isMine`, `unclaimed` and its `rating` |
+| GET | `/agents/:id` | one build with its listings and reputation |
 | POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy). An agent someone else published and priced needs a live `hireId` covering it |
-| GET | `/grants`, `/grants/:id` | grants with live on-chain state |
+| GET | `/grants` | **the caller's** grants with live on-chain state; empty for an anonymous caller |
+| GET | `/grants/:id` | full for the owner; redacted for anyone else |
 | POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana) |
 | POST | `/intents/preview` | dry-run the gates; no write, no fee |
 | POST | `/intents` | record one intent and submit it only when the current policy precheck allows it |
 | GET | `/grants/:id/intents` | intents with decisions and chain transactions |
 | POST | `/runs` · `/runs/:id/stop` | start / stop the agent runtime (`mode: scripted | llm`) |
-| GET | `/grants/:id/feed` | server-sent events (`*` = all grants) |
-| GET | `/audit?grant=` | append-only audit trail with signatures |
-| GET | `/vaults/:owner` | vault PDA, ATA and live balance |
+| GET | `/grants/:id/feed` | server-sent events (`*` = all grants). Redacted unless the subscriber owns the grant |
+| GET | `/audit?grant=` | the caller's own trail in full; anonymous callers get a short recent window, redacted, and cannot filter it by grant |
+| GET | `/vaults/:owner` | vault PDA, ATA and live balance. Only your own |
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
+| GET | `/listings/:id/reviews` · POST | renter reviews; posting needs a session **and** a rental on that listing, one review per rental |
+| GET | `/listings/:id/reviewable` | whether this wallet may review, and which rentals are open |
 | GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written. A grant for a rented agent records which agreement covers it, and is refused once it lapses |
 | GET | `/analytics?owner=` | volume, allowed/blocked counts and decision latency computed from the audit trail |
 | GET | `/protocol/overview?owner=` | ordered seven-gate catalog, network state and decision/rejection rollup for the live policy visualization |
 | GET | `/policy/presets` | three versioned hypothetical policy configurations for Policy Lab |
 | POST | `/policy/simulate` | public, bounded sequential simulation with seven-gate traces; no wallet, database writes or chain calls |
-| POST | `/devnet/fund` | mint demo USDC into an owner's vault (Devnet only) |
+| POST | `/devnet/fund` | mint demo USDC into **your own** vault (Devnet only) |
 | POST | `/risk-assess` | AI risk copilot with deterministic floor |
 | POST | `/assistant` | answers a question about recorded state; the brief is assembled server-side and is the only fact source the model gets |
 
@@ -91,6 +112,25 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 Policy Lab input limits, examples, response semantics and Vietnamese user documentation: [docs/POLICY_LAB.md](../docs/POLICY_LAB.md). Run `npm run dev:lab` for an isolated local server on `127.0.0.1:8788` without Postgres or a chain executor. Only the two Policy Lab endpoints are available in this mode; other endpoints explicitly return 503. The normal server includes both new routes automatically, with no schema migration.
 
 `/protocol/overview` now excludes expired grants as well as revoked grants from its active count, using the same clock as the policy engine.
+
+## Reputation
+
+An agent's standing is two numbers, kept apart on purpose (`src/routes/ratings.ts`).
+
+**Reliability** is derived from records nobody can vote on: the policy decisions
+its grants produced (`allowed / decisions`) and what the chain did with the
+transfers it was allowed to make (`successes / attempts`). An agent whose
+proposals were repeatedly refused has a low compliance rate no matter what its
+renters say.
+
+**Reviews** come only from wallets that paid for a rental. `AgentReview.hireId`
+is unique, so one rental buys exactly one review — inflating a score means
+renting again, which costs real SOL.
+
+The headline `score` (0–100) weights reliability 70 / reviews 30, needs at least
+three recorded decisions before the reliability half counts, and is `null` with
+neither. An agent with no history is **unrated**, which is not the same as badly
+rated — `basis` says which halves the score used.
 
 ## Runtime modes
 

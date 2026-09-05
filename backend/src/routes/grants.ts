@@ -7,6 +7,8 @@ import { prisma } from "../db/client.js";
 import { audit } from "../db/audit.js";
 import { PolicySchema, canonicalPolicy, policyHash, toGrantLimits } from "../policy/canonical.js";
 import { deterministic } from "./risk.js";
+import { callerWallet, identityEnforced, requireWallet } from "../auth.js";
+import { redactAuditRow, redactPayload } from "../redact.js";
 import { json } from "./json.js";
 
 const CreateGrant = z.object({
@@ -63,6 +65,10 @@ async function resolveHire(agentVersionId: string, ownerWallet: string, hireId?:
 export async function grantRoutes(app: FastifyInstance) {
   app.post("/grants", async (req, reply) => {
     const body = CreateGrant.parse(req.body);
+    // A grant hands an executor authority over this wallet's vault. Recording
+    // one for a wallet the caller has not proved control of would let a
+    // stranger attach agents to someone else's treasury page.
+    requireWallet(req, body.ownerWallet);
     const chain = getChain();
     const now = nowSeconds();
     const hash = policyHash(body.policy);
@@ -135,8 +141,17 @@ export async function grantRoutes(app: FastifyInstance) {
     return reply.code(201).send(json({ grant, policyHash: hash, chain: chain.kind }));
   });
 
-  app.get("/grants", async () => {
-    const grants = await prisma.agentGrant.findMany({ include: { agentVersion: true, policyVersion: true, owner: true, hire: true }, orderBy: { createdAt: "desc" } });
+  // Your grants, not everyone's. The unscoped version was how the dashboard
+  // ended up showing one wallet's agents to another wallet — the "which agent
+  // belongs to which account" problem in its most visible form.
+  app.get("/grants", async (req) => {
+    const caller = callerWallet(req);
+    if (identityEnforced() && !caller) return json([]);
+    const grants = await prisma.agentGrant.findMany({
+      where: caller ? { owner: { wallet: caller } } : undefined,
+      include: { agentVersion: true, policyVersion: true, owner: true, hire: true },
+      orderBy: { createdAt: "desc" },
+    });
     return json(grants);
   });
 
@@ -144,6 +159,11 @@ export async function grantRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { agentVersion: true, policyVersion: true, owner: true, vault: true, hire: true, runs: { orderBy: { startedAt: "desc" } } } });
     if (!grant) return reply.code(404).send({ error: "grant not found" });
+    // Someone else's grant stays readable but redacted: the on-chain facts
+    // remain (that is the transparency claim) while the wallet, vault and
+    // destination linkage does not.
+    const caller = callerWallet(req);
+    const mine = !identityEnforced() || (caller !== null && grant.owner.wallet === caller);
     // The mirrored row is still worth returning when the chain read fails —
     // an RPC hiccup, or a grantPda written by a different CHAIN adapter, must
     // not take the whole page down. `onchain: null` is the honest answer.
@@ -153,13 +173,32 @@ export async function grantRoutes(app: FastifyInstance) {
     } catch (err) {
       app.log.warn({ grantId: id, grantPda: grant.grantPda, err: String(err) }, "on-chain grant read failed");
     }
-    return json({ ...grant, onchain });
+    if (!mine) {
+      const redacted = redactAuditRow({
+        id: grant.id, createdAt: grant.createdAt, actorType: "owner", actorId: grant.owner.wallet,
+        eventType: "grant", subjectType: "grant", subjectId: grant.id, chainSignature: grant.createSignature,
+        payload: { grantPda: grant.grantPda, executorPubkey: grant.executorPubkey },
+      });
+      return json({
+        id: grant.id, createdAt: grant.createdAt, revoked: grant.revoked,
+        agentVersion: { id: grant.agentVersion.id, name: grant.agentVersion.name, version: grant.agentVersion.version, agentHash: grant.agentVersion.agentHash },
+        policyVersion: redactPayload({ ...grant.policyVersion }),
+        spentUnits: grant.spentUnits, transactionCount: grant.transactionCount, nextNonce: grant.nextNonce,
+        owner: { wallet: redacted.actorId },
+        grantPda: redacted.payload.grantPda, executorPubkey: redacted.payload.executorPubkey,
+        onchain, redacted: true, isMine: false,
+      });
+    }
+    return json({ ...grant, onchain, isMine: true });
   });
 
   app.post("/grants/:id/revoke", async (req, reply) => {
     const { id } = req.params as { id: string };
-    const grant = await prisma.agentGrant.findUnique({ where: { id } });
+    const grant = await prisma.agentGrant.findUnique({ where: { id }, include: { owner: true } });
     if (!grant) return reply.code(404).send({ error: "grant not found" });
+    // Only the owner revokes. On Solana the program refuses a foreign
+    // signature anyway, but on mock the adapter signs for whoever asks.
+    requireWallet(req, grant.owner.wallet);
     // Browser flow posts the signature of a revoke_grant it already sent;
     // mock / headless demo lets the adapter sign.
     const body = (req.body ?? {}) as { signature?: string };

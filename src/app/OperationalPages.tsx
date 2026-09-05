@@ -20,6 +20,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { RatingBadge, ReviewPanel } from "./components/AgentRating";
 import { TransferLane, VoxelCube } from "./components/depth";
 import { GrantSignButton } from "./components/GrantSignButton";
 import { GrantsPanel } from "./components/GrantsPanel";
@@ -30,6 +31,7 @@ import {
   api,
   API_URL,
   checkHealth,
+  loadSession,
   short,
   type AgentVersion,
   type AuditRow,
@@ -37,6 +39,7 @@ import {
   type Hire,
   type Listing,
 } from "./lib/api";
+import { useSignedIn } from "./lib/useSignedIn";
 import {
   requestRiskAssessment,
   type AgentPolicyInput,
@@ -84,10 +87,24 @@ const fmtSol = (lamports: string) =>
     maximumFractionDigits: 4,
   });
 
+type MarketSort = "newest" | "rating" | "demand" | "price";
+const MARKET_SORTS: [MarketSort, string][] = [
+  ["newest", "Newest"],
+  ["rating", "Reputation"],
+  ["demand", "Most rented"],
+  ["price", "Cheapest"],
+];
+
 export function MarketplacePage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
+  // Renting moves SOL and creates a record in someone's name. The API refuses
+  // it without a signature, so the button waits for one rather than offering
+  // an action that is going to come back 401.
+  const signedIn = useSignedIn(wallet);
+  const [sortBy, setSortBy] = useState<MarketSort>("newest");
+  const [reviewsOpen, setReviewsOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
   const [pricedOnly, setPricedOnly] = useState(false);
@@ -123,7 +140,7 @@ export function MarketplacePage() {
 
   // The publisher claims a listing by naming the wallet that should be paid.
   async function savePrice(listing: Listing) {
-    if (!wallet) return;
+    if (!signedIn) return;
     setBusy(listing.id);
     setError("");
     setNotice("");
@@ -144,7 +161,7 @@ export function MarketplacePage() {
   // Renting is a real SOL transfer to the publisher, then the backend verifies
   // that transaction on Devnet before recording the hire.
   async function rent(listing: Listing) {
-    if (!connected?.signer || !listing.developerWallet) return;
+    if (!connected?.signer || !signedIn || !listing.developerWallet) return;
     const durationHours = hoursFor(listing.id);
     const total =
       BigInt(listing.priceLamports) * BigInt(Math.ceil(durationHours / 24));
@@ -177,17 +194,36 @@ export function MarketplacePage() {
     }
   }
 
-  const filtered = listings.filter((l) => {
-    if (pricedOnly && Number(l.priceLamports) === 0) return false;
-    if (
-      search &&
-      !`${l.agentVersion.name} ${l.agentVersion.strategy}`
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    )
-      return false;
-    return true;
-  });
+  const filtered = listings
+    .filter((l) => {
+      if (pricedOnly && Number(l.priceLamports) === 0) return false;
+      if (
+        search &&
+        !`${l.agentVersion.name} ${l.agentVersion.strategy}`
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+        return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // An unrated agent sorts last rather than first: `null` means "no
+      // evidence yet", and treating that as zero would rank a brand-new
+      // listing below a demonstrably bad one, which is not the same claim.
+      if (sortBy === "rating")
+        return (b.rating?.score ?? -1) - (a.rating?.score ?? -1);
+      if (sortBy === "demand")
+        return (b.totalHires ?? 0) - (a.totalHires ?? 0);
+      if (sortBy === "price")
+        return Number(a.priceLamports) - Number(b.priceLamports);
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  // "Mine" means I published the build or I am already the payout wallet —
+  // either way renting from myself is not a thing, and claiming is.
+  const isMine = (l: Listing) =>
+    Boolean(l.isMine) || (!!wallet && l.developerWallet === wallet);
+  const publisherOf = (l: Listing) =>
+    l.publisherWallet ?? l.developerWallet ?? null;
 
   const [focusedId, setFocusedId] = useState<string>("");
   const featured = filtered.find((l) => l.id === focusedId) ?? filtered[0];
@@ -216,8 +252,30 @@ export function MarketplacePage() {
           <ShieldCheck size={13} />
           Rentable only
         </button>
+        {/* Sorting by reputation or demand is the only reason to compute them.
+            "Newest" stays the default so a fresh listing is not buried by an
+            older one purely for having been around longer. */}
+        <div className="market-sort" role="group" aria-label="Sort listings">
+          {MARKET_SORTS.map(([key, label]) => (
+            <button
+              key={key}
+              className="btn btn-ghost btn-sm"
+              aria-pressed={sortBy === key}
+              onClick={() => setSortBy(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <span className="chip chip-info">{filtered.length} VERSIONS</span>
       </div>
+      {wallet && !signedIn && (
+        <p className="help market-signin-note" role="status">
+          Wallet connected, but not signed in. Renting, claiming and reviewing
+          need a signature — the API cannot tell a connected wallet from a
+          typed address. Use “Sign in” in the top bar.
+        </p>
+      )}
       {error && (
         <div className="error-note" role="alert">
           {error}
@@ -245,6 +303,10 @@ export function MarketplacePage() {
                   <span className="chip chip-info">
                     {featured.agentVersion.version}
                   </span>
+                  <RatingBadge rating={featured.rating} />
+                  {isMine(featured) && (
+                    <span className="chip chip-gold">YOURS</span>
+                  )}
                 </div>
                 <div className="cluster" aria-hidden="true">
                   <VoxelCube size={44} />
@@ -268,10 +330,36 @@ export function MarketplacePage() {
                   <div>
                     <small>PUBLISHER</small>
                     <b>
-                      {featured.developerWallet
-                        ? short(featured.developerWallet, 4)
+                      {publisherOf(featured)
+                        ? short(publisherOf(featured) as string, 4)
                         : "Unclaimed"}
                     </b>
+                  </div>
+                </div>
+                {/* Demand, from records that already existed: hire rows and the
+                    `listing.hired` audit events carrying what was paid. */}
+                <div className="meta demand">
+                  <div>
+                    <small>RENTALS</small>
+                    <b>{featured.totalHires ?? 0}</b>
+                    <small>{featured.hires24h ?? 0} in 24h</small>
+                  </div>
+                  <div>
+                    <small>PAID OUT</small>
+                    <b>{fmtSol(featured.volumeLamports ?? "0")} SOL</b>
+                    <small>all time</small>
+                  </div>
+                  <div>
+                    <small>LAST RENTED</small>
+                    <b>
+                      {featured.lastHiredAt
+                        ? new Date(featured.lastHiredAt).toLocaleDateString()
+                        : "—"}
+                    </b>
+                    <small>
+                      published{" "}
+                      {new Date(featured.createdAt).toLocaleDateString()}
+                    </small>
                   </div>
                 </div>
                 <div className="cta">
@@ -303,14 +391,32 @@ export function MarketplacePage() {
                     <button
                       className="btn btn-gold full-button rentbtn"
                       onClick={() => void rent(featured)}
-                      disabled={!connected?.signer || busy !== ""}
+                      disabled={
+                        !connected?.signer ||
+                        !signedIn ||
+                        busy !== "" ||
+                        isMine(featured)
+                      }
+                      title={
+                        isMine(featured)
+                          ? "You publish this agent"
+                          : !connected?.signer
+                            ? "Connect a wallet to rent"
+                            : !signedIn
+                              ? "Sign in with your wallet to rent"
+                              : ""
+                      }
                     >
                       <Wallet size={14} />
                       {busy === featured.id
                         ? "Waiting for wallet / verification…"
-                        : wallet
-                          ? "Rent with wallet"
-                          : "Connect wallet to rent"}
+                        : isMine(featured)
+                          ? "This is your listing"
+                          : !wallet
+                            ? "Connect wallet to rent"
+                            : !signedIn
+                              ? "Sign in to rent"
+                              : "Rent with wallet"}
                       <ArrowRight size={14} />
                     </button>
                     <p className="help">
@@ -330,12 +436,19 @@ export function MarketplacePage() {
                     be rented.
                   </p>
                 )}
-                {wallet &&
-                  (!featured.developerWallet ||
-                    featured.developerWallet === wallet) && (
+                {/* Only the publisher (or the wallet already being paid) can
+                    claim: the payout wallet is write-once on the API, so
+                    offering "Claim" to anyone else would only lead to a 403. */}
+                {wallet && isMine(featured) && (
                     <div className="publisher-pricing">
                       <button
                         className="btn btn-ghost btn-sm"
+                        disabled={!signedIn}
+                        title={
+                          signedIn
+                            ? ""
+                            : "Sign in with your wallet to claim this listing"
+                        }
                         onClick={() => {
                           setEditing(
                             editing === featured.id ? null : featured.id,
@@ -343,7 +456,9 @@ export function MarketplacePage() {
                           setPriceSol(fmtSol(featured.priceLamports));
                         }}
                       >
-                        Set publisher price
+                        {featured.developerWallet
+                          ? "Edit publisher price"
+                          : "Claim listing · set price"}
                       </button>
                       {editing === featured.id && (
                         <form
@@ -370,6 +485,28 @@ export function MarketplacePage() {
                       )}
                     </div>
                   )}
+                <div className="reputation">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    aria-expanded={reviewsOpen}
+                    onClick={() => setReviewsOpen((v) => !v)}
+                  >
+                    {reviewsOpen
+                      ? "Hide reputation"
+                      : `Reputation & reviews${
+                          featured.rating?.reviews.count
+                            ? ` (${featured.rating.reviews.count})`
+                            : ""
+                        }`}
+                  </button>
+                  {reviewsOpen && (
+                    <ReviewPanel
+                      key={featured.id}
+                      listingId={featured.id}
+                      wallet={wallet}
+                    />
+                  )}
+                </div>
               </section>
             </div>
             <div className="flow-wrap">
@@ -448,7 +585,7 @@ export function MarketplacePage() {
                 <span>AGENT</span>
                 <span>HASH</span>
                 <span>PUBLISHER</span>
-                <span>ACTIVE HIRES</span>
+                <span>HIRES · LIVE / ALL</span>
                 <span>PRICE / DAY</span>
                 <span />
               </div>
@@ -458,18 +595,25 @@ export function MarketplacePage() {
                     <Bot size={14} />
                   </span>
                   <span>
-                    <b>{l.agentVersion.name}</b>
-                    <small>{l.agentVersion.version}</small>
+                    <b>
+                      {l.agentVersion.name}
+                      {isMine(l) && <span className="chip chip-gold">YOURS</span>}
+                    </b>
+                    <small>
+                      {l.agentVersion.version} <RatingBadge rating={l.rating} />
+                    </small>
                   </span>
                   <span className="m">
                     {short(l.agentVersion.agentHash, 5)}
                   </span>
                   <span className="m">
-                    {l.developerWallet
-                      ? short(l.developerWallet, 5)
+                    {publisherOf(l)
+                      ? short(publisherOf(l) as string, 5)
                       : "Unclaimed"}
                   </span>
-                  <span>{l.activeHires}</span>
+                  <span>
+                    {l.activeHires} / {l.totalHires ?? 0}
+                  </span>
                   <span className="p">
                     {Number(l.priceLamports) > 0
                       ? `${fmtSol(l.priceLamports)} SOL`
@@ -1485,6 +1629,8 @@ export function SettingsPage() {
     applyPreference("depth", depthEnabled);
     applyPreference("motion", motionEnabled);
   }, [depthEnabled, motionEnabled]);
+  const signedIn = useSignedIn(wallet);
+  const session = signedIn ? loadSession() : null;
   const tabs = [
     { label: "Network", detail: "Cluster · program · executor", icon: Network },
     {
@@ -1619,20 +1765,27 @@ export function SettingsPage() {
                   {healthLabel.toUpperCase()}
                 </em>
               </header>
-              <div className="settings-choice-row">
-                <span>Cluster</span>
-                <div>
-                  <button type="button" aria-pressed>
-                    Devnet
-                  </button>
-                  <button type="button" disabled>
-                    Testnet
-                  </button>
-                  <button type="button" disabled>
-                    Mainnet-beta
-                  </button>
-                </div>
-              </div>
+              {/* Cluster and commitment are properties of the deployed API, not
+                  switches this page owns. They are reported, not offered — the
+                  old three-button rows implied a choice that changed nothing. */}
+              <Row
+                label="Cluster"
+                value={
+                  health?.cluster ??
+                  (health?.chain === "mock"
+                    ? "mock"
+                    : healthState === "checking"
+                      ? "checking…"
+                      : "unreachable")
+                }
+                accent={health ? C : A}
+              />
+              <Row
+                label="Chain adapter"
+                value={health?.chain ?? "unknown"}
+                accent={health?.chain === "solana" ? M : A}
+              />
+              <Row label="Commitment" value="confirmed" accent={color.textMuted} />
               <Row
                 label="Program"
                 value={health?.programId ?? PROGRAM_ID}
@@ -1652,20 +1805,25 @@ export function SettingsPage() {
                       : color.danger
                 }
               />
-              <div className="settings-choice-row">
-                <span>Commitment</span>
-                <div>
-                  <button type="button" disabled>
-                    processed
-                  </button>
-                  <button type="button" aria-pressed>
-                    confirmed
-                  </button>
-                  <button type="button" disabled>
-                    finalized
-                  </button>
-                </div>
-              </div>
+              <Row
+                label="Chain indexer"
+                value={health?.indexer ?? "unknown"}
+                accent={health?.indexer === "running" ? M : A}
+              />
+              <Row
+                label="API build"
+                value={health?.version ?? "unknown"}
+                accent={color.textMuted}
+              />
+              <Row
+                label="Rate limit"
+                value={
+                  health?.rateLimitPerMinute
+                    ? `${health.rateLimitPerMinute} req/min per IP`
+                    : "unknown"
+                }
+                accent={color.textMuted}
+              />
               <label className="settings-api-row">
                 <span>API URL</span>
                 <div>
@@ -1717,7 +1875,29 @@ export function SettingsPage() {
                 )}
               </div>
               <Row
-                label="Demo USDC mint"
+                label="Wallet session"
+                value={
+                  signedIn && session
+                    ? `signed in · expires ${new Date(session.expiresAt).toLocaleString()}`
+                    : wallet
+                      ? "connected but not signed in"
+                      : "no wallet"
+                }
+                accent={signedIn ? M : A}
+              />
+              <Row
+                label="Writes require a signature"
+                value={
+                  health?.identityEnforced === undefined
+                    ? "unknown"
+                    : health.identityEnforced
+                      ? "yes — this is a public deployment"
+                      : "no — local/mock, writes are open"
+                }
+                accent={health?.identityEnforced ? M : A}
+              />
+              <Row
+                label="Demo USDC mint (browser)"
                 value={
                   import.meta.env.VITE_DEMO_USDC_MINT
                     ? String(import.meta.env.VITE_DEMO_USDC_MINT)
@@ -1726,18 +1906,34 @@ export function SettingsPage() {
                 accent={import.meta.env.VITE_DEMO_USDC_MINT ? C : A}
               />
               <Row
+                label="Demo USDC mint (API)"
+                value={
+                  health?.demoMintConfigured === undefined
+                    ? "unknown"
+                    : health.demoMintConfigured
+                      ? "configured"
+                      : "not configured"
+                }
+                accent={health?.demoMintConfigured ? C : A}
+              />
+              <Row
                 label="Demo destination"
                 value={DEMO_OPS_DESTINATION || "not configured"}
                 accent={DEMO_OPS_DESTINATION ? C : A}
               />
+              {/* This row used to read "configured", which sounded like a
+                  security control. It is not one: the key ships inside this
+                  page's JavaScript, so anyone can read it. It exists to keep
+                  drive-by traffic off the write routes; ownership is proved by
+                  the wallet signature above, not by this. */}
               <Row
-                label="Frontend write key"
+                label="Bundled write key"
                 value={
                   import.meta.env.VITE_API_KEY
-                    ? "configured"
-                    : "open (local/mock)"
+                    ? "present in this bundle — public, not a credential"
+                    : "none (local/mock)"
                 }
-                accent={import.meta.env.VITE_API_KEY ? M : A}
+                accent={A}
               />
             </>
           )}
@@ -1820,7 +2016,8 @@ export function SettingsPage() {
               <div className="settings-experience-note">
                 <Sparkles size={16} />
                 <p>
-                  Sound remains available from the global header so it follows
+                  Depth and motion are stored on this device and applied
+                  immediately. Sound stays in the global header so it follows
                   you across every page.
                 </p>
               </div>

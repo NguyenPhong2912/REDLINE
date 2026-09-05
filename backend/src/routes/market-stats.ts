@@ -15,6 +15,22 @@ export interface HireLike {
   startsAt: Date;
 }
 
+/**
+ * Is this rental live right now?
+ *
+ * `HireAgreement.status` defaults to "active" and nothing ever writes it
+ * again — no expiry job, no cron. Counting rows by that flag therefore
+ * reports every rental ever paid for as still running, which is why a
+ * listing rented once last month advertised "1 active hire" forever. The
+ * end date is the only field that tells the truth, and it is what
+ * resolveHire() in routes/grants.ts already checks before letting a rented
+ * agent be granted authority.
+ */
+export function isLiveHire(hire: { endsAt: Date; status?: string }, now: Date = new Date()): boolean {
+  if (hire.status === "cancelled") return false;
+  return hire.endsAt > now;
+}
+
 export interface ListingStats {
   totalHires: number;
   hires24h: number;

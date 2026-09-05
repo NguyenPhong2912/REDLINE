@@ -928,3 +928,26 @@
   }
   .header-density-trigger { display: none !important; }
 }
+
+/* ── Experience toggles (Settings → Experience) ──────────────────────────────
+   These back the two switches on the Settings page. They used to be useState
+   with nothing behind them: the control moved and the page did not change.
+   `no-depth` flattens the stacked/perspective treatment; `no-motion` stops
+   transitions and animations for people who find them distracting — the same
+   thing prefers-reduced-motion asks for, but chosen deliberately. */
+:root.no-depth [class*="depth"],
+:root.no-depth .settings-artifact-shell,
+:root.no-depth .market-grid > * {
+  transform: none !important;
+  perspective: none !important;
+  box-shadow: 0 1px 2px rgba(4, 2, 12, 0.35) !important;
+}
+
+:root.no-motion *,
+:root.no-motion *::before,
+:root.no-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}

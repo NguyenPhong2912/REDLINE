@@ -8,7 +8,7 @@ import { SolanaChain } from "./chain/solana.js";
 import { startIndexer } from "./indexer.js";
 import { clockSpeed } from "./clock.js";
 import { agentRoutes } from "./routes/agents.js";
-import { registerAuth } from "./auth.js";
+import { identityEnforced, registerAuth } from "./auth.js";
 import { prisma } from "./db/client.js";
 import { auditRoutes } from "./routes/audit.js";
 import { vaultRoutes } from "./routes/vaults.js";
@@ -18,6 +18,7 @@ import { intentRoutes } from "./routes/intents.js";
 import { riskRoutes } from "./routes/risk.js";
 import { runRoutes } from "./routes/runs.js";
 import { listingRoutes } from "./routes/listings.js";
+import { reviewRoutes } from "./routes/reviews.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { protocolRoutes } from "./routes/protocol.js";
 import { assistantRoutes } from "./routes/assistant.js";
@@ -31,9 +32,10 @@ const app = Fastify({
   },
 });
 
+let indexerRunning = false;
 const chain = await initChain();
 app.log.info({ chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey }, "chain adapter ready");
-if (chain instanceof SolanaChain) void startIndexer(chain, msg => app.log.info(msg));
+if (chain instanceof SolanaChain) { indexerRunning = true; void startIndexer(chain, msg => app.log.info(msg)); }
 
 await app.register(cors, { origin: true });
 // Per-IP ceiling; SSE (/feed) is exempt because one connection is long-lived.
@@ -65,9 +67,26 @@ app.setErrorHandler((err, _req, reply) => {
   return reply.code(err.statusCode ?? 500).send({ error: err.message, context });
 });
 
+// What an operator needs to know about this deployment, and nothing they
+// could not already infer by using it. `identityEnforced` in particular is
+// observable behaviour, not a secret: it says whether writes need a wallet
+// signature. The Settings page reads this instead of guessing from the
+// browser's own env vars, which describe the bundle rather than the server.
 app.get("/health", async () => {
   const chain = getChain();
-  return { ok: true, chain: chain.kind, programId: chain.programId, executor: chain.executorPubkey, clockSpeed, version: (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_SHA ?? "local").slice(0, 7) };
+  return {
+    ok: true,
+    chain: chain.kind,
+    programId: chain.programId,
+    executor: chain.executorPubkey,
+    clockSpeed,
+    version: (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_SHA ?? "local").slice(0, 7),
+    identityEnforced: identityEnforced(),
+    indexer: indexerRunning ? "running" : "off",
+    rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120),
+    demoMintConfigured: Boolean(process.env.DEMO_USDC_MINT),
+    cluster: chain.kind === "solana" ? "devnet" : "mock",
+  };
 });
 
 await app.register(agentRoutes);
@@ -79,6 +98,7 @@ await app.register(riskRoutes);
 await app.register(devnetRoutes);
 await app.register(vaultRoutes);
 await app.register(listingRoutes);
+await app.register(reviewRoutes);
 await app.register(analyticsRoutes);
 await app.register(protocolRoutes);
 await app.register(assistantRoutes);

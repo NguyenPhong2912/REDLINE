@@ -249,6 +249,9 @@ Checked in this exact order, on-chain, before a single token moves:
 | 👛 Wallet-signed vault / grant / revoke / withdraw from the browser | 🟢 **Live** |
 | 🤖 Agent runtime, policy engine, indexer, audit trail, SSE feed | 🟢 **Live on Render + Postgres** |
 | 🛍️ Marketplace — publish, claim, rent for real SOL with on-chain payment verification | 🟢 **Live** |
+| 🔏 Wallet sign-in — publishing, renting, reviewing, granting, revoking and funding require a signed session; the shared key alone is not identity | 🟢 **Live** |
+| 🧾 Scoped reads — your grants, rentals, runs and vault are yours; the audit trail and live feed are redacted server-side for anyone else | 🟢 **Live** |
+| ⭐ Agent reputation — reliability from rented on-chain runs (cannot be voted on) + reviews gated one-per-rental | 🟢 **Live** |
 | 📊 Analytics computed from the audit trail (volume, allow/block, decision latency) | 🟢 **Live** |
 | 🧪 On-chain gate tests against the deployed binary (LiteSVM) | 🟢 **CI on every push** |
 | 💹 P&L, APY, win-rate, uptime panels | ⚪ **Removed — nothing in the system measures them, so they are not shown** |
@@ -333,7 +336,7 @@ cd backend && npm run program:fetch && npm run test:onchain
 
 | # | Step |
 |:---:|---|
-| 1️⃣ | 👛 Connect a Devnet wallet. Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx, **1-minute cooldown**). |
+| 1️⃣ | 👛 Connect a Devnet wallet and **Sign in** (the header button — a connected wallet is an address, a signed one is an identity). Guardrails → wizard → risk assessment → **Sign & create on-chain grant** (cap 500 USDC, 5 tx, **1-minute cooldown**). |
 | 2️⃣ | ▶️ **Run safe sequence**. The wallet asks you to sign in first — starting a run spends from the vault, so the API wants proof you hold the owner's key rather than the shared key that ships in the page. The runtime performs three paced transfers, each at 20% of the cap. |
 | 3️⃣ | ✅ Use **Send safely** for a single owner-triggered transfer. The UI calls `/intents/preview`, pins the returned nonce, and submits only an allowed proposal. Use Policy Lab to inspect over-cap, wrong-recipient, replay, expiry, and revocation scenarios without a fee or failed transaction. |
 | 4️⃣ | 🔒 **Revoke** from the wallet; the next attempt fails with `Revoked`. Treasury → **Withdraw**. |

@@ -69,11 +69,7 @@ export function sessionWallet(req: FastifyRequest): string | null {
  * anyone, which is exactly the hole that let listings be claimed by strangers.
  */
 export function requireWallet(req: FastifyRequest, wallet: string): void {
-  // A deployment with no REDLINE_API_KEY has already declared itself local or
-  // mock, where writes are open by design; demanding a signature there would
-  // break the offline smoke test for no gain. Once the key is set the
-  // deployment is public, and ownership is enforced.
-  if (!process.env.REDLINE_API_KEY) return;
+  if (!identityEnforced()) return;
   const signedIn = sessionWallet(req);
   if (!signedIn) {
     throw Object.assign(new Error("Sign in with your wallet to do this"), { statusCode: 401 });
@@ -84,13 +80,51 @@ export function requireWallet(req: FastifyRequest, wallet: string): void {
 }
 
 /**
+ * True when this deployment enforces wallet identity at all.
+ *
+ * A deployment without REDLINE_API_KEY has declared itself local or mock:
+ * writes are open by design there, `scripts/demo.sh` drives the whole six-beat
+ * demo with no headers, and demanding a signature would break it for no gain.
+ * Once the key is set the deployment is public, and identity is enforced.
+ */
+export function identityEnforced(): boolean {
+  return Boolean(process.env.REDLINE_API_KEY);
+}
+
+/**
+ * The wallet this request has proved control of, or null.
+ *
+ * Returns null — rather than throwing — in open mode, so callers can record
+ * "no attributable publisher" instead of inventing one. Routes that must have
+ * an identity call requireSession() instead.
+ */
+export function callerWallet(req: FastifyRequest): string | null {
+  return sessionWallet(req);
+}
+
+/**
+ * Demand a proven wallet. Use on routes where acting anonymously is
+ * meaningless — publishing something others will rent, paying for a rental,
+ * leaving a review. The shared key is not enough: it ships in the public
+ * bundle, so "has the key" says nothing about who is calling.
+ */
+export function requireSession(req: FastifyRequest): string | null {
+  if (!identityEnforced()) return sessionWallet(req);
+  const wallet = sessionWallet(req);
+  if (!wallet) {
+    throw Object.assign(new Error("Sign in with your wallet to do this"), { statusCode: 401 });
+  }
+  return wallet;
+}
+
+/**
  * Assert the caller owns the grant they are acting on. Used by the two routes
  * that make the executor spend — starting a run and submitting an intent —
  * because the shared key is readable in the frontend bundle, and without an
  * owner check it would let anyone drive someone else's agent up to its cap.
  */
 export async function requireGrantOwner(req: FastifyRequest, grantId: string): Promise<void> {
-  if (!process.env.REDLINE_API_KEY) return;
+  if (!identityEnforced()) return;
   const grant = await prisma.agentGrant.findUnique({ where: { id: grantId }, include: { owner: true } });
   if (!grant) throw Object.assign(new Error("grant not found"), { statusCode: 404 });
   requireWallet(req, grant.owner.wallet);

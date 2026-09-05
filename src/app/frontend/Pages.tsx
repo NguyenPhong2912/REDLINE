@@ -36,11 +36,13 @@ import hero from "../../assets/redline-celestial-vault-hero.webp";
 import observatory from "../../assets/redline-evidence-observatory.webp";
 import citadel from "../../assets/redline-guardrails-citadel.webp";
 import vault from "../../assets/redline-treasury-core.webp";
+import { RatingBadge, RatingDetail } from "../components/AgentRating";
 import { PolicyLab } from "../components/PolicyLab";
 import { ProtocolSpine } from "../components/ProtocolSpine";
 import { OpenBook, VoxelCube, WaterDivider } from "../components/depth";
 import { useRealAgents } from "../lib/agents";
 import { api, fmtUsdc, short, type Analytics, type AuditRow } from "../lib/api";
+import { useSignedIn } from "../lib/useSignedIn";
 import { explorerTransactionUrl, type AppClient } from "../solana/client";
 
 const vars = (value: Record<string, string | number>) => value as CSSProperties;
@@ -449,7 +451,13 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
 }
 
 export function ArtifactAgents() {
+  const wallet = useOwner() ?? "";
+  // Connecting a wallet only names an address — the API cannot tell that apart
+  // from a typed one, and publishing is what puts a build on a marketplace
+  // under a name that gets paid. So the button waits for a signature.
+  const signedIn = useSignedIn(wallet);
   const { agents, loading, error, reload } = useRealAgents();
+  const [onlyMine, setOnlyMine] = useState(false);
   const [selected, setSelected] = useState("");
   const [flip, setFlip] = useState(false);
   const [name, setName] = useState("");
@@ -457,9 +465,23 @@ export function ArtifactAgents() {
   const [strategy, setStrategy] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const agent = agents.find((a) => a.id === selected) ?? agents[0];
+  // The detail card follows the visible rail. Without this, filtering to
+  // "mine" while a stranger's agent was selected left the card showing an
+  // agent that is no longer in the list beside it.
+  const visibleAgents = onlyMine ? agents.filter((a) => a.isMine) : agents;
+  const picked = agents.find((a) => a.id === selected);
+  const agent =
+    picked && visibleAgents.includes(picked) ? picked : visibleAgents[0];
   const publish = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signedIn) {
+      setNotice(
+        wallet
+          ? "Sign in with your wallet first — the publisher is taken from the signature, not from this form."
+          : "Connect and sign in with a wallet to publish.",
+      );
+      return;
+    }
     setBusy(true);
     setNotice("");
     try {
@@ -485,9 +507,24 @@ export function ArtifactAgents() {
   return (
     <div className="agents-grid">
       <aside>
-        <div className="eyebrow">VERSIONS · {agents.length}</div>
+        <div className="eyebrow">
+          VERSIONS · {visibleAgents.length}
+          {onlyMine && agents.length !== visibleAgents.length
+            ? ` OF ${agents.length}`
+            : ""}
+        </div>
+        {signedIn && (
+          <button
+            className="btn btn-ghost btn-sm full-button"
+            aria-pressed={onlyMine}
+            onClick={() => setOnlyMine((v) => !v)}
+          >
+            <Fingerprint size={12} />
+            {onlyMine ? "Showing only mine" : "Show only mine"}
+          </button>
+        )}
         <div className="rail-list">
-          {agents.map((a, i) => (
+          {visibleAgents.map((a, i) => (
             <button
               className="arow2"
               style={vars({
@@ -509,14 +546,21 @@ export function ArtifactAgents() {
                 <Bot size={16} />
               </span>
               <span>
-                <b>{a.name}</b>
+                <b>
+                  {a.name}
+                  {a.isMine && <span className="chip chip-gold">MINE</span>}
+                </b>
                 <small>
-                  {a.version} · {short(a.agentHash, 4)}
+                  {a.version} · {short(a.agentHash, 4)}{" "}
+                  <RatingBadge rating={a.rating} />
                 </small>
               </span>
               <span className="n">{a.totalGrants} gr</span>
             </button>
           ))}
+          {onlyMine && !visibleAgents.length && !loading && (
+            <Empty>You have not published a version with this wallet.</Empty>
+          )}
         </div>
         <button
           className="btn btn-ghost full-button"
@@ -569,6 +613,13 @@ export function ArtifactAgents() {
                     {agent.name}
                     <span>{agent.strategy}</span>
                   </h2>
+                  <p className="help publisher-line">
+                    {agent.isMine
+                      ? "Published by you"
+                      : agent.publisherWallet
+                        ? `Published by ${short(agent.publisherWallet, 4)}`
+                        : "Unclaimed — published before publishing required a signature"}
+                  </p>
                   <div className="stat4">
                     {[
                       ["ACTIVE", agent.activeGrants],
@@ -616,6 +667,18 @@ export function ArtifactAgents() {
                 </div>
               </div>
             </div>
+            <Panel
+              title="Reputation"
+              meta={<RatingBadge rating={agent.rating} />}
+            >
+              {agent.rating ? (
+                <RatingDetail rating={agent.rating} />
+              ) : (
+                <Empty>
+                  No policy decisions and no renter reviews recorded yet.
+                </Empty>
+              )}
+            </Panel>
             <Panel
               title="Grants bound to this build"
               meta={<span className="chip chip-gold">{agent.totalGrants}</span>}
@@ -704,11 +767,30 @@ export function ArtifactAgents() {
               <small>IDENTITY INPUT</small>
               <code>sha256(modelRef | codeRef | config)</code>
             </div>
-            <button className="btn btn-gold full-button" disabled={busy}>
+            <button
+              className="btn btn-gold full-button"
+              disabled={busy || !signedIn}
+              title={
+                !wallet
+                  ? "Connect a wallet to publish"
+                  : !signedIn
+                    ? "Sign in with your wallet to publish"
+                    : ""
+              }
+            >
               <Upload size={13} />
               {busy ? "Publishing…" : "Publish to registry"}
               <ArrowRight size={13} />
             </button>
+            {!wallet && (
+              <p className="help">Connect a wallet to publish.</p>
+            )}
+            {wallet && !signedIn && (
+              <p className="help">
+                Sign in with your wallet (top bar) — the publisher is taken
+                from the signature, not from this form.
+              </p>
+            )}
             {notice && (
               <p className="help" role="status">
                 {notice}
