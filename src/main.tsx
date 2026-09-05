@@ -6,12 +6,7 @@ import App from "./app/App";
 import { Toaster } from "./app/components/ui/sonner";
 import { solanaClient } from "./app/solana/client";
 import { LanguageProvider } from "./app/i18n/LanguageContext";
-import "./styles/index.css";
-import "./styles/astral.css";
-import "./styles/layout.css";
-import "./styles/hoyoverse.css";
-import "./styles/pixel-onchain.css";
-import "./styles/astral-depth.css";
+import "./styles/frontend.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

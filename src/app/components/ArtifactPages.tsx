@@ -1,24 +1,24 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import {
-  Activity,
-  AlertTriangle,
-  Bot,
-  CheckCircle2,
-  Cpu,
-  Gauge,
-  Play,
-  Server,
-  ShieldCheck,
-  Sparkles,
-  Wallet,
-} from "lucide-react";
-import { useClient } from "@solana/react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
-import { ProtocolConsole } from "./ProtocolConsole";
-import { api, API_URL, checkHealth, short, type Analytics, type Health } from "../lib/api";
+import { useClient } from "@solana/react";
+import {
+Activity,
+AlertTriangle,
+Bot,
+CheckCircle2,
+Cpu,
+Gauge,
+Play,
+Server,
+ShieldCheck,
+Sparkles,
+Wallet,
+} from "lucide-react";
+import { useEffect,useMemo,useState,type CSSProperties } from "react";
 import { useRealAgents } from "../lib/agents";
+import { api,API_URL,checkHealth,short,type Analytics,type Health } from "../lib/api";
 import type { AppClient } from "../solana/client";
-import { color, mono, sans } from "../theme";
+import { color } from "../theme";
+import { ProtocolConsole } from "./ProtocolConsole";
 
 const panel: CSSProperties = {
   background: color.surface,
@@ -54,11 +54,11 @@ export function CopilotPage() {
       <aside className="artifact-side-panel copilot-model-rail" style={panel}>
         <div className="artifact-panel-kicker"><span />Assistant stack</div>
         {modelOptions.map((model, index) => (
-          <button type="button" className="artifact-model-option" aria-pressed={index === 0} key={model.name}>
+          <div className="artifact-model-option" key={model.name}>
             <span className="artifact-icon" style={{ color: model.tone }}><Bot size={15} /></span>
             <span><strong>{model.name}</strong><small>{model.note}</small></span>
             <i style={{ background: model.tone }} />
-          </button>
+          </div>
         ))}
         <div className="artifact-panel-kicker artifact-panel-kicker-spaced"><span />Grounding</div>
         <div className="artifact-grounding-list">
@@ -101,6 +101,7 @@ type Benchmark = { latency: number; source: string; model: string } | null;
 export function ModelsPage() {
   const [benchmark, setBenchmark] = useState<Benchmark>(null);
   const [busy, setBusy] = useState(false);
+  const [measurements, setMeasurements] = useState<number[]>([]);
   const [error, setError] = useState("");
 
   async function runBenchmark() {
@@ -109,7 +110,9 @@ export function ModelsPage() {
     const started = performance.now();
     try {
       const reply = await api.ask("Explain which REDLINE gate protects the spending cap.");
-      setBenchmark({ latency: Math.round(performance.now() - started), source: reply.source, model: reply.model });
+      const latency = Math.round(performance.now() - started);
+      setBenchmark({ latency, source: reply.source, model: reply.model });
+      setMeasurements(values => [...values.slice(-11), latency]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Connectivity check failed");
     } finally {
@@ -158,14 +161,14 @@ export function ModelsPage() {
         ))}
         <article className="model-chart-card" style={panel}>
           <header><h3>Latency profile</h3><span>LIVE CHECK</span></header>
-          <div className="model-bars" aria-label="Latency reference bars">
-            {[32, 51, 68, 88, 72, 48, 28].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}
+          <div className="model-bars" aria-label="Measured request latency in milliseconds">
+            {measurements.length ? measurements.map((ms, index) => <i key={index} title={`Request ${index + 1}: ${ms} ms`} style={{ height: `${ms / Math.max(...measurements) * 90}%` }}><span>{ms} ms</span></i>) : <p>No measurements yet. Run a benchmark to start.</p>}
           </div>
-          <p>The chart becomes meaningful after a real request; the measured value is shown above.</p>
+          <p>Last 12 successful requests in this session. Values include network and server response time.</p>
         </article>
         <article className="model-check-card" style={panel}>
           <header><h3>Trust boundary checklist</h3><span>5 CONTROLS</span></header>
-          {checks.map(check => <div key={check}><CheckCircle2 size={14} /><span>{check}</span><small>PASS</small></div>)}
+          {checks.map(check => <div key={check}><CheckCircle2 size={14} /><span>{check}</span><small>DESIGN</small></div>)}
         </article>
       </section>
     </div>
@@ -181,16 +184,16 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (!wallet) { setAnalytics(null); return; }
-    api.analytics(wallet).then(setAnalytics).catch(() => setAnalytics(null));
+    let live = true;
+    setAnalytics(null);
+    api.analytics(wallet).then(value => { if (live) setAnalytics(value); }).catch(() => { if (live) setAnalytics(null); });
+    return () => { live = false; };
   }, [wallet]);
 
   const activity = useMemo(() => {
-    const volumes = analytics?.weeklyVolume.map(point => point.volumeUsdc) ?? [];
-    const max = Math.max(1, ...volumes);
-    return Array.from({ length: 56 }, (_, index) => {
-      const value = volumes[index % Math.max(volumes.length, 1)] ?? 0;
-      return Math.max(0.08, value / max);
-    });
+    const points = analytics?.weeklyVolume ?? [];
+    const max = Math.max(1, ...points.map(p => p.volumeUsdc));
+    return points.map(p => ({ ...p, opacity: Math.max(0.08, p.volumeUsdc / max) }));
   }, [analytics]);
 
   return (
@@ -203,7 +206,7 @@ export function ProfilePage() {
         <p>{wallet || "Connect a wallet to load the owner-scoped profile."}</p>
         <div className="profile-rank"><Sparkles size={14} /><span>REDLINE OPERATOR</span></div>
         <dl>
-          <div><dt>Agent versions</dt><dd>{agents.length}</dd></div>
+          <div><dt>Registry versions</dt><dd>{agents.length}</dd></div>
           <div><dt>Active grants</dt><dd>{analytics?.activeGrants ?? "—"}</dd></div>
           <div><dt>Total grants</dt><dd>{analytics?.totalGrants ?? "—"}</dd></div>
           <div><dt>Confirmed volume</dt><dd>{analytics ? `${analytics.totalVolumeUsdc.toLocaleString()} USDC` : "—"}</dd></div>
@@ -220,9 +223,10 @@ export function ProfilePage() {
           ].map(([label, value]) => <article style={panel} key={label}><small>{label}</small><strong>{value}</strong><Activity size={14} /></article>)}
         </div>
         <article className="profile-activity-card" style={panel}>
-          <header><div><h3>Signing activity</h3><p>Built from the wallet's seven-day confirmed volume.</p></div><span>LIVE LEDGER</span></header>
+          <header><div><h3>Confirmed volume</h3><p>Built from the wallet's seven-day confirmed volume.</p></div><span>LIVE LEDGER</span></header>
           <div className="profile-heatmap">
-            {activity.map((opacity, index) => <i key={index} style={{ opacity }} />)}
+            {activity.map((point, index) => <div key={index}><i style={{ opacity: point.opacity }} /><small>{point.t}</small><b>{point.volumeUsdc.toLocaleString()} USDC</b></div>)}
+            {!activity.length && <p>Connect a wallet to load its recorded activity.</p>}
           </div>
           <footer><span>LOW</span><span>OWNER-SCOPED ACTIVITY</span><span>HIGH</span></footer>
         </article>

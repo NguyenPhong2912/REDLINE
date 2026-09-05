@@ -146,7 +146,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
       {error && <div className="px-5 py-2 text-[13px]" style={{ ...mono, color: R }}>{error}</div>}
       {/* The same grants as physical policy cards — click one to open its proposals below */}
       <PolicyDeck grants={grants} selected={openGrant} onSelect={id => void toggleIntents(id)} tr={tr} />
-      {grants.length === 0 && !error && <div className="px-5 py-6 text-[13px]" style={{ ...mono, color: color.textDim }}>{tr("No grants yet — create one in the wizard below.")}</div>}
+      {grants.length === 0 && !error && <div className="policy-empty"><Key size={36}/><h3>Your next boundary starts here.</h3><p>No grants are recorded yet. Select an agent and define its limits in the policy builder.</p><span>OWNER SIGNATURE · SEVEN GATES · ONE TRANSACTION</span></div>}
       {grants.map(g => {
         const oc = g.onchain;
         const cap = Number(g.policyVersion.spendCapUnits);

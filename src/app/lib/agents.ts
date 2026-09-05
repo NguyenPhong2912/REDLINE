@@ -24,7 +24,7 @@ export interface AgentSummary {
 export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentSummary[] {
   return agents.map(a => {
     const own = grants.filter(g => g.agentVersion.id === a.id);
-    const active = own.filter(g => !g.revoked);
+    const active = own.filter(g => !g.revoked && new Date(g.policyVersion.expiresAt).getTime() > Date.now());
     const totalSpentUsdc = own.reduce((s, g) => s + Number(g.spentUnits) / 1_000_000, 0);
     const totalTx = own.reduce((s, g) => s + g.transactionCount, 0);
     const lastActiveAt = own.reduce<string | null>((latest, g) => {
@@ -34,7 +34,7 @@ export function summarizeAgents(agents: AgentVersion[], grants: Grant[]): AgentS
     const latestGrant = [...own].sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0];
     return {
       id: a.id, name: a.name, version: a.version, strategy: a.strategy, agentHash: a.agentHash,
-      status: own.length === 0 ? "IDLE" : active.length > 0 ? "ACTIVE" : "REVOKED",
+      status: own.length === 0 ? "IDLE" : active.length > 0 ? "ACTIVE" : own.every(g => g.revoked) ? "REVOKED" : "IDLE",
       activeGrants: active.length, totalGrants: own.length, totalSpentUsdc, totalTx,
       lastActiveAt, latestExpiresAt: latestGrant?.policyVersion.expiresAt ?? null,
       grants: own,

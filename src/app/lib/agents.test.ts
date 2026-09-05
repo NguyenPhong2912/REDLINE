@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { summarizeAgents } from "./agents";
 import type { AgentVersion, Grant } from "./api";
 
@@ -16,6 +16,13 @@ const grant = (over: Partial<Grant> & { agentVersionId: string }): Grant => ({
 });
 
 describe("summarizeAgents", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-08-15T00:00:00Z")); });
+  afterEach(() => vi.useRealTimers());
+  it("marks an expired unrevoked grant idle while retaining its history", () => {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00Z"));
+    const [result] = summarizeAgents([agent("v1", "A")], [grant({agentVersionId:"v1",spentUnits:"250000000"})]);
+    expect(result).toMatchObject({status:"IDLE",activeGrants:0,totalGrants:1,totalSpentUsdc:250});
+  });
   it("rolls spend and transfers up per agent version", () => {
     const [a] = summarizeAgents([agent("v1", "TreasuryOps")], [
       grant({ agentVersionId: "v1", spentUnits: "100000000", transactionCount: 2 }),

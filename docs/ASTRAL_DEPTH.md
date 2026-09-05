@@ -1,72 +1,41 @@
-# REDLINE Astral Depth — hệ thống chiều sâu, chuyển động và bố cục
+# REDLINE Astral Depth — giao diện artifact
 
-**Version:** 1.1 · **Date:** 2026-09-04 · **Status:** phases 1–2 in code (Protocol + 7 trang vận hành), phase 3 in design
+Bản FE hiện hành thay khung bố cục và hệ CSS cũ bằng thiết kế từ `design/astral-depth/artboards/`. Các file `.dc.html` là tài liệu thiết kế; mã `DCLogic`, địa chỉ ví, giao dịch và số liệu mẫu trong đó không được thực thi trong ứng dụng.
 
-Astral Depth là lớp nâng cấp của thiết kế Astral hiện có: **giữ nguyên** palette (nền `#080d19`, panel `#121c30`, vàng champagne `#dfc38c`, Inter / JetBrains Mono / Georgia italic) và thêm bốn thứ mà bản trước còn thiếu — một thang bóng đổ thống nhất, chiều sâu 3D xếp lớp, nút bấm có xúc giác, và một bộ mô-típ 3D dùng chung (voxel · chain · water · open book) để trang Protocol kể được câu chuyện *"the agent proposes, the chain decides"* bằng chuyển động.
+## Cấu trúc hiện hành
 
-Nguồn thiết kế: `design/astral-depth/` (12 artboard `.dc.html` + `canvas.json` của Claude Design canvas) và bản canvas bấm được đã chia sẻ trong phiên thiết kế.
+- `src/app/App.tsx`: header chung, điều hướng hash, topline, menu mobile, tìm trang và vùng cuộn riêng.
+- `src/app/frontend/Pages.tsx`: Protocol, Agents, Analytics, Audit; dữ liệu từ API hiện có.
+- `src/app/OperationalPages.tsx`: Marketplace, Guardrails, Treasury, Settings và luồng ký ví hiện có.
+- `src/app/components/ArtifactPages.tsx`: Copilot, Models, Profile.
+- `src/styles/frontend.css`: điểm nhập CSS duy nhất. Gồm fonts, Tailwind, semantic tokens, CSS gốc artifact, các widget nghiệp vụ và responsive.
+- `scripts/sync-artifact-styles.mjs`: lấy CSS từ artboard và giới hạn selector theo route. Chạy `node scripts/sync-artifact-styles.mjs` khi cập nhật bản thiết kế. Không chạy logic mẫu trong artboard.
+- Các file giao diện cũ `index.css`, `astral.css`, `layout.css`, `hoyoverse.css`, `pixel-onchain.css`, `astral-depth.css` không còn được import vào ứng dụng.
 
-## 1. Token
+## Ánh xạ thiết kế và dữ liệu
 
-| Token | Giá trị | Dùng cho |
+| Trang | Bố cục | Dữ liệu / tương tác |
 |---|---|---|
-| `--ease` | `cubic-bezier(.16,1,.3,1)` | mọi transition / entrance |
-| `--sh-1` | 1px top light + 24px soft | input, chip, tool, resting |
-| `--sh-2` | 2 lớp 34 / 70px | panel, card, KPI tile |
-| `--sh-3` | 3 lớp + 70px gold ambient | hover, hero worlds, modal |
-| `--sh-gold` | 26px gold bloom + inset rim | CTA chính |
-| `--pg` | r,g,b theo route (hoyoverse.css) | viền đùn nổi của panel, corner, water dưới banner |
+| Protocol | Hero Georgia italic, sentinel, dòng nước, bảy gate, sách Three Worlds, bốn thẻ chapter, policy lab, chuỗi block | Explore tới Three Worlds; sách đổi trang; lab mô phỏng; block mở chữ ký Solana thật; Ownership mở Guardrails và Interrogate mở Copilot |
+| Marketplace | Spotlight + coverflow + bảng registry | Tìm theo tên/strategy, chọn phiên bản, thời hạn thuê, tổng SOL, xác minh giao dịch thuê ở backend |
+| Agents | Rail phiên bản + thẻ định danh lật + form xuất bản | Registry, hash, grants, số chi tiêu; xuất bản phiên bản mới qua API |
+| Guardrails | Policy deck + wizard + transfer lane | Giữ các bước scope, hạn mức, thời gian, review/risk assessment và ký ví |
+| Treasury | Vault 3D + ví + hoạt động chain | Số dư vault thật; mỗi voxel tương ứng 1.000 dUSDC, tối đa 12; nạp/rút giữ luồng cũ |
+| Audit | KPI + bộ lọc + timeline + chi tiết | Tìm payload/signature, lọc loại sự kiện, mở Explorer, tải thêm từng 100 dòng |
+| Analytics | Bento KPI, diện tích volume, outcomes, ranking, cột ngày | API analytics, phạm vi owner nếu kết nối ví; chưa tải được hiện dấu — |
+| Settings | Sidebar + panel cấu hình | API health; thông số mạng chỉ đọc; tùy chọn depth/motion lưu trên thiết bị |
+| Copilot | Stack thông tin + console + trạng thái | Assistant API với model hoặc deterministic fallback; không có quyền ký |
+| Models | Model identity + KPI + latency + trust boundary | Chạy request thật; biểu đồ 12 phép đo gần nhất trong phiên; không bịa tok/s, TTFT, phần cứng hay kết quả đánh giá |
+| Profile | Owner identity + KPI + volume 7 ngày | Analytics theo ví; không lặp một tuần thành nhiều tuần hoạt động |
 
-Quy tắc bất biến từ `DESIGN_SYSTEM_PROMPT.md` vẫn áp dụng: mono = sự thật on-chain, sans = diễn giải; màu trạng thái bão hòa và chỉ xuất hiện đúng khoảnh khắc có nghĩa; nút không hoàn tác được tách khỏi hàng nút thường.
+## Chuyển động và co giãn
 
-## 2. Chiều sâu
+Desktop dùng toàn chiều ngang với khoảng đệm của bản 1440px; có breakpoint 1400/1180/760px. Rail, bảng registry, bảy gate và chuỗi block cuộn trong vùng riêng khi thiếu chiều ngang. Trên điện thoại, form và các panel chuyển sang một cột.
 
-- **Panel**: `--sh-2` khi nghỉ, cộng viền đùn nổi 8px theo `--pg` (`8px 8px 0 rgba(var(--pg),.22)`); hover nhấc 3px và chuyển `--sh-3`. Áp cho `.route-page .rounded-2xl`, `.redline-spine`, `.protocol-facts`, `.analytics-ledger`, `.market-grid > *`.
-- **KPI tile / fact**: `preserve-3d`, hover `translateZ(12px)`.
-- **Nút**: cạnh đùn 4–5px (`0 5px 0 0 #8f7340`) sập xuống khi `:active` (`translateY(4px)`, transition 60ms) kèm gợn sóng `::after`. Class: `.rl-btn-gold`, `.rl-btn-ghost`, `.rl-btn-danger`; các nút Astral cũ (`.astral-button`, `.protocol-primary-action`) được nâng cấp tự động.
+`prefers-reduced-motion` hoặc tắt Motion loại bỏ animation và cuộn mượt. Depth giảm phối cảnh của các panel/cảnh chính. Tùy chọn được lưu độc lập với route; thao tác reload không làm bật lại lựa chọn đã tắt. Âm thanh do nút Sound trên header điều khiển, mặc định theo thiết lập đã lưu.
 
-## 3. Mô-típ 3D (`src/app/components/depth/`)
+## Kiểm tra và giới hạn
 
-| Component | CSS | Ý nghĩa |
-|---|---|---|
-| `VoxelCube` | `.vox` ba mặt, `--vs` kích cỡ, `--vc` màu; `tone` = gold / ok / bad / info | khối = một proposal, một block, một đơn vị tài sản |
-| `ChainLinks` / `ChainConnector` | `.rl-chain`, `.lnk` | "link by link" — chuỗi xích nối các cổng |
-| `WaterDivider` / `StoryDivider` | `.rl-water`, `.rl-divider` | dòng chảy nối các chương, đáy hero và banner |
-| `GateChain` | `.gate-chain`, `rl-gate-0..6`, `rl-runner` | 7 cổng là phiến đùn nổi; vòng 24 s: proposal 1 qua hết → vault sáng, proposal 2 bị chặn ở cổng 06 |
-| `OpenBook` | `.rl-book` | Three worlds là sách mở: bìa, gáy, tờ giấy xếp lớp, trang phải lật vào từ −86° |
+Chạy `npm run check` trước khi phát hành. Kiểm tra trình duyệt ở 1440px, 1920px và 390px, gồm menu, điều hướng Three Worlds, chọn phiên bản, lật thẻ, lab, tìm kiếm và cài đặt. Không tự thực hiện giao dịch ví trong quá trình QA giao diện.
 
-Mọi chuyển động là CSS keyframe (không JS trên main thread); `prefers-reduced-motion` biến tất cả thành khung tĩnh và ẩn runner.
-
-## 4. Bố cục theo trang (phase 2 — đã vào code)
-
-Mỗi trang vận hành có một bố cục riêng thay cho công thức "journey bar → banner → panel". Banner nghệ thuật của route bị ẩn, journey bar rút còn 44px, tiêu đề trang thành một dòng topline (`.route-page > :first-child`), phần còn lại là bố cục riêng của trang bằng CSS override trong `astral-depth.css` cộng bốn component mới trong `depth/`:
-
-| Component | Trang | Dữ liệu thật |
-|---|---|---|
-| `TransferLane` | Guardrails | `subscribeFeed("*")` — `intent.created` → coin bay, `tx.confirmed` → 7 cổng xanh + vault sáng, `tx.rejected`/`decision.precheck` → dừng ở cổng theo `reasonCode` |
-| `PolicyDeck` | Guardrails (trong `GrantsPanel`) | 3 grant mới nhất (grant còn sống lên trước); click đưa thẻ ra trước và mở danh sách proposal |
-| `VaultScene` | Treasury (trong `VaultPanel`) | `balanceUnits` on-chain; mỗi khối = 1,000 dUSDC, tối đa 12; refill → khối rơi, withdraw → khối bay ra |
-| `FlipCard` | Agents | mặt trước là thẻ agent hiện có, mặt sau là `agentHash` và công thức `sha256(modelRef\|codeRef\|config)` |
-
-| Trang | Bố cục | Hoạt cảnh giao dịch |
-|---|---|---|
-| Guardrails | *policy deck* (thẻ grant vật lý xếp chồng 3D) + wizard + **live transfer lane** | Start agent → coin bay qua 7 cổng, cổng sáng xanh, dòng log rơi vào; Force over cap → dừng ở 06, lóe đỏ |
-| Treasury | cảnh vault toàn màn, mỗi khối voxel = 1,000 dUSDC | Refill → khối rơi vào; Withdraw → khối bay về ví |
-| Audit | dòng thời gian với tia chạy, thẻ sự kiện nhóm theo ngày, khối bằng chứng đối chiếu | — |
-| Marketplace | spotlight + coverflow 3D | Rent → "Verifying on devnet…" → "Hired" + bung pixel |
-| Agents | thẻ định danh lật 180° lộ công thức hash | — |
-| Analytics | bento grid, cột 3D, donut nghiêng | — |
-| Settings | sidebar tabs 3D | — |
-| Copilot | chat với model local (Ollama qua `OPENAI_BASE_URL=http://localhost:11434/v1`), model card, connection panel | stream token |
-| Models | profiling model: TTFT / tok/s / p95, calibration vs. gate outcome, adversarial suite | Run benchmark |
-| Profile | thẻ owner, heatmap ký, sessions, API key, signatures | — |
-
-## 5. Lộ trình vào code
-
-1. **Phase 1 (đã commit)** — `astral-depth.css`, 5 component depth, Protocol dùng `GateChain` + `OpenBook` + water dividers, nút xúc giác toàn app.
-2. **Phase 2 (đã commit)** — bố cục riêng cho 7 trang vận hành theo bảng trên, `TransferLane` / `PolicyDeck` / `VaultScene` / `FlipCard` nối vào dữ liệu và feed SSE thật. Còn nợ: gộp 5 lớp CSS (`index → astral → layout → hoyoverse → pixel-onchain → astral-depth`) thành hai file và bỏ `!important`.
-3. **Phase 3** — Copilot (route chat SSE song song `askForJson`), Models, Profile.
-
-## 6. Kiểm tra
-
-`npm run typecheck && npm run build` phải xanh. Khi thêm hiệu ứng mới: có nhánh `prefers-reduced-motion`, không quá 3 lớp parallax một cảnh, không `filter: blur` trên phần tử đang animate.
+Các màn dùng dữ liệu thật có trạng thái trống khác artboard mẫu khi chưa có ví hoặc chưa có bản ghi. Tính năng benchmark chỉ đo tổng thời gian phản hồi của request; backend có thể trả `source: rules` nếu model không khả dụng. Trạng thái DESIGN mô tả ranh giới thiết kế, không phải kết quả chạy bộ đánh giá tự động.
