@@ -242,6 +242,13 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
               <Play size={12} /> Explore the flow
             </button>
           </div>
+          {/* In the copy's flow, not pinned to the hero's bottom edge: the
+              hero is a fixed 880px and the copy is centred in it, so an
+              absolutely positioned cue landed on top of the buttons whenever
+              the copy ran tall (every desktop width). */}
+          <button className="scrollcue" onClick={() => scroll("protocol-worlds")}>
+            FOLLOW THE CURRENT <ArrowDown size={13} />
+          </button>
         </div>
         <div className="scene" aria-hidden="true">
           <div className="halo" />
@@ -287,9 +294,6 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
             <VoxelCube size={22} tone={i % 2 ? "info" : "gold"} />
           </div>
         ))}
-        <button className="scrollcue" onClick={() => scroll("protocol-worlds")}>
-          FOLLOW THE CURRENT <ArrowDown size={13} />
-        </button>
         <div className="edition">
           <span>REDLINE UNIVERSE</span>
           <i />

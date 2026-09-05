@@ -2508,3 +2508,75 @@ html[data-depth="off"] .scene {
     letter-spacing: 0.14em;
   }
 }
+
+/* ── Wide-desktop fixes for the Protocol page ─────────────────────────────────
+   The artboard was drawn at 1440px. Three things in it were sized in absolute
+   pixels and broke as the viewport grew past that. */
+
+/* The scroll cue lives inside .copy now (see Pages.tsx) — flow, not pinned. */
+[data-route="protocol"] .hero .copy .scrollcue {
+  position: static;
+  margin-top: 34px;
+  padding: 0;
+  bottom: auto;
+  left: auto;
+}
+
+/* The world tabs must paint above the book. The pages are rotated toward the
+   viewer around the spine, so with a wide container the perspective enlarges
+   them past the book's own box — up into the tab row and out past its sides. */
+[data-route="protocol"] .wtabs {
+  position: relative;
+  z-index: 2;
+}
+/* Past ~2100px the pages, turned 12° toward the viewer, would reach the
+   viewport edges — the perspective grows faster than the container. A
+   shallower turn keeps the spread inside the story's padding. The right page
+   ends its flip on the same angle (the animation fills forwards, so the
+   keyframe, not the rule, decides where it rests). */
+@media (min-width: 2100px) {
+  .rl-book .pg.left {
+    transform: rotateY(8deg);
+  }
+  .rl-book .pg.right {
+    transform: rotateY(-8deg);
+    animation-name: rl-page-flip-wide;
+  }
+  @keyframes rl-page-flip-wide {
+    0% { transform: rotateY(-86deg); opacity: .15; filter: brightness(.5); }
+    55% { opacity: 1; }
+    100% { transform: rotateY(-8deg); opacity: 1; filter: none; }
+  }
+}
+[data-route="protocol"] .rl-book {
+  /* Head-room for the perspective overshoot. 26px is the artboard's own
+     value at 1440px; it grows about 6px per 100px of viewport beyond that. */
+  --rl-pad: clamp(26px, 6vw - 60px, 96px);
+  padding-top: var(--rl-pad);
+  z-index: 1;
+}
+/* The cover and its ribbon keep their artboard offsets from the pages. */
+[data-route="protocol"] .rl-book .cover {
+  top: calc(var(--rl-pad) - 16px);
+}
+[data-route="protocol"] .rl-book .ribbon {
+  top: calc(var(--rl-pad) - 10px);
+}
+/* The picture caption sat on the folio ("p.01 · L") once the serif grew. */
+.rl-book .pg.left .cap {
+  bottom: 46px;
+}
+
+/* Section headings: the lede is bottom-aligned with the title, which reads
+   well while the title wraps to two lines. Past ~1400px the title fits on one
+   line and a 360px lede was taller than it, so it stuck up above the eyebrow.
+   Let it use the width it has instead. */
+@media (min-width: 1181px) {
+  [data-route="protocol"] .sechead {
+    align-items: flex-start;
+  }
+  [data-route="protocol"] .sechead .lede {
+    margin-top: 2px;
+    max-width: min(560px, 32vw);
+  }
+}
