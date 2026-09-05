@@ -243,7 +243,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                           `cap` and, before the agent had spent anything, made a
                           real transfer of the whole budget. One unit past what
                           is left is the smallest amount the program must refuse. */}
-                      <Btn icon={Zap} label={`${tr("Force")} ${fmtUsdc(Math.max(cap - spent, 0) + 1)} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
+                      <Btn icon={Zap} label={`${tr("Force")} >${fmtUsdc(Math.max(cap - spent, 0))} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
                         onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(Math.max(cap - spent, 0) + 1), destination: dest, reason: "Manual over-cap attempt from dashboard" }), g.owner.wallet)} />
                       <Btn icon={ShieldOff} label={tr("Revoke")} accent={color.blocked} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                     </div>

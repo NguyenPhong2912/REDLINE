@@ -27,13 +27,30 @@ type OnchainGrant = GrantState & { owner?: string; vault?: string; policyHash?: 
  * of short retries turns "not found yet" into a clean answer instead of a
  * 400 the owner has to work around by clicking again.
  */
-async function readFreshGrant(grantPda: string, attempts = 8, delayMs = 1_250): Promise<OnchainGrant | null> {
+async function readFreshGrant(
+  grantPda: string,
+  attempts = 8,
+  delayMs = 1_250,
+  settled: (state: OnchainGrant) => boolean = () => true,
+): Promise<OnchainGrant | null> {
+  let last: OnchainGrant | null = null;
   for (let i = 0; i < attempts; i += 1) {
-    const state = (await getChain().readGrant(grantPda)) as OnchainGrant | null;
-    if (state) return state;
+    let state: OnchainGrant | null = null;
+    try {
+      state = (await getChain().readGrant(grantPda)) as OnchainGrant | null;
+    } catch (err) {
+      // An account that is not a Grant (wrong PDA, or a mock-era row on a
+      // Solana deploy) decodes as an error, not as null. That is the
+      // caller's input being wrong, not a server fault.
+      throw fail(400, `could not read ${grantPda} as a grant account: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    if (state) {
+      last = state;
+      if (settled(state)) return state;
+    }
     if (i < attempts - 1) await new Promise(r => setTimeout(r, delayMs));
   }
-  return null;
+  return last;
 }
 
 const hex = (bytes: Uint8Array | undefined) => (bytes ? Buffer.from(bytes).toString("hex") : "");
@@ -329,7 +346,9 @@ export async function grantRoutes(app: FastifyInstance) {
       // The posted string is a claim, not proof. The chain is the truth: if
       // the account still says active, nothing was revoked, and flipping the
       // row here would show REVOKED on a grant the executor can still run.
-      const state = await readFreshGrant(grant.grantPda, 6, 1_000);
+      // Poll while the account still reads active: the wallet's RPC confirmed
+      // the revoke a moment ago and ours may trail it by a slot.
+      const state = await readFreshGrant(grant.grantPda, 6, 1_000, s => !s.active);
       if (state && state.active) {
         return reply.code(409).send({ error: "the grant is still active on-chain — the revoke_grant transaction has not confirmed (or was rejected)" });
       }

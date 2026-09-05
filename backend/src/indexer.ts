@@ -61,6 +61,9 @@ async function backfill(chain: SolanaChain, log: (msg: string) => void) {
   // in the order the chain produced them.
   for (const entry of [...missed].reverse()) {
     try {
+      // handle() dedups too, but only after the fetch; skipping here keeps a
+      // long backfill from re-downloading transactions already on record.
+      if (await alreadyIndexed(entry.signature as string)) continue;
       const tx = await withRetry(
         () => chain.rpc
           .getTransaction(entry.signature, { commitment: "confirmed", encoding: "json", maxSupportedTransactionVersion: 0 })
@@ -105,10 +108,13 @@ export async function startIndexer(chain: SolanaChain, log: (msg: string) => voi
   }
 }
 
+async function alreadyIndexed(signature: string): Promise<boolean> {
+  return Boolean(await prisma.auditEvent.findFirst({ where: { chainSignature: signature, actorType: "chain", eventType: { startsWith: "chain." } }, select: { id: true } }));
+}
+
 async function handle(chain: SolanaChain, signature: string, err: unknown, slot: bigint, logs: readonly string[]) {
   // Idempotent: the executor may already have written this signature.
-  const seen = await prisma.auditEvent.findFirst({ where: { chainSignature: signature, actorType: "chain", eventType: { startsWith: "chain." } } });
-  if (seen) return;
+  if (await alreadyIndexed(signature)) return;
 
   if (err) {
     const code = extractCustomError(err) ?? extractCustomError(logs.join("\n"));

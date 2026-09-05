@@ -52,7 +52,9 @@ export interface AgentVersion {
   publisherWallet?: string | null; isMine?: boolean; unclaimed?: boolean;
   rating?: AgentRating | null;
 }
-export interface OnchainGrant { active: boolean; spentUnits: string; transactionCount: number; nextNonce: number; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: number; allowedMints: string[]; allowedDestinations: string[] }
+// On a grant that is not yours the API returns the allowlists as counts, not
+// addresses — the addresses are the linkage it redacts everywhere else.
+export interface OnchainGrant { active: boolean; spentUnits: string; transactionCount: number; nextNonce: number; spendCapUnits: string; maxTransactions: number; cooldownSeconds: number; expiresAt: number; lastExecutionAt?: number; allowedMints: string[] | number; allowedDestinations: string[] | number }
 export interface Grant {
   id: string; grantPda: string; agentId: string; executorPubkey: string; createSignature: string | null;
   spentUnits: string; transactionCount: number; nextNonce: number; revoked: boolean; createdAt: string; lastExecutionAt: string | null;

@@ -8,7 +8,7 @@ import { SolanaChain } from "./chain/solana.js";
 import { startIndexer } from "./indexer.js";
 import { clockSpeed } from "./clock.js";
 import { agentRoutes } from "./routes/agents.js";
-import { identityEnforced, registerAuth } from "./auth.js";
+import { FEED_PATH, identityEnforced, registerAuth } from "./auth.js";
 import { prisma } from "./db/client.js";
 import { auditRoutes } from "./routes/audit.js";
 import { vaultRoutes } from "./routes/vaults.js";
@@ -47,7 +47,10 @@ if (chain instanceof SolanaChain) { indexerRunning = true; void startIndexer(cha
 
 await app.register(cors, { origin: true });
 // Per-IP ceiling; SSE (/feed) is exempt because one connection is long-lived.
-await app.register(rateLimit, { max: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120), timeWindow: "1 minute", allowList: (req) => req.url.endsWith("/feed") });
+// The path only: the feed now carries ?access_token= for signed-in owners,
+// and matching on the raw URL would count exactly those long-lived
+// connections against the ceiling.
+await app.register(rateLimit, { max: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120), timeWindow: "1 minute", allowList: (req) => FEED_PATH.test(req.url.split("?")[0]) });
 registerAuth(app);
 
 // Solana errors carry BigInts in `context`; logging the raw object makes pino
