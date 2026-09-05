@@ -84,15 +84,16 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | POST | `/agents` | publish an immutable build. **Needs a wallet session** — the publisher is taken from the signature, never from the body. Re-publishing the same bytes from the same wallet is idempotent; a different wallet gets its own row (`agentHash` is unique per publisher) |
 | GET | `/agents` · `?mine=true` · `?publisher=` | the catalogue, each row carrying `publisherWallet`, `isMine`, `unclaimed` and its `rating` |
 | GET | `/agents/:id` | one build with its listings and reputation |
-| POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy). An agent someone else published and priced needs a live `hireId` covering it |
+| POST | `/grants/preflight` | everything `POST /grants` would refuse, answered **before** the wallet signs: rental required (402), wrong wallet (403), unknown agent (404), plus the lifetime clamped to the rental term and the executor to name in `create_grant` |
+| POST | `/grants` | record a wallet-signed grant (`grantPda`, `createSignature`, `agentId`, policy). On Solana the account is read back and must name this wallet as owner, this API's executor and the posted policy's hash — a stranger cannot register someone else's grant. An agent someone else published and priced needs a live `hireId` covering it |
 | GET | `/grants` | **the caller's** grants with live on-chain state; empty for an anonymous caller |
-| GET | `/grants/:id` | full for the owner; redacted for anyone else |
-| POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana) |
+| GET | `/grants/:id` | full for the owner; redacted for anyone else (`onchain` carries counters and limits only) |
+| POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana; refused with 409 while the account still reads active) |
 | POST | `/intents/preview` | dry-run the gates; no write, no fee |
 | POST | `/intents` | record one intent and submit it only when the current policy precheck allows it |
-| GET | `/grants/:id/intents` | intents with decisions and chain transactions |
-| POST | `/runs` · `/runs/:id/stop` | start / stop the agent runtime (`mode: scripted | llm`) |
-| GET | `/grants/:id/feed` | server-sent events (`*` = all grants). Redacted unless the subscriber owns the grant |
+| GET | `/grants/:id/intents` | intents with decisions and chain transactions; destinations redacted for anyone but the owner |
+| POST | `/runs` · `/runs/:id/stop` | start / stop the agent runtime (`mode: scripted | llm`). Runs left `running` by a restart are closed at boot; a run under a rental stops when the rental ends |
+| GET | `/grants/:id/feed` | server-sent events (`*` = all grants). Redacted unless the subscriber owns the grant. `EventSource` cannot send headers, so this one route accepts the session token as `?access_token=` |
 | GET | `/audit?grant=` | the caller's own trail in full; anonymous callers get a short recent window, redacted, and cannot filter it by grant |
 | GET | `/vaults/:owner` | vault PDA, ATA and live balance. Only your own |
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
@@ -111,7 +112,7 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 
 Policy Lab input limits, examples, response semantics and Vietnamese user documentation: [docs/POLICY_LAB.md](../docs/POLICY_LAB.md). Run `npm run dev:lab` for an isolated local server on `127.0.0.1:8788` without Postgres or a chain executor. Only the two Policy Lab endpoints are available in this mode; other endpoints explicitly return 503. The normal server includes both new routes automatically, with no schema migration.
 
-`/protocol/overview` now excludes expired grants as well as revoked grants from its active count, using the same clock as the policy engine.
+`/protocol/overview`, `/analytics` and `/assistant` count a grant as active only while it is neither revoked nor past its window. Each grant carries its own `expiresAt` (mirrored from the program at creation); the `PolicyVersion` row's date is shared by every grant with the same policy shape and is only a fallback for rows written before the column existed.
 
 ## Reputation
 
