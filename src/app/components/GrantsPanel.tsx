@@ -9,6 +9,7 @@ import { explorerTransactionUrl } from "../solana/client";
 import { revokeGrantInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
 import { CopyChip } from "./CopyChip";
+import { EmergencyStop } from "./EmergencyStop";
 import { PolicyDeck } from "./depth";
 import { useT } from "../i18n/LanguageContext";
 import { playSound } from "../lib/soundscape";
@@ -139,9 +140,15 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     <div className="rounded-2xl overflow-hidden" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
       <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
         <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Grants")}</span>
-        <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
-          {grants.filter(g => !g.revoked).length} {tr("active")} · {chain || tr("api offline")}
-        </span>
+        <div className="flex items-center gap-3">
+          {/* Revoking everything belongs next to the count of what is running,
+              not buried per row: it is the one control someone reaches for
+              without wanting to read the page first. */}
+          <EmergencyStop grants={grants} chain={chain} onDone={load} />
+          <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ ...mono, background: `${M}14`, color: M, border: `1px solid ${M}25` }}>
+            {grants.filter(g => !g.revoked).length} {tr("active")} · {chain || tr("api offline")}
+          </span>
+        </div>
       </div>
       {error && <div className="px-5 py-2 text-[13px]" style={{ ...mono, color: R }}>{error}</div>}
       {/* The same grants as physical policy cards — click one to open its proposals below */}
