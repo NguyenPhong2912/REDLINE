@@ -94,6 +94,15 @@ export interface Listing {
   // `listing.hired` audit events). Optional so an older API build still types.
   totalHires?: number; hires24h?: number; volumeLamports?: string; lastHiredAt?: string | null;
 }
+// The marketplace take rate, served by the API rather than bundled, so the
+// payment the wallet signs always matches the one the server will verify.
+export interface ProtocolFee { treasury: string | null; feeBps: number; enabled: boolean }
+export interface ProtocolRevenue {
+  feeBps: number; treasury: string | null; enabled: boolean;
+  rentalsCharged: number; grossVolumeLamports: string; protocolRevenueLamports: string; revenue24hLamports: string;
+  recent: { hireId: string; agent: string; at: string; paidLamports: string; publisherLamports: string; protocolFeeLamports: string; feeBps: number; signature: string | null }[];
+}
+
 export interface Hire {
   id: string; listingId: string; ownerWallet: string; paymentSignature: string | null; startsAt: string; endsAt: string; status: string;
   listing: Listing;
@@ -243,6 +252,8 @@ export const api = {
   hires: (wallet?: string) => req<Hire[]>(`/hires${wallet ? `?wallet=${wallet}` : ""}`),
   hire: (b: { listingId: string; ownerWallet: string; durationHours: number; paymentSignature: string }) =>
     req<Hire>("/hires", { method: "POST", body: JSON.stringify(b) }),
+  protocolFee: () => req<ProtocolFee>("/protocol/fee", undefined, false),
+  protocolRevenue: () => req<ProtocolRevenue>("/protocol/revenue", undefined, false),
   reviews: (listingId: string) => req<{ rating: AgentRating; reviews: AgentReview[] }>(`/listings/${listingId}/reviews`),
   reviewable: (listingId: string) => req<Reviewable>(`/listings/${listingId}/reviewable`),
   submitReview: (listingId: string, b: { hireId: string; reviewerWallet: string; rating: number; comment?: string }) =>

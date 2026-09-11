@@ -6,15 +6,30 @@ Start with treasury teams that already use DeFi automation but still rely on bro
 
 ## Revenue
 
-### Team subscription
+### Team subscription — planned, not built
 
 - Starter: free Devnet policies and local risk checks.
 - Pro: 99 USD/month for production policies, alerts, history, and five operators.
 - Treasury: 499 USD/month for approval workflows, exports, custom limits, and support.
 
-### Agent marketplace
+### Agent marketplace — implemented
 
-REDLINE can charge a 10% fee on verified agent rental revenue. Marketplace revenue is a second phase; the policy product must deliver independent value first.
+REDLINE charges **10% of verified agent rental revenue**, and this is the one
+revenue line that exists in the product rather than on this page.
+
+A rental is a single wallet-signed transaction carrying two transfers: the
+publisher's 90% and the protocol's 10%. `POST /hires` verifies both legs against
+Devnet before recording the rental, so a payment that skips the fee is rejected
+rather than accepted — the take rate is enforced, not requested. Every lamport
+collected is listed at `GET /protocol/revenue` and on the Marketplace page, each
+row linking to the payment on Explorer.
+
+The rate is configuration (`PROTOCOL_FEE_BPS`, capped at 20%) and the collector
+is a wallet (`PROTOCOL_TREASURY`). A deployment that sets neither charges
+nothing and pays publishers in full — which is what a fork, and every local run,
+does today.
+
+Subscriptions below remain unbuilt, and are priced here as a plan, not a claim.
 
 ### Enterprise
 

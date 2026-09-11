@@ -57,6 +57,13 @@ services:
         sync: false
       - key: DEMO_OPS_DESTINATION
         sync: false
+      # The marketplace take rate. Unset PROTOCOL_TREASURY and the fee is
+      # zero and every rental pays the publisher in full — which is what a
+      # fork, or a local run, should do. Set it to the wallet that collects.
+      - key: PROTOCOL_TREASURY
+        sync: false
+      - key: PROTOCOL_FEE_BPS
+        value: "1000"
       # Unset: the risk copilot falls back to its deterministic rules.
       # Any OpenAI-compatible chat-completions endpoint works — Groq's free
       # tier needs no card. Set all three together; the model name has to be

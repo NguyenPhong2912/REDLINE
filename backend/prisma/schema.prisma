@@ -78,22 +78,29 @@ model AgentListing {
 }
 
 model HireAgreement {
-  id               String       @id @default(cuid())
-  listingId        String
-  listing          AgentListing @relation(fields: [listingId], references: [id])
-  ownerWallet      String
+  id                  String       @id @default(cuid())
+  listingId           String
+  listing             AgentListing @relation(fields: [listingId], references: [id])
+  ownerWallet         String
   // Signature of the on-chain payment that funded this hire. Verified against
   // the listing price before the row is created when CHAIN=solana.
-  paymentSignature String?      @unique
-  startsAt         DateTime     @default(now())
-  endsAt           DateTime
+  paymentSignature    String?      @unique
+  // What the renter actually signed away, and how that one payment split.
+  // Recorded per rental rather than recomputed from the current fee, because
+  // the rate can change and a receipt must keep saying what was charged.
+  paidLamports        BigInt       @default(0)
+  publisherLamports   BigInt       @default(0)
+  protocolFeeLamports BigInt       @default(0)
+  protocolFeeBps      Int          @default(0)
+  startsAt            DateTime     @default(now())
+  endsAt              DateTime
   // The term is what decides whether a rental is live — see isLiveHire() in
   // routes/market-stats.ts. This column exists so a rental can be cancelled
   // before its end date; nothing writes it yet, which is why counting "active"
   // rows by this flag reported every rental ever paid for as still running.
-  status           String       @default("active") // active | cancelled
-  grants           AgentGrant[]
-  review           AgentReview?
+  status              String       @default("active") // active | cancelled
+  grants              AgentGrant[]
+  review              AgentReview?
 }
 
 // A renter's verdict on an agent they actually paid for.
