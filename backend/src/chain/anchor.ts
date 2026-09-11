@@ -9,6 +9,7 @@ import type { GrantState, ReasonCode } from "../policy/types.js";
 
 export const VAULT_SEED = new TextEncoder().encode("vault");
 export const GRANT_SEED = new TextEncoder().encode("grant");
+export const SWAP_POLICY_SEED = new TextEncoder().encode("swap");
 
 const addressEncoder = getAddressEncoder();
 const addressDecoder = getAddressDecoder();
@@ -22,7 +23,9 @@ class Writer {
   private parts: Uint8Array[] = [];
   bytes(b: Uint8Array) { this.parts.push(b); return this; }
   u8(v: number) { return this.bytes(new Uint8Array([v])); }
+  u16(v: number) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, v, true); return this.bytes(b); }
   u32(v: number) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); return this.bytes(b); }
+  vecU8(b: Uint8Array) { this.u32(b.length); return this.bytes(b); }
   u64(v: bigint) { const b = new Uint8Array(8); new DataView(b.buffer).setBigUint64(0, v, true); return this.bytes(b); }
   i64(v: bigint) { const b = new Uint8Array(8); new DataView(b.buffer).setBigInt64(0, v, true); return this.bytes(b); }
   address(a: string) { return this.bytes(new Uint8Array(addressEncoder.encode(a as Address))); }
@@ -44,6 +47,7 @@ class Reader {
   skip(n: number) { this.o += n; return this; }
   bytes(n: number) { const b = this.buf.subarray(this.o, this.o + n); this.o += n; return b; }
   u8() { return this.buf[this.o++]; }
+  u16() { const v = this.view().getUint16(this.o, true); this.o += 2; return v; }
   u32() { const v = this.view().getUint32(this.o, true); this.o += 4; return v; }
   u64() { const v = this.view().getBigUint64(this.o, true); this.o += 8; return v; }
   i64() { const v = this.view().getBigInt64(this.o, true); this.o += 8; return v; }
@@ -83,6 +87,40 @@ export function encodeExecuteTransfer(nonce: bigint, amountUnits: bigint): Uint8
   return new Writer().bytes(discriminator("global", "execute_transfer")).u64(nonce).u64(amountUnits).build();
 }
 
+/**
+ * Turn trading on for one grant.
+ *
+ * A separate instruction, and a separate account, because signing a transfer
+ * policy is not the same decision as letting an agent trade — and because
+ * adding a field to `Grant` would make every grant already live on Devnet
+ * undecodable.
+ */
+export function encodeCreateSwapPolicy(allowedPrograms: string[], maxSlippageBps: number): Uint8Array {
+  if (!allowedPrograms.length || allowedPrograms.length > 4) throw new Error("a swap policy names 1 to 4 programs");
+  if (maxSlippageBps < 0 || maxSlippageBps >= 10_000) throw new Error("slippage tolerance must be below 100%");
+  return new Writer()
+    .bytes(discriminator("global", "create_swap_policy"))
+    .vecAddress(allowedPrograms)
+    .u16(Math.round(maxSlippageBps))
+    .build();
+}
+
+/**
+ * Trade inside the policy.
+ *
+ * `routeData` is the DEX's own instruction payload, passed through untouched:
+ * the program does not parse it, it brackets the call and judges the balances
+ * afterwards. `quotedOut` is recorded on-chain so the audit trail can show the
+ * quote, the floor it implied, and the fill that actually landed.
+ */
+export function encodeExecuteSwap(nonce: bigint, amountIn: bigint, quotedOut: bigint, minOut: bigint, routeData: Uint8Array): Uint8Array {
+  return new Writer()
+    .bytes(discriminator("global", "execute_swap"))
+    .u64(nonce).u64(amountIn).u64(quotedOut).u64(minOut)
+    .vecU8(routeData)
+    .build();
+}
+
 export function encodeRevokeGrant(): Uint8Array {
   return new Writer().bytes(discriminator("global", "revoke_grant")).build();
 }
@@ -94,6 +132,11 @@ export function encodeWithdraw(amountUnits: bigint): Uint8Array {
 // ── PDAs ──
 export async function findVaultPda(programId: string, owner: string) {
   const [address, bump] = await getProgramDerivedAddress({ programAddress: programId as Address, seeds: [VAULT_SEED, addressEncoder.encode(owner as Address)] });
+  return { address: address as string, bump };
+}
+
+export async function findSwapPolicyPda(programId: string, grantPda: string) {
+  const [address, bump] = await getProgramDerivedAddress({ programAddress: programId as Address, seeds: [SWAP_POLICY_SEED, addressEncoder.encode(grantPda as Address)] });
   return { address: address as string, bump };
 }
 
@@ -152,12 +195,47 @@ export function encodeGrantForTest(g: GrantAccount): Uint8Array {
     .build();
 }
 
+export const SWAP_POLICY_DISCRIMINATOR = discriminator("account", "SwapPolicy");
+
+export interface SwapPolicyAccount {
+  swapPolicyPda: string;
+  grant: string;
+  maxSlippageBps: number;
+  bump: number;
+  allowedPrograms: string[];
+}
+
+/** Field order mirrors `SwapPolicy` in lib.rs. Append only; never reorder. */
+export function decodeSwapPolicy(data: Uint8Array, swapPolicyPda: string): SwapPolicyAccount {
+  const r = new Reader(data);
+  const disc = r.bytes(8);
+  if (!SWAP_POLICY_DISCRIMINATOR.every((b, i) => b === disc[i])) throw new Error("not a SwapPolicy account");
+  const grant = r.address();
+  const maxSlippageBps = r.u16();
+  const bump = r.u8();
+  const allowedPrograms = r.vecAddress();
+  return { swapPolicyPda, grant, maxSlippageBps, bump, allowedPrograms };
+}
+
+/** Encoder for tests: the exact bytes the program would store. */
+export function encodeSwapPolicyForTest(p: SwapPolicyAccount): Uint8Array {
+  return new Writer()
+    .bytes(SWAP_POLICY_DISCRIMINATOR)
+    .address(p.grant).u16(p.maxSlippageBps).u8(p.bump)
+    .vecAddress(p.allowedPrograms)
+    .build();
+}
+
 // ── errors ──
 // Index = variant order in RedlineError. Code on chain = 6000 + index.
 const ERROR_VARIANTS = [
   "InvalidSpendCap", "InvalidTransactionCap", "InvalidExpiry", "InvalidCooldown", "InvalidAllowlist",
   "Revoked", "Expired", "NonceReplay", "MintNotAllowed", "DestinationNotAllowed",
   "TxCapExceeded", "SpendCapExceeded", "CooldownActive", "ArithmeticOverflow",
+  // 6014 onwards. Appended, never interleaved: an existing code appears in
+  // audit rows already written, and renumbering would rewrite their meaning.
+  "SwapsNotEnabled", "ProgramNotAllowed", "OutputMintNotAllowed", "SlippageExceeded",
+  "InputOverspent", "InvalidSlippage", "InvalidSwapPair",
 ] as const;
 
 const VARIANT_TO_REASON: Partial<Record<(typeof ERROR_VARIANTS)[number], ReasonCode>> = {
@@ -169,6 +247,14 @@ const VARIANT_TO_REASON: Partial<Record<(typeof ERROR_VARIANTS)[number], ReasonC
   TxCapExceeded: "TX_CAP_EXCEEDED",
   SpendCapExceeded: "SPEND_CAP_EXCEEDED",
   CooldownActive: "COOLDOWN_ACTIVE",
+  SwapsNotEnabled: "SWAPS_NOT_ENABLED",
+  ProgramNotAllowed: "PROGRAM_NOT_ALLOWED",
+  OutputMintNotAllowed: "OUTPUT_MINT_NOT_ALLOWED",
+  SlippageExceeded: "SLIPPAGE_EXCEEDED",
+  // A route that pulled more input than authorised is the spend cap being
+  // broken by the venue rather than by the agent, so it reports as the same
+  // refusal an over-cap transfer would.
+  InputOverspent: "SPEND_CAP_EXCEEDED",
 };
 
 export function errorCodeToReason(code: number): { variant: string; reasonCode: ReasonCode | null } {
@@ -201,6 +287,8 @@ export const EVENT_DISCRIMINATORS = {
   GrantRevoked: discriminator("event", "GrantRevoked"),
   VaultInitialized: discriminator("event", "VaultInitialized"),
   Withdrawn: discriminator("event", "Withdrawn"),
+  SwapDecision: discriminator("event", "SwapDecision"),
+  SwapPolicyCreated: discriminator("event", "SwapPolicyCreated"),
 } as const;
 
 export type DecodedEvent =
@@ -208,7 +296,9 @@ export type DecodedEvent =
   | { name: "GrantCreated"; grant: string; owner: string; vault: string; executor: string; policyHash: string; spendCapUnits: bigint; maxTransactions: number; expiresAt: number }
   | { name: "GrantRevoked"; grant: string; owner: string }
   | { name: "VaultInitialized"; vault: string; owner: string }
-  | { name: "Withdrawn"; vault: string; owner: string; mint: string; amountUnits: bigint };
+  | { name: "Withdrawn"; vault: string; owner: string; mint: string; amountUnits: bigint }
+  | { name: "SwapDecision"; grant: string; executor: string; nonce: bigint; inputMint: string; outputMint: string; dexProgram: string; amountIn: bigint; quotedOut: bigint; minOut: bigint; amountOut: bigint; spentUnits: bigint; transactionCount: number; slot: bigint }
+  | { name: "SwapPolicyCreated"; grant: string; swapPolicy: string; programs: number; maxSlippageBps: number };
 
 function same(a: Uint8Array, b: Uint8Array) { return a.length === b.length && a.every((v, i) => v === b[i]); }
 
@@ -224,6 +314,17 @@ export function decodeEvent(data: Uint8Array): DecodedEvent | null {
   if (same(disc, EVENT_DISCRIMINATORS.GrantRevoked)) return { name: "GrantRevoked", grant: r.address(), owner: r.address() };
   if (same(disc, EVENT_DISCRIMINATORS.VaultInitialized)) return { name: "VaultInitialized", vault: r.address(), owner: r.address() };
   if (same(disc, EVENT_DISCRIMINATORS.Withdrawn)) return { name: "Withdrawn", vault: r.address(), owner: r.address(), mint: r.address(), amountUnits: r.u64() };
+  if (same(disc, EVENT_DISCRIMINATORS.SwapDecision)) {
+    return {
+      name: "SwapDecision", grant: r.address(), executor: r.address(), nonce: r.u64(),
+      inputMint: r.address(), outputMint: r.address(), dexProgram: r.address(),
+      amountIn: r.u64(), quotedOut: r.u64(), minOut: r.u64(), amountOut: r.u64(),
+      spentUnits: r.u64(), transactionCount: r.u32(), slot: r.u64(),
+    };
+  }
+  if (same(disc, EVENT_DISCRIMINATORS.SwapPolicyCreated)) {
+    return { name: "SwapPolicyCreated", grant: r.address(), swapPolicy: r.address(), programs: r.u8(), maxSlippageBps: r.u16() };
+  }
   return null;
 }
 

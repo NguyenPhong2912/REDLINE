@@ -8,14 +8,31 @@ import { nowSeconds } from "../clock.js";
 // Presentation-neutral metadata for the policy pipeline. The frontend turns
 // this into a spatial "transaction spine", while other clients can render the
 // same ordered gates as a table or an audit checklist.
+/**
+ * Gates run in two phases.
+ *
+ * `pre-execution` gates are decided before anything moves; a failure there
+ * costs a transaction fee and nothing else. `post-settlement` exists because a
+ * trade cannot be judged in advance — the only honest measure of a swap is the
+ * balance the vault came back with, so that check runs after the DEX has and
+ * reverts the whole transaction when it fails.
+ */
 export const POLICY_GATES = [
-  { id: 1, key: "active", label: "Active grant", detail: "Owner has not revoked access", reasonCodes: ["REVOKED"] },
-  { id: 2, key: "expiry", label: "Time window", detail: "Grant has not expired", reasonCodes: ["EXPIRED"] },
-  { id: 3, key: "nonce", label: "Fresh intent", detail: "Nonce cannot be replayed", reasonCodes: ["NONCE_REPLAY"] },
-  { id: 4, key: "mint", label: "Allowed asset", detail: "Mint is inside the signed scope", reasonCodes: ["MINT_NOT_ALLOWED"] },
-  { id: 5, key: "destination", label: "Allowed recipient", detail: "Destination is allowlisted", reasonCodes: ["DESTINATION_NOT_ALLOWED"] },
-  { id: 6, key: "budget", label: "Budget envelope", detail: "Spend and transaction caps hold", reasonCodes: ["TX_CAP_EXCEEDED", "SPEND_CAP_EXCEEDED"] },
-  { id: 7, key: "cooldown", label: "Execution pace", detail: "Cooldown has elapsed", reasonCodes: ["COOLDOWN_ACTIVE"] },
+  { id: 1, key: "active", phase: "pre-execution", label: "Active grant", detail: "Owner has not revoked access", reasonCodes: ["REVOKED"] },
+  { id: 2, key: "expiry", phase: "pre-execution", label: "Time window", detail: "Grant has not expired", reasonCodes: ["EXPIRED"] },
+  { id: 3, key: "nonce", phase: "pre-execution", label: "Fresh intent", detail: "Nonce cannot be replayed", reasonCodes: ["NONCE_REPLAY"] },
+  { id: 4, key: "mint", phase: "pre-execution", label: "Allowed asset", detail: "Mint is inside the signed scope", reasonCodes: ["MINT_NOT_ALLOWED"] },
+  // Gate 5 asks the same question of both kinds of intent: may the value go
+  // where this instruction sends it? For a transfer that is a recipient
+  // wallet; for a swap there is no recipient — the output returns to the
+  // vault — so it becomes the route and the token being bought.
+  { id: 5, key: "destination", phase: "pre-execution", label: "Allowed counterparty", detail: "Recipient, DEX route and purchased asset are allowlisted", reasonCodes: ["DESTINATION_NOT_ALLOWED", "SWAPS_NOT_ENABLED", "PROGRAM_NOT_ALLOWED", "OUTPUT_MINT_NOT_ALLOWED"] },
+  { id: 6, key: "budget", phase: "pre-execution", label: "Budget envelope", detail: "Spend and transaction caps hold", reasonCodes: ["TX_CAP_EXCEEDED", "SPEND_CAP_EXCEEDED"] },
+  { id: 7, key: "cooldown", phase: "pre-execution", label: "Execution pace", detail: "Cooldown has elapsed", reasonCodes: ["COOLDOWN_ACTIVE"] },
+  // Swaps only. A transfer moves a known amount to a known account and has
+  // nothing to settle; a trade is only judged once the tokens have moved,
+  // which is why this gate exists after execution rather than before it.
+  { id: 8, key: "settlement", phase: "post-settlement", label: "Execution quality", detail: "The swap returned at least the floor the owner accepted", reasonCodes: ["SLIPPAGE_EXCEEDED"] },
 ] as const;
 
 const gateForReason: ReadonlyMap<string, number> = new Map(

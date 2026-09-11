@@ -1,4 +1,4 @@
-import type { GrantLimits, GrantState, Intent, ReasonCode } from "../policy/types.js";
+import type { GrantLimits, GrantState, Intent, ReasonCode, SwapIntent, SwapPolicy } from "../policy/types.js";
 
 // The runtime and API talk to the chain only through this interface.
 // MockChain applies the same gates in memory so the whole flow works before
@@ -10,6 +10,19 @@ export interface ExecutionResult {
   reasonCode: ReasonCode;
   error?: string;
   slot?: bigint;
+}
+
+/**
+ * What a settled swap actually moved.
+ *
+ * `amountInUnits` and `amountOutUnits` are measured after the route ran, not
+ * quoted before it — the whole point of the swap adapter is that these two
+ * numbers, and not the instruction that produced them, decide whether the
+ * trade was inside the policy.
+ */
+export interface SwapResult extends ExecutionResult {
+  amountInUnits: bigint;
+  amountOutUnits: bigint;
 }
 
 export interface ChainAdapter {
@@ -24,4 +37,15 @@ export interface ChainAdapter {
   // program rejects, so the demo can show a deliberately failed transaction.
   executeTransfer(intent: Intent): Promise<ExecutionResult>;
   revokeGrant(grantPda: string): Promise<{ signature: string }>;
+
+  // ── swaps ──
+  // Optional: an adapter that cannot trade simply does not implement these,
+  // and the routes report that the grant may not swap rather than pretending.
+
+  /** The grant's trading policy, or null when its owner never enabled trading. */
+  readSwapPolicy?(grantPda: string): Promise<SwapPolicy | null>;
+  /** Owner-signed: turn trading on for one grant. */
+  createSwapPolicy?(grantPda: string, policy: SwapPolicy): Promise<{ signature: string }>;
+  /** Executor-signed: route a trade and judge it on the balances it produced. */
+  executeSwap?(intent: SwapIntent): Promise<SwapResult>;
 }
