@@ -21,3 +21,26 @@ export function transferSolInstruction(source: string, destination: string, lamp
     data,
   };
 }
+
+export interface RentalSplit {
+  publisherLamports: bigint;
+  protocolLamports: bigint;
+  treasury: string | null;
+}
+
+/**
+ * The instructions that pay one rental.
+ *
+ * Both transfers ride in a single transaction, so the renter signs one prompt
+ * and there is no state where the publisher was paid and the marketplace fee
+ * was not — the wallet either lands both or neither. The API re-checks both
+ * legs against the chain before recording the rental, so a hand-built payment
+ * that drops the fee is rejected rather than quietly accepted.
+ */
+export function rentalPaymentInstructions(payer: string, publisher: string, split: RentalSplit): Instruction[] {
+  const instructions = [transferSolInstruction(payer, publisher, split.publisherLamports)];
+  if (split.treasury && split.protocolLamports > 0n) {
+    instructions.push(transferSolInstruction(payer, split.treasury, split.protocolLamports));
+  }
+  return instructions;
+}

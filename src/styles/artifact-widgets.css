@@ -409,3 +409,26 @@
 [data-route="agents"] .agents-grid > aside > .btn.full-button + .rail-list,
 [data-route="agents"] .agents-grid > aside > .eyebrow + .btn.full-button { margin-top: 10px; }
 [data-route="agents"] .idcard .publisher-line { margin: 10px 0 0; font: 10.5px var(--mono); letter-spacing: .06em; color: var(--muted); }
+
+/* ── Marketplace revenue ─────────────────────────────────────────────────────
+   The take rate, reported where the rentals that produced it are listed. */
+.protocol-revenue { display: grid; gap: 0.75rem; }
+.protocol-revenue-head { display: grid; gap: 0.35rem; }
+.protocol-revenue-grid {
+  display: grid; gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+.protocol-revenue-cell {
+  display: grid; gap: 0.15rem;
+  padding: 0.6rem 0.75rem; border-radius: 0.6rem;
+  background: var(--surface-inset, #0c1425); border: 1px solid var(--border, #2d3b53);
+}
+.protocol-revenue-cell small { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.protocol-revenue-cell strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.protocol-revenue-cell em { font-size: 0.62rem; font-style: normal; opacity: 0.6; }
+.protocol-revenue-list { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.protocol-revenue-list li {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline;
+  font-size: 0.7rem; font-variant-numeric: tabular-nums; opacity: 0.85;
+}
+.protocol-revenue-list li a { display: inline-flex; align-items: center; gap: 0.2rem; }

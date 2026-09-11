@@ -97,6 +97,8 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/audit?grant=` | the caller's own trail in full; anonymous callers get a short recent window, redacted, and cannot filter it by grant |
 | GET | `/vaults/:owner` | vault PDA, ATA and live balance. Only your own |
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
+| GET | `/protocol/fee` | the take rate and the wallet that collects it, so the dashboard builds a payment the API will accept |
+| GET | `/protocol/revenue` | what the fee has collected, per rental, with payment signatures |
 | GET | `/listings/:id/reviews` · POST | renter reviews; posting needs a session **and** a rental on that listing, one review per rental |
 | GET | `/listings/:id/reviewable` | whether this wallet may review, and which rentals are open |
 | GET | `/hires` · POST `/hires` | rental agreements; the SOL payment is fetched from Devnet and checked (signer, payee, rate × 24h periods) before the row is written. A grant for a rented agent records which agreement covers it, and is refused once it lapses |
@@ -113,6 +115,27 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 Policy Lab input limits, examples, response semantics and Vietnamese user documentation: [docs/POLICY_LAB.md](../docs/POLICY_LAB.md). Run `npm run dev:lab` for an isolated local server on `127.0.0.1:8788` without Postgres or a chain executor. Only the two Policy Lab endpoints are available in this mode; other endpoints explicitly return 503. The normal server includes both new routes automatically, with no schema migration.
 
 `/protocol/overview`, `/analytics` and `/assistant` count a grant as active only while it is neither revoked nor past its window. Each grant carries its own `expiresAt` (mirrored from the program at creation); the `PolicyVersion` row's date is shared by every grant with the same policy shape and is only a fallback for rows written before the column existed.
+
+## Marketplace take rate
+
+A rental is one wallet-signed transaction carrying two transfers: the
+publisher's share and the protocol fee. The fee comes **out of** the advertised
+price rather than on top of it, so the number on the card is what the renter
+pays, and "10% of rental revenue" means 10% of what the publisher earns.
+
+`POST /hires` re-derives the split from its own configuration and checks **both**
+legs against the chain before writing the rental (`src/protocol-fee.ts`,
+`checkPaymentLegs`). Verifying only the publisher leg would let a hand-built
+transaction pay the publisher, skip the treasury and still register the rental —
+which is how a take rate quietly becomes optional.
+
+Set `PROTOCOL_TREASURY` to collect; leave it empty and the fee is zero and the
+payment is the single transfer the marketplace made before. `PROTOCOL_FEE_BPS`
+defaults to 1000 (10%) and is capped at 2000.
+
+Each rental records what it actually paid — `paidLamports`, `publisherLamports`,
+`protocolFeeLamports`, `protocolFeeBps` — because the rate can change and a
+receipt has to keep saying what was charged at the time.
 
 ## Reputation
 

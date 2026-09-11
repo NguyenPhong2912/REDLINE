@@ -21,24 +21,14 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { RatingBadge, ReviewPanel } from "./components/AgentRating";
+import { ProtocolRevenuePanel } from "./components/ProtocolRevenue";
 import { TransferLane, VoxelCube } from "./components/depth";
 import { GrantSignButton } from "./components/GrantSignButton";
 import { GrantsPanel } from "./components/GrantsPanel";
 import { SolanaWalletControl } from "./components/SolanaWalletControl";
 import { VaultPanel } from "./components/VaultPanel";
 import { applyPreference, readPreference } from "./frontend/preferences";
-import {
-  api,
-  API_URL,
-  checkHealth,
-  loadSession,
-  short,
-  type AgentVersion,
-  type AuditRow,
-  type Health,
-  type Hire,
-  type Listing,
-} from "./lib/api";
+import { api, API_URL, checkHealth, loadSession, short, type AgentVersion, type AuditRow, type Health, type Hire, type Listing, type ProtocolFee } from "./lib/api";
 import { useSignedIn } from "./lib/useSignedIn";
 import {
   requestRiskAssessment,
@@ -51,7 +41,8 @@ import {
   explorerTransactionUrl,
   isAddressLike,
 } from "./solana/client";
-import { transferSolInstruction } from "./solana/payments";
+import { rentalPaymentInstructions } from "./solana/payments";
+import { formatFeeRate, splitRental } from "./lib/fee";
 import { PROGRAM_ID } from "./solana/redline";
 import { color, mono, sans } from "./theme";
 
@@ -111,6 +102,10 @@ export function MarketplacePage() {
   const [error, setError] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState("");
+  // The marketplace take rate, read from the API so the card and the payment
+  // always agree with what the server will verify.
+  const [fee, setFee] = useState<ProtocolFee>({ treasury: null, feeBps: 0, enabled: false });
+  useEffect(() => { api.protocolFee().then(setFee).catch(() => { /* fee stays off; the API is the authority anyway */ }); }, []);
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [priceSol, setPriceSol] = useState("0.05");
@@ -158,8 +153,9 @@ export function MarketplacePage() {
     }
   }
 
-  // Renting is a real SOL transfer to the publisher, then the backend verifies
-  // that transaction on Devnet before recording the hire.
+  // Renting is a real SOL payment, split in one transaction between the
+  // publisher and the REDLINE treasury, then verified on Devnet — both legs —
+  // before the rental is recorded.
   async function rent(listing: Listing) {
     if (!connected?.signer || !signedIn || !listing.developerWallet) return;
     const durationHours = hoursFor(listing.id);
@@ -169,9 +165,14 @@ export function MarketplacePage() {
     setError("");
     setNotice("");
     try {
-      const result = await client.sendTransaction([
-        transferSolInstruction(wallet, listing.developerWallet, total),
-      ]);
+      // Read the rate at pay time rather than trusting a value baked into this
+      // bundle: a stale fee would make the wallet sign a payment the API then
+      // refuses, after the SOL had already moved.
+      const fee = await api.protocolFee();
+      const split = splitRental(total, fee, listing.developerWallet);
+      const result = await client.sendTransaction(
+        rentalPaymentInstructions(wallet, listing.developerWallet, split),
+      );
       const signature = String(result.context.signature);
       await api.hire({
         listingId: listing.id,
@@ -180,7 +181,9 @@ export function MarketplacePage() {
         paymentSignature: signature,
       });
       setNotice(
-        `Rented ${listing.agentVersion.name} for ${durationHours}h · ${short(signature, 6)}`,
+        split.protocolLamports > 0n
+          ? `Rented ${listing.agentVersion.name} for ${durationHours}h · publisher ${fmtSol(split.publisherLamports.toString())} SOL + ${formatFeeRate(split.feeBps)} protocol fee ${fmtSol(split.protocolLamports.toString())} SOL · ${short(signature, 6)}`
+          : `Rented ${listing.agentVersion.name} for ${durationHours}h · ${short(signature, 6)}`,
       );
       await load();
     } catch (e) {
@@ -289,6 +292,7 @@ export function MarketplacePage() {
           {notice}
         </p>
       )}
+      <ProtocolRevenuePanel />
       {featured ? (
         <>
           <div className="spot">
@@ -429,6 +433,24 @@ export function MarketplacePage() {
                       )}{" "}
                       SOL · {hoursFor(featured.id)} hours
                     </p>
+                    {/* Where that total goes. Shown before the wallet prompt
+                        because a fee a renter only learns about afterwards is
+                        a surprise, not a business model. */}
+                    {(() => {
+                      const split = splitRental(
+                        BigInt(featured.priceLamports) * BigInt(periodsFor(featured.id)),
+                        fee,
+                        featured.developerWallet ?? "",
+                      );
+                      if (split.protocolLamports <= 0n) return null;
+                      return (
+                        <p className="help">
+                          Publisher {fmtSol(split.publisherLamports.toString())} SOL ·{" "}
+                          {formatFeeRate(split.feeBps)} protocol fee{" "}
+                          {fmtSol(split.protocolLamports.toString())} SOL — one transaction, both verified on-chain
+                        </p>
+                      );
+                    })()}
                   </>
                 ) : (
                   <p className="help">

@@ -9,6 +9,7 @@ import { callerWallet, identityEnforced, requireSession, requireWallet } from ".
 import { json } from "./json.js";
 import { hireStatsByListing, isLiveHire, listingStats, volumeByListing } from "./market-stats.js";
 import { emptyRating, invalidateRatings, ratingsForListings } from "./ratings.js";
+import { checkPaymentLegs, feeConfigFromEnv, splitRental, type RentalSplit } from "../protocol-fee.js";
 
 // Real marketplace: a listing is the (already-existing) default AgentListing
 // row created when an agent is published. Hiring is a plain wallet-signed SOL
@@ -20,9 +21,19 @@ import { emptyRating, invalidateRatings, ratingsForListings } from "./ratings.js
 //
 // Returns the lamports the payee actually received, so the record says what
 // was paid rather than what was owed.
-async function verifyPayment(signature: string, payer: string, payee: string, minLamports: bigint): Promise<bigint> {
+/**
+ * Check that one transaction paid both the publisher and the protocol.
+ *
+ * The two transfers ride in a single wallet-signed transaction, so there is
+ * no state where the publisher was paid and the fee was not — the renter
+ * signs both or neither. Verifying them together here is what makes that
+ * atomicity worth anything: checking only the publisher leg would let a
+ * hand-built transaction skip the fee and still register the rental.
+ */
+async function verifyPayment(signature: string, payer: string, split: RentalSplit, payee: string): Promise<{ publisher: bigint; protocol: bigint }> {
   const chain = getChain();
-  if (!(chain instanceof SolanaChain)) return minLamports; // mock: nothing to verify against
+  // mock: nothing to verify against, so take the split at face value
+  if (!(chain instanceof SolanaChain)) return { publisher: split.publisherLamports, protocol: split.protocolLamports };
   // The wallet's send resolves when *its* RPC sees the transaction; ours can
   // trail it by a slot or two, and the public endpoint by more. A payment
   // that is not visible yet is not a payment that failed — and the SOL has
@@ -36,16 +47,21 @@ async function verifyPayment(signature: string, payer: string, payee: string, mi
   if (!tx) throw new Error("payment transaction not found on Devnet after 30s — if your wallet shows it confirmed, wait a moment and rent again with the same signature");
   if (tx.meta?.err) throw new Error(`payment transaction failed on-chain: ${JSON.stringify(tx.meta.err)}`);
   const keys = tx.transaction.message.accountKeys as unknown as string[];
-  if (keys[0] !== payer) throw new Error("payment was not signed by the renting wallet");
-  const payeeIndex = keys.indexOf(payee);
-  if (payeeIndex === -1) throw new Error("payment does not touch the developer wallet");
-  const pre = BigInt(tx.meta?.preBalances?.[payeeIndex] ?? 0);
-  const post = BigInt(tx.meta?.postBalances?.[payeeIndex] ?? 0);
-  if (post - pre < minLamports) throw new Error(`payment of ${post - pre} lamports is below the listing price of ${minLamports}`);
-  return post - pre;
+  const pre = (tx.meta?.preBalances ?? []).map(v => BigInt(v));
+  const post = (tx.meta?.postBalances ?? []).map(v => BigInt(v));
+  return checkPaymentLegs(keys, pre, post, payer, payee, split);
 }
 
 export async function listingRoutes(app: FastifyInstance) {
+  // The rate and the destination the renter is about to pay. Served rather
+  // than bundled: a fee baked into the dashboard build would drift from the
+  // one the API enforces, and the wallet would sign a payment the server
+  // then rejects.
+  app.get("/protocol/fee", async () => {
+    const config = feeConfigFromEnv();
+    return { treasury: config.treasury, feeBps: config.feeBps, enabled: Boolean(config.treasury && config.feeBps > 0) };
+  });
+
   // Real listings — the ones auto-created by POST /agents, enriched with hire
   // stats so the marketplace can show real demand: active hires, all-time
   // count, 24h count, and total lamports paid. The volume figure is summed
@@ -124,6 +140,44 @@ export async function listingRoutes(app: FastifyInstance) {
   // Rentals are scoped to the caller. Reading them used to need only a wallet
   // address in the query string, which is public information — anyone could
   // enumerate what any treasury had rented and when.
+  // What the take rate has actually collected, from the rental rows that
+  // recorded it. Public on purpose: a marketplace that charges a fee should be
+  // willing to show what it charged, and every figure here is one an auditor
+  // can re-derive from the payment signatures beside it.
+  app.get("/protocol/revenue", async () => {
+    const config = feeConfigFromEnv();
+    const hires = await prisma.hireAgreement.findMany({
+      where: { protocolFeeLamports: { gt: 0n } },
+      include: { listing: { include: { agentVersion: { select: { name: true, version: true } } } } },
+      orderBy: { startsAt: "desc" },
+      take: 200,
+    });
+    const totalFee = hires.reduce((sum, h) => sum + h.protocolFeeLamports, 0n);
+    const totalVolume = hires.reduce((sum, h) => sum + h.paidLamports, 0n);
+    const dayAgo = new Date(Date.now() - 86_400_000);
+    return json({
+      feeBps: config.feeBps,
+      treasury: config.treasury,
+      enabled: Boolean(config.treasury && config.feeBps > 0),
+      // Rentals that predate the fee are counted in neither figure; they paid
+      // none, and folding them in would understate the rate going forward.
+      rentalsCharged: hires.length,
+      grossVolumeLamports: totalVolume.toString(),
+      protocolRevenueLamports: totalFee.toString(),
+      revenue24hLamports: hires.filter(h => h.startsAt >= dayAgo).reduce((sum, h) => sum + h.protocolFeeLamports, 0n).toString(),
+      recent: hires.slice(0, 20).map(h => ({
+        hireId: h.id,
+        agent: `${h.listing.agentVersion.name} ${h.listing.agentVersion.version}`,
+        at: h.startsAt,
+        paidLamports: h.paidLamports.toString(),
+        publisherLamports: h.publisherLamports.toString(),
+        protocolFeeLamports: h.protocolFeeLamports.toString(),
+        feeBps: h.protocolFeeBps,
+        signature: h.paymentSignature,
+      })),
+    });
+  });
+
   app.get("/hires", async (req, reply) => {
     const { wallet } = req.query as { wallet?: string };
     const caller = callerWallet(req);
@@ -174,9 +228,11 @@ export async function listingRoutes(app: FastifyInstance) {
     // period it covers — otherwise one day's payment would buy thirty.
     const periods = BigInt(Math.ceil(body.durationHours / 24));
     const required = listing.priceLamports * periods;
-    let paidLamports = required;
+    // The advertised price is what the renter pays; the fee comes out of it.
+    const split = splitRental(required, feeConfigFromEnv(), listing.developerWallet);
+    let credited = { publisher: split.publisherLamports, protocol: split.protocolLamports };
     try {
-      paidLamports = await verifyPayment(body.paymentSignature, body.ownerWallet, listing.developerWallet, required);
+      credited = await verifyPayment(body.paymentSignature, body.ownerWallet, split, listing.developerWallet);
     } catch (err) {
       // A payment that does not check out is the caller's problem, not a
       // server fault — 400 so the UI can show the reason as-is.
@@ -188,6 +244,10 @@ export async function listingRoutes(app: FastifyInstance) {
         listingId: listing.id,
         ownerWallet: body.ownerWallet,
         paymentSignature: body.paymentSignature,
+        paidLamports: credited.publisher + credited.protocol,
+        publisherLamports: credited.publisher,
+        protocolFeeLamports: credited.protocol,
+        protocolFeeBps: split.feeBps,
         endsAt: new Date(Date.now() + body.durationHours * 3600_000),
       },
     });
@@ -197,7 +257,16 @@ export async function listingRoutes(app: FastifyInstance) {
     await audit({
       actorType: "owner", actorId: body.ownerWallet, eventType: "listing.hired", subjectType: "hire", subjectId: hire.id,
       chainSignature: body.paymentSignature,
-      payload: { listingId: listing.id, agentVersionId: listing.agentVersionId, rateLamportsPer24h: listing.priceLamports.toString(), paidLamports: paidLamports.toString(), requiredLamports: required.toString(), durationHours: body.durationHours },
+      payload: {
+        listingId: listing.id, agentVersionId: listing.agentVersionId,
+        rateLamportsPer24h: listing.priceLamports.toString(),
+        paidLamports: (credited.publisher + credited.protocol).toString(),
+        requiredLamports: required.toString(),
+        publisherLamports: credited.publisher.toString(),
+        protocolFeeLamports: credited.protocol.toString(),
+        protocolFeeBps: split.feeBps,
+        durationHours: body.durationHours,
+      },
     });
     return reply.code(201).send(json(hire));
   });

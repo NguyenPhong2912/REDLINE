@@ -54,6 +54,6 @@ Reference, if the live run is slow: [a transfer that was allowed](https://explor
 
 What is real today: the Anchor program on Devnet, wallet-signed grants, seven gates enforced on every transfer, an audit trail sourced from chain events, marketplace rentals whose SOL payment is verified against the chain, and analytics computed from the trail. P&L and APY are absent on purpose — the system has no price feed, so there is no honest number to show.
 
-Where it goes: treasury teams first, subscription plus marketplace fee. The next technical milestone is DEX adapters with instruction inspection, so agents can trade inside a policy rather than only transfer.
+Where it goes: treasury teams first. The marketplace fee is already live — 10% of every rental, split out in the same transaction that pays the publisher and verified on-chain before the rental is recorded, with what it has collected listed on the Marketplace page. Subscriptions are the planned second line. The next technical milestone is DEX adapters with instruction inspection, so agents can trade inside a policy rather than only transfer.
 
 Be direct about scope: Devnet only, no professional audit yet.
