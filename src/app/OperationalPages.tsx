@@ -29,6 +29,7 @@ import { SolanaWalletControl } from "./components/SolanaWalletControl";
 import { VaultPanel } from "./components/VaultPanel";
 import { applyPreference, readPreference } from "./frontend/preferences";
 import { api, API_URL, checkHealth, loadSession, short, type AgentVersion, type AuditRow, type Health, type Hire, type Listing, type ProtocolFee } from "./lib/api";
+import { useBackendStatus } from "./components/BackendStatus";
 import { useSignedIn } from "./lib/useSignedIn";
 import {
   requestRiskAssessment,
@@ -1636,10 +1637,12 @@ export function SettingsPage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
-  const [health, setHealth] = useState<Health | null>(null);
-  const [healthState, setHealthState] = useState<
-    "checking" | "healthy" | "offline"
-  >("checking");
+  const backend = useBackendStatus();
+  const health = backend.health;
+  // "waking" is its own state on the wire; Settings only needs to know whether
+  // it can show numbers yet, but it must not call a starting service offline.
+  const healthState: "checking" | "healthy" | "offline" =
+    backend.phase === "online" ? "healthy" : backend.phase === "offline" ? "offline" : "checking";
   const [activeTab, setActiveTab] = useState(0);
   const [depthEnabled, setDepthEnabled] = useState(() =>
     readPreference("depth"),
@@ -1668,37 +1671,11 @@ export function SettingsPage() {
     { label: "Experience", detail: "Sound · depth · motion", icon: Sparkles },
   ];
 
-  const testHealth = useCallback(async () => {
-    setHealthState("checking");
-    try {
-      const result = await checkHealth();
-      setHealth(result);
-      setHealthState("healthy");
-    } catch {
-      setHealth(null);
-      setHealthState("offline");
-    }
-  }, []);
+  // Re-probe on demand. The shared prober owns the pacing, so "Test" here
+  // means the same thing as the banner in the shell rather than starting a
+  // second, differently-timed check.
+  const testHealth = backend.retry;
 
-  useEffect(() => {
-    let live = true;
-    checkHealth()
-      .then((h) => {
-        if (live) {
-          setHealth(h);
-          setHealthState("healthy");
-        }
-      })
-      .catch(() => {
-        if (live) {
-          setHealth(null);
-          setHealthState("offline");
-        }
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
 
   const healthLabel = healthState === "checking" ? "checking" : healthState;
 

@@ -187,17 +187,21 @@ async function req<T>(path: string, init?: RequestInit, authenticated = true): P
   return res.json() as Promise<T>;
 }
 
-// Render services can need a moment to wake and occasionally reject the first
-// probe. UI status indicators use this bounded retry so a transient cold start
-// is not presented as a broken deployment.
-export async function checkHealth(attempts = 3, delayMs = 700): Promise<Health> {
+// A bounded probe of the API.
+//
+// The free Render service sleeps after about fifteen minutes and takes most of
+// a minute to come back, which is longer than any reasonable single request.
+// Callers that need to sit through that use `probeBackend` in
+// ./backend-status, which owns the pacing and can report "waking" rather than
+// "offline"; this stays the primitive both of them are built on.
+export async function checkHealth(attempts = 3, delayMs = 700, timeoutMs = 12_000): Promise<Health> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      return await req<Health>("/health", { signal: AbortSignal.timeout(12_000) }, false);
+      return await req<Health>("/health", { signal: AbortSignal.timeout(timeoutMs) }, false);
     } catch (error) {
       lastError = error;
-      if (attempt < attempts - 1) await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
+      if (attempt < attempts - 1 && delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
     }
   }
   throw lastError instanceof Error ? lastError : new Error("API unreachable");
