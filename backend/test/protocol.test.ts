@@ -3,11 +3,23 @@ import { POLICY_GATES } from "../src/routes/protocol.js";
 import { MESSAGES } from "../src/policy/engine.js";
 
 describe("protocol overview gate catalog", () => {
-  it("matches the seven on-chain checks in order", () => {
-    expect(POLICY_GATES.map(gate => gate.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(POLICY_GATES.map(gate => gate.key)).toEqual([
+  it("matches the seven on-chain checks in order, before anything moves", () => {
+    const pre = POLICY_GATES.filter(gate => gate.phase === "pre-execution");
+    expect(pre.map(gate => gate.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(pre.map(gate => gate.key)).toEqual([
       "active", "expiry", "nonce", "mint", "destination", "budget", "cooldown",
     ]);
+  });
+
+  it("keeps settlement after execution, because a trade cannot be judged before it", () => {
+    // A transfer's outcome is knowable in advance; a swap's is not. Ordering
+    // this gate with the other seven would claim the program can check a fill
+    // it has not seen yet.
+    const settlement = POLICY_GATES.filter(gate => gate.phase === "post-settlement");
+    expect(settlement.map(gate => gate.key)).toEqual(["settlement"]);
+    expect(Math.min(...settlement.map(g => g.id))).toBeGreaterThan(
+      Math.max(...POLICY_GATES.filter(g => g.phase === "pre-execution").map(g => g.id)),
+    );
   });
 
   it("maps every policy rejection to exactly one visual gate", () => {
@@ -16,6 +28,7 @@ describe("protocol overview gate catalog", () => {
     expect(reasons).toEqual(expect.arrayContaining([
       "REVOKED", "EXPIRED", "NONCE_REPLAY", "MINT_NOT_ALLOWED",
       "DESTINATION_NOT_ALLOWED", "TX_CAP_EXCEEDED", "SPEND_CAP_EXCEEDED", "COOLDOWN_ACTIVE",
+      "SWAPS_NOT_ENABLED", "PROGRAM_NOT_ALLOWED", "OUTPUT_MINT_NOT_ALLOWED", "SLIPPAGE_EXCEEDED",
     ]));
   });
 });

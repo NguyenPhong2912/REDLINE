@@ -89,9 +89,26 @@ Program           the sole authority over vault funds
 - `backend/test/onchain.test.ts` — the **deployed Devnet binary** loaded into LiteSVM: 3 allows, nonce replay, spend cap (balance unchanged), foreign destination, wrong signer, revoke. Runs in CI (`.github/workflows/backend-ci.yml`) on Linux; LiteSVM has no Windows build.
 - `backend/test/auth.test.ts`, `transient.test.ts` — API key guard, RPC error classification.
 
+## Trading inside a policy
+
+The swap adapter is venue-agnostic by construction: it does not parse DEX
+instructions, it brackets the call and measures the vault's balances before and
+after. A route may spend no more than authorised and must return at least the
+floor the owner accepted, with the output landing back in the vault's own
+account. See `backend/README.md` for the reasoning and the deployment note — the
+off-chain half is live and tested; `execute_swap` is written and awaiting the
+program upgrade.
+
 ## Known limitations
 
-- Adapter v0 is SPL transfer to an allowlisted destination. DEX adapters (Jupiter/Orca) need instruction inspection and are the next milestone; Devnet liquidity makes them impractical to demo today.
+- The swap adapter enforces its guarantees from balance deltas rather than
+  instruction inspection, which makes it venue-agnostic. `execute_swap` is
+  written and tested against the gates in LiteSVM, but the deployed program has
+  not been upgraded yet, so trading runs only under `CHAIN=mock` today. Devnet
+  liquidity also makes a real Jupiter/Orca fill impractical to demo.
+- Slippage protection binds the executor to its own quote within a transaction.
+  It stops a route filling worse than promised; it does not stop a compromised
+  executor quoting badly. The spend cap and mint allowlist are what bound that.
 - Demo USDC is a Devnet mint we control; `POST /devnet/fund` exists only for demos.
 - The hosted demo runs on the public Devnet endpoint, which rate-limits shared cloud IPs like Render's. The chain adapter retries with backoff and an agent run survives a throttled step, but a dedicated RPC is the real fix and is not yet in place.
 - The shared API key still opens the write routes that record public facts — registering a grant the chain already holds, funding a Devnet vault, recording a paid rental. It ships in the frontend bundle where anyone can read it, so those routes are open in practice. The routes where that would cause harm (spending from a vault, claiming a listing) require a wallet session instead. Retiring the key entirely means giving the remaining routes an owner to check against. No professional audit has been performed; mainnet use is out of scope.

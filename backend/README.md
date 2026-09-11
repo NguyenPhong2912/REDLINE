@@ -97,6 +97,9 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/audit?grant=` | the caller's own trail in full; anonymous callers get a short recent window, redacted, and cannot filter it by grant |
 | GET | `/vaults/:owner` | vault PDA, ATA and live balance. Only your own |
 | GET | `/listings` · PATCH `/listings/:id` | marketplace listings; the publisher claims one by setting a payout wallet and a 24h rate (write-once wallet) |
+| GET | `/grants/:id/swap-policy` · POST | what a grant may trade, and the owner-signed decision to let it trade at all |
+| POST | `/swaps/preview` | dry-run the swap gates and report the floor the policy implies for a quote |
+| POST | `/swaps` | route a trade; refused locally before it costs a fee, then judged on-chain by what the vault came back with |
 | GET | `/protocol/fee` | the take rate and the wallet that collects it, so the dashboard builds a payment the API will accept |
 | GET | `/protocol/revenue` | what the fee has collected, per rental, with payment signatures |
 | GET | `/listings/:id/reviews` · POST | renter reviews; posting needs a session **and** a rental on that listing, one review per rental |
@@ -115,6 +118,85 @@ Amounts are strings of base units (`"100000000"` = 100 USDC).
 Policy Lab input limits, examples, response semantics and Vietnamese user documentation: [docs/POLICY_LAB.md](../docs/POLICY_LAB.md). Run `npm run dev:lab` for an isolated local server on `127.0.0.1:8788` without Postgres or a chain executor. Only the two Policy Lab endpoints are available in this mode; other endpoints explicitly return 503. The normal server includes both new routes automatically, with no schema migration.
 
 `/protocol/overview`, `/analytics` and `/assistant` count a grant as active only while it is neither revoked nor past its window. Each grant carries its own `expiresAt` (mirrored from the program at creation); the `PolicyVersion` row's date is shared by every grant with the same policy shape and is only a fallback for rows written before the column existed.
+
+## Trading inside a policy (DEX adapter)
+
+**Status: the off-chain half ships and is tested; `execute_swap` is written but
+not yet deployed.** The deployed program (`Fj7MV8Z2…`) still knows only
+`execute_transfer`, so `CHAIN=solana` answers "this deployment's chain adapter
+cannot trade" until the upgrade lands. `CHAIN=mock` runs the whole flow today.
+
+### Why it does not parse DEX instructions
+
+Every venue encodes a swap differently, a parser is one upgrade behind the venue
+forever, and — the part that actually matters — a route whose instruction looks
+perfect can still hand the vault back less than it agreed to accept. Parsing
+answers "did this instruction look like the swap we expected?", which is the
+wrong question.
+
+So the adapter brackets the call instead. It records the vault's input and
+output balances, invokes whatever program the owner allowlisted with whatever
+payload the agent supplied, reads the balances again, and judges the trade on
+what actually moved:
+
+```
+spent_in  = before_in  - after_in    must be <= amount_in   (the route cannot overdraw)
+out       = after_out  - before_out  must be >= min_out     (the fill cannot be worse than agreed)
+```
+
+Both token accounts are constrained to be the vault's own, which is what makes
+"the output returns to the vault" a fact rather than a hope — a route cannot
+deliver the proceeds elsewhere and still satisfy the account constraints.
+
+### The gates a trade adds
+
+Gates 1–4 and 6–7 are the transfer gates, unchanged: a trade is still a spend of
+the same vault under the same grant, against the same caps, cooldown and expiry.
+
+Gate 5 changes shape. A transfer asks *may the money go to that account?*; a swap
+has no recipient, so it asks *may this grant route through that program, and may
+it buy that token?* — `PROGRAM_NOT_ALLOWED` and `OUTPUT_MINT_NOT_ALLOWED`. The
+second is what stops an agent swapping a treasury into something nobody can sell,
+and no transfer gate would ever have caught it.
+
+Gate 8 is new and runs **after** execution, because a swap's outcome is not
+knowable in advance: `SLIPPAGE_EXCEEDED`, checked against the balance that
+landed. `POLICY_GATES` in `src/routes/protocol.ts` marks each gate's phase for
+exactly this reason.
+
+### What slippage protection does and does not buy
+
+The program has no oracle, and the two sides of a pair have different decimals,
+so no output floor can be derived from the input amount. What it does instead is
+make the agent's quote part of the transaction and require the accepted minimum
+to sit within the owner's tolerance of it.
+
+That defends against **the route**: a sandwich, a stale pool, or a venue that
+fills worse than it promised all revert, because the quote was fixed before the
+swap ran. It does **not** defend against an executor that quotes dishonestly in
+the first place — a compromised runtime could quote low and accept low. What
+bounds that is the spend cap and the mint allowlist: it can lose at most the cap,
+and only into a token the owner named. Slippage is a quality control, not a
+custody control, and the code says so where it is enforced.
+
+### Deploying the upgrade
+
+`programs/redline_guardrails/src/lib.rs` adds `create_swap_policy` and
+`execute_swap`. The change is deliberately **additive**:
+
+- `Grant` is byte-identical. Trading permission lives in a new `SwapPolicy` PDA
+  (`["swap", grant]`), so every grant already signed on Devnet stays decodable
+  and keeps working exactly as before.
+- Error codes 6014–6020 are appended; no existing code moves. Those numbers are
+  already written into audit rows, and renumbering would rewrite what past
+  records mean.
+- A grant with no `SwapPolicy` cannot trade. Every grant signed before this
+  existed is in that state and stays there until its owner says otherwise.
+
+Deploy the same way as v2 (Solana Playground → Build → Upgrade, keeping the
+program id), then `npm run program:fetch && npm run test:onchain`.
+`test/onchain-swap.test.ts` skips itself while the deployed binary predates
+`execute_swap` and starts testing the moment the upgrade lands.
 
 ## Marketplace take rate
 

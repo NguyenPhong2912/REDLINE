@@ -16,6 +16,7 @@ import { devnetRoutes } from "./routes/devnet.js";
 import { grantRoutes } from "./routes/grants.js";
 import { reconcileOrphanedRuns } from "./runtime/runner.js";
 import { intentRoutes } from "./routes/intents.js";
+import { swapRoutes } from "./routes/swaps.js";
 import { riskRoutes } from "./routes/risk.js";
 import { runRoutes } from "./routes/runs.js";
 import { listingRoutes } from "./routes/listings.js";
@@ -118,6 +119,7 @@ app.get("/health", async () => {
 await app.register(agentRoutes);
 await app.register(grantRoutes);
 await app.register(intentRoutes);
+await app.register(swapRoutes);
 await app.register(runRoutes);
 await app.register(auditRoutes);
 await app.register(riskRoutes);
