@@ -16,6 +16,7 @@ Wallet,
 import { useEffect,useMemo,useState,type CSSProperties } from "react";
 import { useRealAgents } from "../lib/agents";
 import { api,API_URL,checkHealth,short,type Analytics,type Health } from "../lib/api";
+import { useBackendStatus } from "./BackendStatus";
 import type { AppClient } from "../solana/client";
 import { color } from "../theme";
 import { ProtocolConsole } from "./ProtocolConsole";
@@ -35,18 +36,11 @@ export function CopilotPage() {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : undefined;
-  const [health, setHealth] = useState<Health | null>(null);
-  const [healthState, setHealthState] = useState<"checking" | "online" | "offline">("checking");
-
-  useEffect(() => {
-    let live = true;
-    checkHealth().then(result => {
-      if (live) { setHealth(result); setHealthState("online"); }
-    }).catch(() => {
-      if (live) { setHealth(null); setHealthState("offline"); }
-    });
-    return () => { live = false; };
-  }, []);
+  // Shared with every other indicator in the shell, so a cold start cannot be
+  // reported as LIVE here and OFFLINE two panels away.
+  const backend = useBackendStatus();
+  const health = backend.health;
+  const healthState = backend.phase === "waking" ? "checking" : backend.phase;
 
   return (
     <div className="route-page page-copilot artifact-page-grid">

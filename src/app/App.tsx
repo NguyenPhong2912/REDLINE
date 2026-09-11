@@ -21,6 +21,8 @@ import {
   ModelsPage,
   ProfilePage,
 } from "./components/ArtifactPages";
+import { BackendStatusBanner } from "./components/BackendStatus";
+import { DemoGuide } from "./components/DemoGuide";
 import { CommandPalette } from "./components/CommandPalette";
 import { VoxelCube } from "./components/depth";
 import { GuidePage } from "./components/GuidePage";
@@ -291,6 +293,10 @@ export default function App() {
           </nav>
         )}
       </header>
+      {/* One shared probe for the whole shell. A cold Render service takes most
+          of a minute to wake, and the dashboard used to report that as OFFLINE
+          on every page at once. */}
+      <BackendStatusBanner />
       <main
         ref={main}
         className={`main-scroll ${index === 0 ? "" : "page"}`}
@@ -349,6 +355,10 @@ export default function App() {
             </div>
           </div>
         )}
+        {/* The guided path sits above the landing page only: it is for a
+            first-time visitor working out where the story is, and it would be
+            noise on every other route. */}
+        {route.slug === "protocol" && <DemoGuide navigate={navigate} />}
         <div key={route.slug} className="route-enter">
           <Page
             setNav={(n: number) => navigate(oldRouteOrder[n] ?? "protocol")}
