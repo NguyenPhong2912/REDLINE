@@ -141,3 +141,14 @@ export async function policyHashHex(p: { agentName: string; strategy: string; to
   });
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(canonical))));
 }
+
+// Revoke several grants in one transaction.
+//
+// The program takes one revocation per grant account, which the dashboard used
+// to present as a reason you had to sign once per grant. It is not: a Solana
+// transaction carries many instructions, so N grants is N instructions and one
+// wallet prompt. `planEmergencyStop` decides how many fit; this only turns a
+// batch into the instruction array.
+export async function emergencyStopInstructions(owner: string, grantPdas: string[]): Promise<Instruction[]> {
+  return Promise.all(grantPdas.map(pda => revokeGrantInstruction(owner, pda)));
+}

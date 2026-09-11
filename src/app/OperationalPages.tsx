@@ -1969,8 +1969,11 @@ export function SettingsPage() {
               <div className="settings-policy-note">
                 <ShieldCheck size={16} />
                 <p>
-                  Each grant is revoked separately because the on-chain program
-                  accepts one owner-signed revocation per policy account.
+                  The program takes one owner-signed revocation per policy
+                  account — but a Solana transaction carries many instructions,
+                  so <strong>Stop all agents</strong> on Guardrails revokes every
+                  active grant in a single signature. Funds stay in the vault;
+                  only the agents' authority ends.
                 </p>
               </div>
             </>
