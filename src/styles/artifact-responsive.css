@@ -79,6 +79,23 @@ code {
 .hdr .tools {
   gap: 8px;
 }
+/* The nav is nowrap and used to shrink below its content, so at a tight width
+   the last items ran underneath the tools. Now it clips and scrolls instead,
+   and the tools keep their width. The block padding keeps the active-page
+   diamond (drawn 1px below the button) inside the clip. */
+.hdr .nav {
+  flex: 1 1 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 6px;
+  scrollbar-width: none;
+}
+.hdr .nav::-webkit-scrollbar {
+  display: none;
+}
+.hdr .tools {
+  flex: none;
+}
 .brand {
   flex: none;
 }
@@ -1709,7 +1726,8 @@ code {
     padding-inline: 7px;
     font-size: 11px;
   }
-  .tools .netpill {
+  .tools .netpill,
+  .tools .tool > span {
     display: none;
   }
   .topline {
