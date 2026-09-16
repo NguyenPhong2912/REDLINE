@@ -12,6 +12,8 @@
 // what someone needs at three in the morning when an agent is behaving oddly and
 // they do not want to click through nine confirmations to stop it.
 
+import type { Lang } from "../i18n/LanguageContext";
+
 /**
  * Grants per transaction.
  *
@@ -64,7 +66,12 @@ export function planEmergencyStop(
 }
 
 /** Plain-language summary for the confirmation, so nobody stops nine things meaning to stop one. */
-export function describeStopPlan(plan: StopPlan): string {
+export function describeStopPlan(plan: StopPlan, lang: Lang = "en"): string {
+  if (lang === "vi") {
+    if (plan.total === 0) return "Không có grant nào đang hoạt động — không có gì để dừng.";
+    const prompts = plan.signatures === 1 ? "một chữ ký ví" : `${plan.signatures} chữ ký ví`;
+    return `Thu hồi ${plan.total} grant đang hoạt động trong ${prompts}. Mọi agent mất quyền ngay lập tức; tiền của bạn vẫn nằm trong vault.`;
+  }
   if (plan.total === 0) return "No active grants — there is nothing to stop.";
   const grants = `${plan.total} active grant${plan.total === 1 ? "" : "s"}`;
   const prompts = plan.signatures === 1 ? "one wallet signature" : `${plan.signatures} wallet signatures`;
@@ -97,8 +104,16 @@ export interface StopResult {
  * believing every agent is off while some still hold authority. So a partial
  * result names the number still running rather than leading with the successes.
  */
-export function describeStopResult(result: StopResult): string {
+export function describeStopResult(result: StopResult, lang: Lang = "en"): string {
   const { revoked, failed, error, unrecorded = 0 } = result;
+  if (lang === "vi") {
+    const lag = unrecorded > 0 ? ` ${unrecorded} lệnh thu hồi chưa tới được API — chain đã ghi nhận; dashboard này sẽ tự cập nhật.` : "";
+    if (failed === 0 && revoked === 0) return `Không có gì được thu hồi.${lag}`;
+    if (failed === 0) return `Đã dừng ${revoked} grant. Không agent nào còn quyền với vault nữa.${lag}`;
+    const tail = error ? ` ${error}` : "";
+    if (revoked === 0) return `Không dừng được gì — ${failed} grant vẫn đang hoạt động.${tail}${lag}`;
+    return `Đã dừng ${revoked}, nhưng ${failed} grant VẪN ĐANG HOẠT ĐỘNG — hãy thử dừng lại.${tail}${lag}`;
+  }
   const lag = unrecorded > 0 ? ` ${unrecorded} revocation${unrecorded === 1 ? "" : "s"} did not reach the API — the chain has them; this dashboard will catch up.` : "";
   if (failed === 0 && revoked === 0) return `Nothing was revoked.${lag}`;
   if (failed === 0) return `Stopped ${revoked} grant${revoked === 1 ? "" : "s"}. No agent holds authority over the vault any more.${lag}`;

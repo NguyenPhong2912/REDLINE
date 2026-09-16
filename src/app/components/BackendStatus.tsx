@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, WifiOff } from "lucide-react";
 import { backendMessage, idleStatus, probeBackend, type BackendStatus } from "../lib/backend-status";
+import { useLang, useT } from "../i18n/LanguageContext";
+
+const VI: Record<string, string> = {
+  "API connected": "Đã kết nối API",
+  "Live Devnet data is loading.": "Đang tải dữ liệu Devnet trực tiếp.",
+  "Try again": "Thử lại",
+};
 
 /**
  * One probe for the whole page.
@@ -49,7 +56,9 @@ export function useBackendStatus(): BackendStatus & { retry: () => void } {
  */
 export function BackendStatusBanner() {
   const status = useBackendStatus();
-  const message = backendMessage(status);
+  const { lang } = useLang();
+  const tr = useT(VI);
+  const message = backendMessage(status, lang);
   // Keep the banner up for a beat after it connects, so the transition is
   // legible rather than a flash of text that vanishes.
   const [visible, setVisible] = useState(false);
@@ -70,8 +79,8 @@ export function BackendStatusBanner() {
         {offline ? <WifiOff size={15} /> : <Loader2 size={15} className={status.phase === "online" ? "" : "spin"} />}
       </span>
       <span className="backend-banner-text">
-        <strong>{status.phase === "online" ? "API connected" : message.label}</strong>
-        <small>{status.phase === "online" ? "Live Devnet data is loading." : message.detail}</small>
+        <strong>{status.phase === "online" ? tr("API connected") : message.label}</strong>
+        <small>{status.phase === "online" ? tr("Live Devnet data is loading.") : message.detail}</small>
       </span>
       {status.phase !== "online" && (
         <span className="backend-banner-track" aria-hidden="true">
@@ -79,7 +88,7 @@ export function BackendStatusBanner() {
         </span>
       )}
       {offline && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={status.retry}>Try again</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={status.retry}>{tr("Try again")}</button>
       )}
     </div>
   );

@@ -84,7 +84,22 @@ export async function probeBackend(
 }
 
 /** What to tell the reader, phase by phase. */
-export function backendMessage(status: BackendStatus): { label: string; detail: string } {
+export function backendMessage(status: BackendStatus, lang: "en" | "vi" = "en"): { label: string; detail: string } {
+  if (lang === "vi") {
+    switch (status.phase) {
+      case "online":
+        return { label: "TRỰC TIẾP", detail: "Đã kết nối API Devnet." };
+      case "waking":
+        return {
+          label: "ĐANG KHỞI ĐỘNG",
+          detail: `Đang khởi động API — gói miễn phí ngủ sau mười lăm phút không hoạt động. Thường mất dưới một phút (${Math.round(status.elapsedMs / 1000)}s).`,
+        };
+      case "offline":
+        return { label: "MẤT KẾT NỐI", detail: status.error ? `API không phản hồi: ${status.error}` : "API không phản hồi." };
+      default:
+        return { label: "ĐANG KIỂM TRA", detail: "Đang liên hệ API…" };
+    }
+  }
   switch (status.phase) {
     case "online":
       return { label: "LIVE", detail: "Connected to the Devnet API." };

@@ -113,3 +113,25 @@ describe("describeStopResult", () => {
     expect(m).not.toContain("Stopped 0");
   });
 });
+
+describe("Vietnamese copy", () => {
+  // The toggle in the header makes these the sentences a Vietnamese owner
+  // actually reads before pressing the red button, so they get the same pins.
+  it("says how many, how many prompts, and that funds stay put", () => {
+    const vi = describeStopPlan(planEmergencyStop([grant("a"), grant("b")]), "vi");
+    expect(vi).toContain("2 grant");
+    expect(vi).toContain("một chữ ký ví");
+    expect(vi).toContain("vẫn nằm trong vault");
+    expect(describeStopPlan(planEmergencyStop([]), "vi")).toContain("không có gì để dừng");
+  });
+
+  it("keeps the partial-failure warning loud", () => {
+    const m = describeStopResult({ revoked: 1, failed: 2, error: null }, "vi");
+    expect(m).toContain("VẪN ĐANG HOẠT ĐỘNG");
+    expect(m).toContain("2 grant");
+  });
+
+  it("defaults to English when no language is given", () => {
+    expect(describeStopPlan(planEmergencyStop([grant("a")]))).toContain("active grant");
+  });
+});

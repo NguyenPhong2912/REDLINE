@@ -1,6 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, Check, Circle, FlaskConical, X } from "lucide-react";
 import { api, isSignedIn, loadSession, type AuditRow, type Grant } from "../lib/api";
+import { useT } from "../i18n/LanguageContext";
+
+// deriveProgress stays in English so its tests read as written; the component
+// translates at the point of display.
+const VI: Record<string, string> = {
+  "Sign a boundary": "Ký một ranh giới",
+  "Guardrails → build a policy → Sign & create on-chain grant. Use a small cap: 500 USDC, 5 transfers.": "Guardrails → tạo chính sách → Ký & tạo grant on-chain. Dùng hạn mức nhỏ: 500 USDC, 5 lệnh chuyển.",
+  "Connect a Devnet wallet and sign in from the top bar, then open Guardrails.": "Kết nối ví Devnet và đăng nhập từ thanh trên cùng, rồi mở Guardrails.",
+  "The wallet signs once. From here the limits live on Solana, not in this dashboard.": "Ví ký một lần. Từ đây giới hạn nằm trên Solana, không phải trong dashboard này.",
+  "Let the agent operate": "Để agent hoạt động",
+  "On the grant you just made, press Start agent. It proposes transfers inside the policy.": "Trên grant vừa tạo, bấm Start agent. Nó sẽ đề xuất các lệnh chuyển trong phạm vi chính sách.",
+  "Counters move on the grant itself — they are read back from the chain, not from the server.": "Bộ đếm thay đổi ngay trên grant — đọc lại từ chain, không phải từ server.",
+  "Watch the chain refuse one": "Xem chain từ chối một lệnh",
+  "The agent tries to spend past the cap. Or press Force over-cap to skip the wait.": "Agent thử chi vượt hạn mức. Hoặc bấm Force over-cap để khỏi chờ.",
+  "The transaction lands on Solana and fails with SPEND_CAP_EXCEEDED. Open the explorer link: the token balances before and after are identical. Nothing moved.": "Giao dịch lên Solana và thất bại với SPEND_CAP_EXCEEDED. Mở link explorer: số dư token trước và sau y hệt nhau. Không gì dịch chuyển.",
+  "Take the authority back": "Thu hồi quyền",
+  "Revoke the grant from your wallet, then let the agent try again.": "Revoke grant từ ví của bạn, rồi để agent thử lại.",
+  "It now fails with Revoked. The owner did not ask the agent to stop — the program stopped accepting it.": "Giờ nó thất bại với Revoked. Chủ sở hữu không yêu cầu agent dừng — program ngừng chấp nhận nó.",
+  "Guided demo": "Demo có hướng dẫn",
+  "FOUR MINUTES": "BỐN PHÚT",
+  "See the chain refuse a transfer": "Xem chain từ chối một lệnh chuyển",
+  "You have seen the whole path. Every step above is backed by a real transaction.": "Bạn đã đi hết đường. Mỗi bước ở trên đều có giao dịch thật làm bằng chứng.",
+  "Four steps. Each one ticks itself only when the records say it happened.": "Bốn bước. Mỗi bước chỉ tự đánh dấu khi bản ghi cho thấy nó đã xảy ra.",
+  "Hide the guided demo": "Ẩn hướng dẫn demo",
+  "No wallet to hand?": "Không có ví sẵn?",
+  "Policy Lab": "Policy Lab",
+  "below runs the same seven gates as a simulation — no wallet, no transaction, nothing written down. The steps here need a Devnet wallet because they put real records on Solana.": "bên dưới chạy cùng bảy gate dưới dạng mô phỏng — không ví, không giao dịch, không ghi gì cả. Các bước ở đây cần ví Devnet vì chúng ghi bản ghi thật lên Solana.",
+  "Go": "Đi",
+};
 
 // A path through the demo, driven by what has actually happened.
 //
@@ -92,6 +121,7 @@ export function deriveProgress(grants: Grant[], audit: AuditRow[], signedIn: boo
 }
 
 export function DemoGuide({ navigate }: { navigate?: (slug: string) => void }) {
+  const tr = useT(VI);
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(DISMISSED_KEY) === "1"; } catch { return false; }
   });
@@ -136,30 +166,27 @@ export function DemoGuide({ navigate }: { navigate?: (slug: string) => void }) {
   const current = steps.find(s => !s.done) ?? steps[steps.length - 1];
 
   return (
-    <section className="demo-guide" aria-label="Guided demo">
+    <section className="demo-guide" aria-label={tr("Guided demo")}>
       <header className="demo-guide-head">
-        <span className="chip chip-info"><FlaskConical size={12} /> FOUR MINUTES</span>
+        <span className="chip chip-info"><FlaskConical size={12} />{tr("FOUR MINUTES")}</span>
         <div>
-          <strong>See the chain refuse a transfer</strong>
+          <strong>{tr("See the chain refuse a transfer")}</strong>
           <small>
             {completed === steps.length
-              ? "You have seen the whole path. Every step above is backed by a real transaction."
-              : "Four steps. Each one ticks itself only when the records say it happened."}
+              ? tr("You have seen the whole path. Every step above is backed by a real transaction.")
+              : tr("Four steps. Each one ticks itself only when the records say it happened.")}
           </small>
         </div>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
           setDismissed(true);
           try { localStorage.setItem(DISMISSED_KEY, "1"); } catch { /* fine either way */ }
-        }} aria-label="Hide the guided demo">
+        }} aria-label={tr("Hide the guided demo")}>
           <X size={14} />
         </button>
       </header>
 
       {!signedIn && (
-        <p className="help">
-          No wallet to hand? <strong>Policy Lab</strong> below runs the same seven gates as a simulation — no wallet, no
-          transaction, nothing written down. The steps here need a Devnet wallet because they put real records on Solana.
-        </p>
+        <p className="help">{tr("No wallet to hand?")}<strong>{tr("Policy Lab")}</strong>{tr("below runs the same seven gates as a simulation — no wallet, no transaction, nothing written down. The steps here need a Devnet wallet because they put real records on Solana.")}</p>
       )}
 
       <ol className="demo-guide-steps">
@@ -169,13 +196,13 @@ export function DemoGuide({ navigate }: { navigate?: (slug: string) => void }) {
               {step.done ? <Check size={13} /> : <Circle size={9} />}
             </span>
             <span className="demo-guide-body">
-              <strong>{i + 1}. {step.title}</strong>
-              <small>{step.detail}</small>
-              {step === current && !step.done && <em>{step.look}</em>}
+              <strong>{i + 1}. {tr(step.title)}</strong>
+              <small>{tr(step.detail)}</small>
+              {step === current && !step.done && <em>{tr(step.look)}</em>}
             </span>
             {navigate && !step.done && (
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate(step.slug)}>
-                Go <ArrowRight size={12} />
+                {tr("Go")} <ArrowRight size={12} />
               </button>
             )}
           </li>

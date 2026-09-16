@@ -46,6 +46,212 @@ import { rentalPaymentInstructions } from "./solana/payments";
 import { formatFeeRate, splitRental } from "./lib/fee";
 import { PROGRAM_ID } from "./solana/redline";
 import { color, mono, sans } from "./theme";
+import { useT } from "./i18n/LanguageContext";
+
+const VI: Record<string, string> = {
+  "Newest": "Mới nhất",
+  "Reputation": "Uy tín",
+  "Most rented": "Thuê nhiều nhất",
+  "Cheapest": "Rẻ nhất",
+  "Search published agents": "Tìm agent đã xuất bản",
+  "Search agents, strategies…": "Tìm agent, chiến lược…",
+  "Rentable only": "Chỉ agent cho thuê",
+  "Sort listings": "Sắp xếp danh sách",
+  "VERSIONS": "PHIÊN BẢN",
+  "Wallet connected, but not signed in. Renting, claiming and reviewing need a signature — the API cannot tell a connected wallet from a typed address. Use “Sign in” in the top bar.": "Ví đã kết nối nhưng chưa đăng nhập. Thuê, nhận listing và đánh giá đều cần chữ ký — API không phân biệt được ví đã kết nối với một địa chỉ gõ tay. Dùng “Sign in” ở thanh trên cùng.",
+  "Retry": "Thử lại",
+  "FEATURED · IMMUTABLE BUILD": "NỔI BẬT · BẢN BUILD BẤT BIẾN",
+  "YOURS": "CỦA BẠN",
+  "Built to act within boundaries.": "Được tạo ra để hành động trong giới hạn.",
+  "ACTIVE HIRES": "ĐANG ĐƯỢC THUÊ",
+  "AGENT HASH": "AGENT HASH",
+  "PUBLISHER": "NGƯỜI XUẤT BẢN",
+  "Unclaimed": "Chưa nhận",
+  "RENTALS": "LƯỢT THUÊ",
+  "in 24h": "trong 24h",
+  "PAID OUT": "ĐÃ TRẢ",
+  "all time": "tổng cộng",
+  "LAST RENTED": "THUÊ GẦN NHẤT",
+  "published": "xuất bản",
+  "Unpriced": "Chưa định giá",
+  "per 24-hour period": "mỗi 24 giờ",
+  "You publish this agent": "Bạn là người xuất bản agent này",
+  "Connect a wallet to rent": "Kết nối ví để thuê",
+  "Sign in with your wallet to rent": "Đăng nhập bằng ví để thuê",
+  "Waiting for wallet / verification…": "Đang chờ ví / xác minh…",
+  "This is your listing": "Đây là listing của bạn",
+  "Connect wallet to rent": "Kết nối ví để thuê",
+  "Sign in to rent": "Đăng nhập để thuê",
+  "Rent with wallet": "Thuê bằng ví",
+  "Total": "Tổng",
+  "hours": "giờ",
+  "Publisher": "Người xuất bản",
+  "protocol fee": "phí giao thức",
+  "— one transaction, both verified on-chain": "— một giao dịch, cả hai phần đều được xác minh on-chain",
+  "The publisher must configure a price before this version can be rented.": "Người xuất bản cần đặt giá trước khi phiên bản này có thể được thuê.",
+  "Sign in with your wallet to claim this listing": "Đăng nhập bằng ví để nhận listing này",
+  "Edit publisher price": "Sửa giá",
+  "Claim listing · set price": "Nhận listing · đặt giá",
+  "Price per day · SOL": "Giá mỗi ngày · SOL",
+  "Save price": "Lưu giá",
+  "Hide reputation": "Ẩn uy tín",
+  "Reputation & reviews": "Uy tín & đánh giá",
+  "EXPLORE THE REGISTRY": "KHÁM PHÁ SỔ ĐĂNG KÝ",
+  "View": "Xem",
+  "active hires": "đang thuê",
+  "Previous agent": "Agent trước",
+  "Next agent": "Agent sau",
+  "All published versions": "Tất cả phiên bản đã xuất bản",
+  "AGENT": "AGENT",
+  "HASH": "HASH",
+  "HIRES · LIVE / ALL": "LƯỢT THUÊ · ĐANG / TỔNG",
+  "PRICE / DAY": "GIÁ / NGÀY",
+  "The registry could not be loaded. Retry the connection above.": "Không tải được sổ đăng ký. Thử kết nối lại ở trên.",
+  "No published versions match this search.": "Không có phiên bản nào khớp với tìm kiếm.",
+  "Rented": "Đã thuê",
+  "for": "trong",
+  "publisher": "người xuất bản",
+  "Rental payment was rejected or could not be verified.": "Thanh toán thuê bị từ chối hoặc không xác minh được.",
+  "Owner wallet": "Ví chủ sở hữu",
+  "Devnet SOL pays transaction fees.": "SOL Devnet dùng để trả phí giao dịch.",
+  "Connect your wallet to load its vault, balances and signing controls.": "Kết nối ví để tải vault, số dư và các nút ký.",
+  "Recent chain activity": "Hoạt động on-chain gần đây",
+  "LATEST 8": "8 GẦN NHẤT",
+  "No recorded transactions yet.": "Chưa có giao dịch nào được ghi nhận.",
+  "Activity loads after connecting a wallet.": "Hoạt động sẽ hiện sau khi kết nối ví.",
+  "Assets remain in a program-owned vault. The agent can only move them within an owner-signed policy.": "Tài sản nằm trong vault do program sở hữu. Agent chỉ có thể chuyển chúng trong phạm vi chính sách mà chủ sở hữu đã ký.",
+  "Scope": "Phạm vi",
+  "Spend Limits": "Hạn mức chi",
+  "Time Bounds": "Giới hạn thời gian",
+  "Review & Sign": "Xem lại & Ký",
+  "Step": "Bước",
+  "One of these is not a valid Solana address.": "Một trong các địa chỉ này không phải địa chỉ Solana hợp lệ.",
+  "Add at least one address the agent may pay.": "Thêm ít nhất một địa chỉ mà agent được thanh toán.",
+  "Duplicate destinations are ignored.": "Địa chỉ trùng sẽ bị bỏ qua.",
+  "Unable to assess this policy.": "Không đánh giá được chính sách này.",
+  "Agent Guardrails": "Guardrails cho Agent",
+  "Design bounded Solana policies, run AI risk checks, and publish verifiable proofs": "Thiết kế chính sách Solana có giới hạn, chạy kiểm tra rủi ro bằng AI và xuất bản bằng chứng có thể xác minh",
+  "Create Agent Policy": "Tạo chính sách cho Agent",
+  "Which published agent version does this grant authorise? The grant records its": "Grant này uỷ quyền cho phiên bản agent đã xuất bản nào? Grant ghi lại",
+  ", so this is the build the policy is bound to.": ", nên đây là bản build mà chính sách gắn vào.",
+  "Agent version this grant authorises": "Phiên bản agent mà grant này uỷ quyền",
+  "No agent published yet — signing this grant publishes “": "Chưa có agent nào được xuất bản — ký grant này sẽ xuất bản “",
+  "” and binds the grant to it. Publish from the Agents page first to name your own.": "” và gắn grant vào đó. Hãy xuất bản từ trang Agents trước nếu muốn đặt tên riêng.",
+  "Running under your rental of this agent — it covers grants until": "Chạy theo hợp đồng thuê agent này của bạn — có hiệu lực cho grant đến",
+  ". The grant records which rental authorised it.": ". Grant ghi lại hợp đồng thuê nào đã uỷ quyền.",
+  "Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.": "Cho phép các tài sản SPL mà agent được dùng. Mọi mint khác nằm ngoài chính sách đã ký.",
+  "Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to": "Cho phép các địa chỉ agent được thanh toán. Program đối chiếu mọi lệnh chuyển với danh sách này — địa chỉ không có ở đây không thể nhận tiền, dù agent đề xuất gì. Tối đa",
+  "Recipient address (base58)": "Địa chỉ người nhận (base58)",
+  "Allowed destination": "Địa chỉ được phép",
+  "Remove destination": "Xóa địa chỉ",
+  "+ Add destination": "+ Thêm địa chỉ",
+  "The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.": "Digest của chính sách gắn phạm vi token, allowlist địa chỉ, hạn mức chi, giới hạn số lần thực thi, cooldown và thời hạn hiệu lực thành một bằng chứng có thể xác minh.",
+  "Configure total spend ceiling and per-session transaction limits.": "Cấu hình trần chi tiêu tổng và giới hạn số giao dịch mỗi phiên.",
+  "Total Spend Cap": "Tổng hạn mức chi",
+  "Max Transactions / Session": "Số giao dịch tối đa / phiên",
+  "Avg/Tx": "TB/giao dịch",
+  "Risk": "Rủi ro",
+  "Tokens": "Token",
+  "Set validity window and minimum cooldown between executions.": "Đặt thời hạn hiệu lực và cooldown tối thiểu giữa các lần thực thi.",
+  "Session Duration": "Thời lượng phiên",
+  "Execution Cooldown": "Cooldown giữa các lần thực thi",
+  "Expires": "Hết hạn",
+  "executions": "lần thực thi",
+  "cooldown": "cooldown",
+  "Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.": "Xem lại chính sách, chạy copilot đánh giá rủi ro, rồi ký grant on-chain. Program thực thi các giới hạn này trên mọi lệnh chuyển của agent.",
+  "Agent": "Agent",
+  "(new)": "(mới)",
+  "Rental": "Thuê",
+  "until": "đến",
+  "not rented — yours to run": "không thuê — bạn tự chạy",
+  "Token Scope": "Phạm vi token",
+  "Destinations": "Địa chỉ nhận",
+  "none": "không có",
+  "Spend Cap": "Hạn mức chi",
+  "Max Txns": "Số giao dịch tối đa",
+  "transactions": "giao dịch",
+  "Duration": "Thời lượng",
+  "Cooldown": "Cooldown",
+  "minutes": "phút",
+  "Network": "Mạng",
+  "Risk copilot verdict": "Kết luận của copilot rủi ro",
+  "OpenAI + deterministic safety floor": "OpenAI + sàn an toàn tất định",
+  "Deterministic safety fallback": "Dự phòng an toàn tất định",
+  "Back": "Quay lại",
+  "Assessing policy…": "Đang đánh giá…",
+  "Re-run risk assessment": "Chạy lại đánh giá rủi ro",
+  "Run AI risk assessment": "Chạy đánh giá rủi ro bằng AI",
+  "Continue": "Tiếp tục",
+  "Cluster · program · executor": "Cluster · program · executor",
+  "Wallet & demo assets": "Ví & tài sản demo",
+  "Owner · mints · destinations": "Chủ sở hữu · mint · địa chỉ",
+  "Policy invariants": "Bất biến của chính sách",
+  "What the program enforces": "Những gì program thực thi",
+  "Experience": "Trải nghiệm",
+  "Sound · depth · motion": "Âm thanh · chiều sâu · chuyển động",
+  "Settings": "Cài đặt",
+  "Live configuration of this REDLINE deployment": "Cấu hình thực tế của bản triển khai REDLINE này",
+  "Backend anchor · devnet ·": "Backend · devnet ·",
+  "checking": "đang kiểm tra",
+  "healthy": "hoạt động",
+  "offline": "mất kết nối",
+  "NETWORK": "MẠNG",
+  "Cluster": "Cluster",
+  "checking…": "đang kiểm tra…",
+  "unreachable": "không kết nối được",
+  "Chain adapter": "Bộ nối chuỗi",
+  "unknown": "không rõ",
+  "Commitment": "Commitment",
+  "Program": "Program",
+  "Executor": "Executor",
+  "Chain indexer": "Bộ lập chỉ mục chuỗi",
+  "API build": "Bản build API",
+  "Rate limit": "Giới hạn tần suất",
+  "req/min per IP": "yêu cầu/phút mỗi IP",
+  "Testing…": "Đang kiểm tra…",
+  "Test": "Kiểm tra",
+  "OWNER SESSION": "PHIÊN CHỦ SỞ HỮU",
+  "CONNECTED": "ĐÃ KẾT NỐI",
+  "NOT CONNECTED": "CHƯA KẾT NỐI",
+  "Connected wallet": "Ví đã kết nối",
+  "Wallet required": "Cần ví",
+  "Connect through Wallet Standard in the top bar": "Kết nối qua Wallet Standard ở thanh trên cùng",
+  "Wallet session": "Phiên ví",
+  "signed in · expires": "đã đăng nhập · hết hạn",
+  "connected but not signed in": "đã kết nối nhưng chưa đăng nhập",
+  "no wallet": "chưa có ví",
+  "Writes require a signature": "Ghi dữ liệu cần chữ ký",
+  "yes — this is a public deployment": "có — đây là bản triển khai công khai",
+  "no — local/mock, writes are open": "không — local/mock, ghi tự do",
+  "Demo USDC mint (browser)": "Mint USDC demo (trình duyệt)",
+  "not configured": "chưa cấu hình",
+  "Demo USDC mint (API)": "Mint USDC demo (API)",
+  "configured": "đã cấu hình",
+  "Demo destination": "Địa chỉ demo",
+  "Bundled write key": "Khóa ghi đóng gói sẵn",
+  "present in this bundle — public, not a credential": "có trong bundle — công khai, không phải thông tin xác thực",
+  "none (local/mock)": "không có (local/mock)",
+  "PROGRAM BOUNDARY": "RANH GIỚI PROGRAM",
+  "ON-CHAIN": "ON-CHAIN",
+  "Gates enforced in order": "Số gate thực thi theo thứ tự",
+  "Policy digest": "Digest chính sách",
+  "Allowlist ceiling": "Trần allowlist",
+  "4 mints · 4 destinations": "4 mint · 4 địa chỉ",
+  "Revocation authority": "Quyền thu hồi",
+  "owner signature": "chữ ký chủ sở hữu",
+  "Execution behavior": "Hành vi thực thi",
+  "first failed gate stops atomically": "gate lỗi đầu tiên dừng toàn bộ giao dịch",
+  "The program takes one owner-signed revocation per policy account — but a Solana transaction carries many instructions, so": "Program nhận một lệnh thu hồi có chữ ký chủ sở hữu cho mỗi tài khoản policy — nhưng một giao dịch Solana chứa được nhiều lệnh, nên",
+  "Stop all agents": "Dừng tất cả agent",
+  "on Guardrails revokes every active grant in a single signature. Funds stay in the vault; only the agents' authority ends.": "ở Guardrails thu hồi mọi grant đang hoạt động trong một chữ ký. Tiền vẫn nằm trong vault; chỉ quyền của agent chấm dứt.",
+  "LOCAL PREFERENCES": "TÙY CHỌN CỤC BỘ",
+  "THIS DEVICE": "THIẾT BỊ NÀY",
+  "3D depth": "Chiều sâu 3D",
+  "Perspective, stepped shadows and spatial panels": "Phối cảnh, bóng đổ nhiều lớp và panel không gian",
+  "Motion": "Chuyển động",
+  "Page transitions, hover lift and live signals": "Chuyển trang, hiệu ứng hover và tín hiệu trực tiếp",
+  "Depth and motion are stored on this device and applied immediately. Sound stays in the global header so it follows you across every page.": "Chiều sâu và chuyển động được lưu trên thiết bị này và áp dụng ngay. Âm thanh nằm ở thanh tiêu đề chung nên đi theo bạn qua mọi trang.",
+};
 
 // The program's Grant account stores at most four of each.
 const MAX_DESTS = 4;
@@ -88,6 +294,7 @@ const MARKET_SORTS: [MarketSort, string][] = [
 ];
 
 export function MarketplacePage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
@@ -183,15 +390,15 @@ export function MarketplacePage() {
       });
       setNotice(
         split.protocolLamports > 0n
-          ? `Rented ${listing.agentVersion.name} for ${durationHours}h · publisher ${fmtSol(split.publisherLamports.toString())} SOL + ${formatFeeRate(split.feeBps)} protocol fee ${fmtSol(split.protocolLamports.toString())} SOL · ${short(signature, 6)}`
-          : `Rented ${listing.agentVersion.name} for ${durationHours}h · ${short(signature, 6)}`,
+          ? `${tr("Rented")} ${listing.agentVersion.name} ${tr("for")} ${durationHours}h · ${tr("publisher")} ${fmtSol(split.publisherLamports.toString())} SOL + ${formatFeeRate(split.feeBps)} ${tr("protocol fee")} ${fmtSol(split.protocolLamports.toString())} SOL · ${short(signature, 6)}`
+          : `${tr("Rented")} ${listing.agentVersion.name} ${tr("for")} ${durationHours}h · ${short(signature, 6)}`,
       );
       await load();
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
-          : "Rental payment was rejected or could not be verified.",
+          : tr("Rental payment was rejected or could not be verified."),
       );
     } finally {
       setBusy("");
@@ -242,10 +449,10 @@ export function MarketplacePage() {
         <label className="search">
           <Search size={15} />
           <input
-            aria-label="Search published agents"
+            aria-label={tr("Search published agents")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search agents, strategies…"
+            placeholder={tr("Search agents, strategies…")}
           />
         </label>
         <button
@@ -253,13 +460,11 @@ export function MarketplacePage() {
           aria-pressed={pricedOnly}
           onClick={() => setPricedOnly((v) => !v)}
         >
-          <ShieldCheck size={13} />
-          Rentable only
-        </button>
+          <ShieldCheck size={13} />{tr("Rentable only")}</button>
         {/* Sorting by reputation or demand is the only reason to compute them.
             "Newest" stays the default so a fresh listing is not buried by an
             older one purely for having been around longer. */}
-        <div className="market-sort" role="group" aria-label="Sort listings">
+        <div className="market-sort" role="group" aria-label={tr("Sort listings")}>
           {MARKET_SORTS.map(([key, label]) => (
             <button
               key={key}
@@ -267,25 +472,19 @@ export function MarketplacePage() {
               aria-pressed={sortBy === key}
               onClick={() => setSortBy(key)}
             >
-              {label}
+              {tr(label)}
             </button>
           ))}
         </div>
-        <span className="chip chip-info">{filtered.length} VERSIONS</span>
+        <span className="chip chip-info">{filtered.length} {tr("VERSIONS")}</span>
       </div>
       {wallet && !signedIn && (
-        <p className="help market-signin-note" role="status">
-          Wallet connected, but not signed in. Renting, claiming and reviewing
-          need a signature — the API cannot tell a connected wallet from a
-          typed address. Use “Sign in” in the top bar.
-        </p>
+        <p className="help market-signin-note" role="status">{tr("Wallet connected, but not signed in. Renting, claiming and reviewing need a signature — the API cannot tell a connected wallet from a typed address. Use “Sign in” in the top bar.")}</p>
       )}
       {error && (
         <div className="error-note" role="alert">
           {error}
-          <button className="btn btn-ghost btn-sm" onClick={() => void load()}>
-            Retry
-          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => void load()}>{tr("Retry")}</button>
         </div>
       )}
       {notice && (
@@ -304,13 +503,13 @@ export function MarketplacePage() {
                 key={featured.id}
               >
                 <div className="kick">
-                  <small>FEATURED · IMMUTABLE BUILD</small>
+                  <small>{tr("FEATURED · IMMUTABLE BUILD")}</small>
                   <span className="chip chip-info">
                     {featured.agentVersion.version}
                   </span>
                   <RatingBadge rating={featured.rating} />
                   {isMine(featured) && (
-                    <span className="chip chip-gold">YOURS</span>
+                    <span className="chip chip-gold">{tr("YOURS")}</span>
                   )}
                 </div>
                 <div className="cluster" aria-hidden="true">
@@ -320,24 +519,24 @@ export function MarketplacePage() {
                 </div>
                 <h2>
                   {featured.agentVersion.name}
-                  <span>Built to act within boundaries.</span>
+                  <span>{tr("Built to act within boundaries.")}</span>
                 </h2>
                 <p>{featured.agentVersion.strategy}</p>
                 <div className="meta">
                   <div>
-                    <small>ACTIVE HIRES</small>
+                    <small>{tr("ACTIVE HIRES")}</small>
                     <b>{featured.activeHires}</b>
                   </div>
                   <div>
-                    <small>AGENT HASH</small>
+                    <small>{tr("AGENT HASH")}</small>
                     <b>{short(featured.agentVersion.agentHash, 4)}</b>
                   </div>
                   <div>
-                    <small>PUBLISHER</small>
+                    <small>{tr("PUBLISHER")}</small>
                     <b>
                       {publisherOf(featured)
                         ? short(publisherOf(featured) as string, 4)
-                        : "Unclaimed"}
+                        : tr("Unclaimed")}
                     </b>
                   </div>
                 </div>
@@ -345,24 +544,24 @@ export function MarketplacePage() {
                     `listing.hired` audit events carrying what was paid. */}
                 <div className="meta demand">
                   <div>
-                    <small>RENTALS</small>
+                    <small>{tr("RENTALS")}</small>
                     <b>{featured.totalHires ?? 0}</b>
-                    <small>{featured.hires24h ?? 0} in 24h</small>
+                    <small>{featured.hires24h ?? 0} {tr("in 24h")}</small>
                   </div>
                   <div>
-                    <small>PAID OUT</small>
+                    <small>{tr("PAID OUT")}</small>
                     <b>{fmtSol(featured.volumeLamports ?? "0")} SOL</b>
-                    <small>all time</small>
+                    <small>{tr("all time")}</small>
                   </div>
                   <div>
-                    <small>LAST RENTED</small>
+                    <small>{tr("LAST RENTED")}</small>
                     <b>
                       {featured.lastHiredAt
                         ? new Date(featured.lastHiredAt).toLocaleDateString()
                         : "—"}
                     </b>
                     <small>
-                      published{" "}
+                      {tr("published")}{" "}
                       {new Date(featured.createdAt).toLocaleDateString()}
                     </small>
                   </div>
@@ -372,9 +571,9 @@ export function MarketplacePage() {
                     <b>
                       {Number(featured.priceLamports) > 0
                         ? `${fmtSol(featured.priceLamports)} SOL`
-                        : "Unpriced"}
+                        : tr("Unpriced")}
                     </b>
-                    <small>per 24-hour period</small>
+                    <small>{tr("per 24-hour period")}</small>
                   </div>
                   <div className="dur">
                     {[24, 48, 72].map((h) => (
@@ -404,35 +603,35 @@ export function MarketplacePage() {
                       }
                       title={
                         isMine(featured)
-                          ? "You publish this agent"
+                          ? tr("You publish this agent")
                           : !connected?.signer
-                            ? "Connect a wallet to rent"
+                            ? tr("Connect a wallet to rent")
                             : !signedIn
-                              ? "Sign in with your wallet to rent"
+                              ? tr("Sign in with your wallet to rent")
                               : ""
                       }
                     >
                       <Wallet size={14} />
                       {busy === featured.id
-                        ? "Waiting for wallet / verification…"
+                        ? tr("Waiting for wallet / verification…")
                         : isMine(featured)
-                          ? "This is your listing"
+                          ? tr("This is your listing")
                           : !wallet
-                            ? "Connect wallet to rent"
+                            ? tr("Connect wallet to rent")
                             : !signedIn
-                              ? "Sign in to rent"
-                              : "Rent with wallet"}
+                              ? tr("Sign in to rent")
+                              : tr("Rent with wallet")}
                       <ArrowRight size={14} />
                     </button>
                     <p className="help">
-                      Total{" "}
+                      {tr("Total")}{" "}
                       {fmtSol(
                         String(
                           BigInt(featured.priceLamports) *
                             BigInt(periodsFor(featured.id)),
                         ),
                       )}{" "}
-                      SOL · {hoursFor(featured.id)} hours
+                      SOL · {hoursFor(featured.id)} {tr("hours")}
                     </p>
                     {/* Where that total goes. Shown before the wallet prompt
                         because a fee a renter only learns about afterwards is
@@ -446,18 +645,15 @@ export function MarketplacePage() {
                       if (split.protocolLamports <= 0n) return null;
                       return (
                         <p className="help">
-                          Publisher {fmtSol(split.publisherLamports.toString())} SOL ·{" "}
-                          {formatFeeRate(split.feeBps)} protocol fee{" "}
-                          {fmtSol(split.protocolLamports.toString())} SOL — one transaction, both verified on-chain
+                          {tr("Publisher")} {fmtSol(split.publisherLamports.toString())} SOL ·{" "}
+                          {formatFeeRate(split.feeBps)} {tr("protocol fee")}{" "}
+                          {fmtSol(split.protocolLamports.toString())} SOL {tr("— one transaction, both verified on-chain")}
                         </p>
                       );
                     })()}
                   </>
                 ) : (
-                  <p className="help">
-                    The publisher must configure a price before this version can
-                    be rented.
-                  </p>
+                  <p className="help">{tr("The publisher must configure a price before this version can be rented.")}</p>
                 )}
                 {/* Only the publisher (or the wallet already being paid) can
                     claim: the payout wallet is write-once on the API, so
@@ -470,7 +666,7 @@ export function MarketplacePage() {
                         title={
                           signedIn
                             ? ""
-                            : "Sign in with your wallet to claim this listing"
+                            : tr("Sign in with your wallet to claim this listing")
                         }
                         onClick={() => {
                           setEditing(
@@ -480,8 +676,8 @@ export function MarketplacePage() {
                         }}
                       >
                         {featured.developerWallet
-                          ? "Edit publisher price"
-                          : "Claim listing · set price"}
+                          ? tr("Edit publisher price")
+                          : tr("Claim listing · set price")}
                       </button>
                       {editing === featured.id && (
                         <form
@@ -490,9 +686,7 @@ export function MarketplacePage() {
                             void savePrice(featured);
                           }}
                         >
-                          <label>
-                            Price per day · SOL
-                            <input
+                          <label>{tr("Price per day · SOL")}<input
                               type="number"
                               step="0.000001"
                               min="0.000001"
@@ -501,9 +695,7 @@ export function MarketplacePage() {
                               onChange={(e) => setPriceSol(e.target.value)}
                             />
                           </label>
-                          <button className="btn btn-gold" disabled={!!busy}>
-                            Save price
-                          </button>
+                          <button className="btn btn-gold" disabled={!!busy}>{tr("Save price")}</button>
                         </form>
                       )}
                     </div>
@@ -515,8 +707,8 @@ export function MarketplacePage() {
                     onClick={() => setReviewsOpen((v) => !v)}
                   >
                     {reviewsOpen
-                      ? "Hide reputation"
-                      : `Reputation & reviews${
+                      ? tr("Hide reputation")
+                      : `${tr("Reputation & reviews")}${
                           featured.rating?.reviews.count
                             ? ` (${featured.rating.reviews.count})`
                             : ""
@@ -533,7 +725,7 @@ export function MarketplacePage() {
               </section>
             </div>
             <div className="flow-wrap">
-              <div className="eyebrow">EXPLORE THE REGISTRY</div>
+              <div className="eyebrow">{tr("EXPLORE THE REGISTRY")}</div>
               <div className="cover-flow">
                 {filtered.map((l, i) => {
                   const delta = i - focusAt;
@@ -554,7 +746,7 @@ export function MarketplacePage() {
                         } as React.CSSProperties
                       }
                       onClick={() => setFocusedId(l.id)}
-                      aria-label={`View ${l.agentVersion.name}`}
+                      aria-label={`${tr("View")} ${l.agentVersion.name}`}
                     >
                       <span className="av">
                         <Bot size={21} />
@@ -568,8 +760,8 @@ export function MarketplacePage() {
                       <div className="pr">
                         {Number(l.priceLamports) > 0
                           ? `${fmtSol(l.priceLamports)} SOL`
-                          : "Unpriced"}
-                        <span>{l.activeHires} active hires</span>
+                          : tr("Unpriced")}
+                        <span>{l.activeHires} {tr("active hires")}</span>
                       </div>
                     </button>
                   );
@@ -579,7 +771,7 @@ export function MarketplacePage() {
               <div className="cf-nav">
                 <button
                   className="btn btn-ghost btn-sm"
-                  aria-label="Previous agent"
+                  aria-label={tr("Previous agent")}
                   onClick={() => move(-1)}
                 >
                   <ArrowLeft size={14} />
@@ -589,7 +781,7 @@ export function MarketplacePage() {
                 </span>
                 <button
                   className="btn btn-ghost btn-sm"
-                  aria-label="Next agent"
+                  aria-label={tr("Next agent")}
                   onClick={() => move(1)}
                 >
                   <ArrowRight size={14} />
@@ -599,17 +791,17 @@ export function MarketplacePage() {
           </div>
           <section className="panel registry-table">
             <div className="ph">
-              <h2>All published versions</h2>
-              <span className="chip chip-info">{filtered.length} VERSIONS</span>
+              <h2>{tr("All published versions")}</h2>
+              <span className="chip chip-info">{filtered.length} {tr("VERSIONS")}</span>
             </div>
             <div className="registry-scroll">
               <div className="listing registry-head">
                 <span />
-                <span>AGENT</span>
-                <span>HASH</span>
-                <span>PUBLISHER</span>
-                <span>HIRES · LIVE / ALL</span>
-                <span>PRICE / DAY</span>
+                <span>{tr("AGENT")}</span>
+                <span>{tr("HASH")}</span>
+                <span>{tr("PUBLISHER")}</span>
+                <span>{tr("HIRES · LIVE / ALL")}</span>
+                <span>{tr("PRICE / DAY")}</span>
                 <span />
               </div>
               {filtered.map((l) => (
@@ -620,7 +812,7 @@ export function MarketplacePage() {
                   <span>
                     <b>
                       {l.agentVersion.name}
-                      {isMine(l) && <span className="chip chip-gold">YOURS</span>}
+                      {isMine(l) && <span className="chip chip-gold">{tr("YOURS")}</span>}
                     </b>
                     <small>
                       {l.agentVersion.version} <RatingBadge rating={l.rating} />
@@ -632,7 +824,7 @@ export function MarketplacePage() {
                   <span className="m">
                     {publisherOf(l)
                       ? short(publisherOf(l) as string, 5)
-                      : "Unclaimed"}
+                      : tr("Unclaimed")}
                   </span>
                   <span>
                     {l.activeHires} / {l.totalHires ?? 0}
@@ -651,7 +843,7 @@ export function MarketplacePage() {
                         ?.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
-                    View <ArrowUpRight size={12} />
+                    {tr("View")} <ArrowUpRight size={12} />
                   </button>
                 </div>
               ))}
@@ -662,8 +854,8 @@ export function MarketplacePage() {
         <section className="panel">
           <div className="empty-state">
             {loadFailed
-              ? "The registry could not be loaded. Retry the connection above."
-              : "No published versions match this search."}
+              ? tr("The registry could not be loaded. Retry the connection above.")
+              : tr("No published versions match this search.")}
           </div>
         </section>
       )}
@@ -673,6 +865,7 @@ export function MarketplacePage() {
 
 /* ── 5. VAULT ── */
 export function VaultPage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : "";
@@ -725,7 +918,7 @@ export function VaultPage() {
       <aside className="treasury-side">
         <section className="panel">
           <div className="ph">
-            <h2>Owner wallet</h2>
+            <h2>{tr("Owner wallet")}</h2>
             <span className="chip chip-info">DEVNET</span>
           </div>
           <div className="pb">
@@ -735,7 +928,7 @@ export function VaultPage() {
                 : "—"}{" "}
               <small>SOL</small>
             </div>
-            <p className="help">Devnet SOL pays transaction fees.</p>
+            <p className="help">{tr("Devnet SOL pays transaction fees.")}</p>
             {owner ? (
               <a
                 className="hash-preview"
@@ -747,10 +940,7 @@ export function VaultPage() {
               </a>
             ) : (
               <>
-                <p className="help">
-                  Connect your wallet to load its vault, balances and signing
-                  controls.
-                </p>
+                <p className="help">{tr("Connect your wallet to load its vault, balances and signing controls.")}</p>
                 <SolanaWalletControl />
               </>
             )}
@@ -758,8 +948,8 @@ export function VaultPage() {
         </section>
         <section className="panel">
           <div className="ph">
-            <h2>Recent chain activity</h2>
-            <span className="chip chip-dim">LATEST 8</span>
+            <h2>{tr("Recent chain activity")}</h2>
+            <span className="chip chip-dim">{tr("LATEST 8")}</span>
           </div>
           <div className="pb">
             {events.length ? (
@@ -783,8 +973,8 @@ export function VaultPage() {
                 <Activity size={28} />
                 <p>
                   {owner
-                    ? "No recorded transactions yet."
-                    : "Activity loads after connecting a wallet."}
+                    ? tr("No recorded transactions yet.")
+                    : tr("Activity loads after connecting a wallet.")}
                 </p>
               </div>
             )}
@@ -792,10 +982,7 @@ export function VaultPage() {
         </section>
         <div className="treasury-boundary">
           <ShieldCheck size={20} />
-          <p>
-            Assets remain in a program-owned vault. The agent can only move them
-            within an owner-signed policy.
-          </p>
+          <p>{tr("Assets remain in a program-owned vault. The agent can only move them within an owner-signed policy.")}</p>
         </div>
       </aside>
     </div>
@@ -804,6 +991,7 @@ export function VaultPage() {
 
 /* ── 7. SESSIONS ── */
 export function SessionsPage() {
+  const tr = useT(VI);
   const [step, setStep] = useState(0);
   const [tokens, setTokens] = useState(["SOL", "USDC"]);
   const [cap, setCap] = useState(500);
@@ -860,11 +1048,11 @@ export function SessionsPage() {
 
   const cleanDests = [...new Set(dests.map((d) => d.trim()).filter(Boolean))];
   const destError = dests.some((d) => d.trim() && !isAddressLike(d.trim()))
-    ? "One of these is not a valid Solana address."
+    ? tr("One of these is not a valid Solana address.")
     : cleanDests.length === 0
-      ? "Add at least one address the agent may pay."
+      ? tr("Add at least one address the agent may pay.")
       : cleanDests.length !== dests.filter((d) => d.trim()).length
-        ? "Duplicate destinations are ignored."
+        ? tr("Duplicate destinations are ignored.")
         : "";
   const destsInvalid =
     cleanDests.length === 0 ||
@@ -906,7 +1094,7 @@ export function SessionsPage() {
       setAssessmentError(
         error instanceof Error
           ? error.message
-          : "Unable to assess this policy.",
+          : tr("Unable to assess this policy."),
       );
     } finally {
       setAssessing(false);
@@ -994,13 +1182,8 @@ export function SessionsPage() {
         <h1
           className="text-2xl font-bold"
           style={{ ...sans, color: color.text }}
-        >
-          Agent Guardrails
-        </h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>
-          Design bounded Solana policies, run AI risk checks, and publish
-          verifiable proofs
-        </p>
+        >{tr("Agent Guardrails")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Design bounded Solana policies, run AI risk checks, and publish verifiable proofs")}</p>
       </div>
 
       {/* Real grants from the REDLINE API (on-chain state via /grants/:id) */}
@@ -1028,9 +1211,7 @@ export function SessionsPage() {
             <span
               className="text-sm font-semibold"
               style={{ ...sans, color: color.text }}
-            >
-              Create Agent Policy
-            </span>
+            >{tr("Create Agent Policy")}</span>
             <span
               className="ml-auto text-[12px] px-2 py-0.5 rounded-full font-semibold"
               style={{
@@ -1050,7 +1231,7 @@ export function SessionsPage() {
                 key={`wiz-step-${i}`}
                 onClick={() => setStep(i)}
                 aria-current={step === i ? "step" : undefined}
-                aria-label={`Step ${i + 1}: ${s}`}
+                aria-label={`${tr("Step")} ${i + 1}: ${tr(s)}`}
                 className="flex-1 flex flex-col items-center gap-1.5"
               >
                 <div
@@ -1072,7 +1253,7 @@ export function SessionsPage() {
                           : "rgba(148,163,184,0.35)",
                   }}
                 >
-                  {String(i + 1).padStart(2, "0")} {s}
+                  {String(i + 1).padStart(2, "0")} {tr(s)}
                 </span>
               </button>
             ))}
@@ -1089,16 +1270,12 @@ export function SessionsPage() {
                     color: color.textSecondary,
                     lineHeight: 1.7,
                   }}
-                >
-                  Which published agent version does this grant authorise? The
-                  grant records its <code>agentHash</code>, so this is the build
-                  the policy is bound to.
-                </p>
+                >{tr("Which published agent version does this grant authorise? The grant records its")}<code>agentHash</code>{tr(", so this is the build the policy is bound to.")}</p>
                 {agentVersions.length > 0 ? (
                   <select
                     value={agentId}
                     onChange={(e) => setAgentId(e.target.value)}
-                    aria-label="Agent version this grant authorises"
+                    aria-label={tr("Agent version this grant authorises")}
                     className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
                     style={{
                       ...mono,
@@ -1127,9 +1304,7 @@ export function SessionsPage() {
                       color: color.warn,
                     }}
                   >
-                    No agent published yet — signing this grant publishes “
-                    {FALLBACK_AGENT.name}” and binds the grant to it. Publish
-                    from the Agents page first to name your own.
+                    {tr("No agent published yet — signing this grant publishes “")}{FALLBACK_AGENT.name}{tr("” and binds the grant to it. Publish from the Agents page first to name your own.")}
                   </p>
                 )}
                 {selectedAgent && (
@@ -1151,25 +1326,21 @@ export function SessionsPage() {
                       lineHeight: 1.6,
                     }}
                   >
-                    Running under your rental of this agent — it covers grants
-                    until{" "}
+                    {tr("Running under your rental of this agent — it covers grants until")}{" "}
                     {new Date(activeHire.endsAt).toLocaleString("en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                    . The grant records which rental authorised it.
+                    {tr(". The grant records which rental authorised it.")}
                   </p>
                 )}
               </div>
               <p
                 className="text-xs"
                 style={{ ...sans, color: color.textSecondary, lineHeight: 1.7 }}
-              >
-                Allowlist the SPL assets this agent may reference. Every other
-                mint remains outside the signed policy.
-              </p>
+              >{tr("Allowlist the SPL assets this agent may reference. Every other mint remains outside the signed policy.")}</p>
               <div className="flex flex-wrap gap-2">
                 {tList.map((t, ti) => {
                   const on = tokens.includes(t);
@@ -1205,9 +1376,7 @@ export function SessionsPage() {
                     lineHeight: 1.7,
                   }}
                 >
-                  Allowlist the addresses this agent may pay. The program checks
-                  every transfer against this list — an address that is not here
-                  cannot receive funds, whatever the agent proposes. Up to{" "}
+                  {tr("Allowlist the addresses this agent may pay. The program checks every transfer against this list — an address that is not here cannot receive funds, whatever the agent proposes. Up to")}{" "}
                   {MAX_DESTS}.
                 </p>
                 {dests.map((d, di) => (
@@ -1221,8 +1390,8 @@ export function SessionsPage() {
                           ),
                         )
                       }
-                      placeholder="Recipient address (base58)"
-                      aria-label={`Allowed destination ${di + 1}`}
+                      placeholder={tr("Recipient address (base58)")}
+                      aria-label={`${tr("Allowed destination")} ${di + 1}`}
                       spellCheck={false}
                       className="flex-1 px-3 py-2 rounded-xl text-[13px] outline-none"
                       style={{
@@ -1238,7 +1407,7 @@ export function SessionsPage() {
                         onClick={() =>
                           setDests((p) => p.filter((_, i) => i !== di))
                         }
-                        aria-label={`Remove destination ${di + 1}`}
+                        aria-label={`${tr("Remove destination")} ${di + 1}`}
                         className="px-3 rounded-xl text-[13px]"
                         style={{
                           ...mono,
@@ -1263,9 +1432,7 @@ export function SessionsPage() {
                       border: `1px solid ${C}25`,
                       color: C,
                     }}
-                  >
-                    + Add destination
-                  </button>
+                  >{tr("+ Add destination")}</button>
                 )}
                 {destError && (
                   <p
@@ -1292,11 +1459,7 @@ export function SessionsPage() {
                     color: color.textSecondary,
                     lineHeight: 1.6,
                   }}
-                >
-                  The policy digest binds token scope, the destination
-                  allowlist, spend cap, execution limit, cooldown, and validity
-                  window into one verifiable proof.
-                </p>
+                >{tr("The policy digest binds token scope, the destination allowlist, spend cap, execution limit, cooldown, and validity window into one verifiable proof.")}</p>
               </div>
             </div>
           )}
@@ -1305,12 +1468,9 @@ export function SessionsPage() {
               <p
                 className="text-xs"
                 style={{ ...sans, color: color.textSecondary }}
-              >
-                Configure total spend ceiling and per-session transaction
-                limits.
-              </p>
+              >{tr("Configure total spend ceiling and per-session transaction limits.")}</p>
               <SliderCtl
-                label="Total Spend Cap"
+                label={tr("Total Spend Cap")}
                 value={cap}
                 onChange={setCap}
                 min={10}
@@ -1319,7 +1479,7 @@ export function SessionsPage() {
                 accent={A}
               />
               <SliderCtl
-                label="Max Transactions / Session"
+                label={tr("Max Transactions / Session")}
                 value={txn}
                 onChange={setTxn}
                 min={1}
@@ -1330,16 +1490,16 @@ export function SessionsPage() {
               <div className="grid grid-cols-3 gap-2">
                 {[
                   {
-                    label: "Avg/Tx",
+                    label: tr("Avg/Tx"),
                     value: `$${(cap / txn).toFixed(2)}`,
                     color: A,
                   },
                   {
-                    label: "Risk",
+                    label: tr("Risk"),
                     value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW",
                     color: cap > 5000 ? color.danger : cap > 1000 ? A : M,
                   },
-                  { label: "Tokens", value: String(tokens.length), color: C },
+                  { label: tr("Tokens"), value: String(tokens.length), color: C },
                 ].map((row, ri) => (
                   <div
                     key={`wiz-row-${ri}`}
@@ -1371,11 +1531,9 @@ export function SessionsPage() {
               <p
                 className="text-xs"
                 style={{ ...sans, color: color.textSecondary }}
-              >
-                Set validity window and minimum cooldown between executions.
-              </p>
+              >{tr("Set validity window and minimum cooldown between executions.")}</p>
               <SliderCtl
-                label="Session Duration"
+                label={tr("Session Duration")}
                 value={dur}
                 onChange={setDur}
                 min={1}
@@ -1384,7 +1542,7 @@ export function SessionsPage() {
                 accent={M}
               />
               <SliderCtl
-                label="Execution Cooldown"
+                label={tr("Execution Cooldown")}
                 value={cool}
                 onChange={setCool}
                 min={1}
@@ -1402,7 +1560,7 @@ export function SessionsPage() {
                     className="text-[13px] font-semibold"
                     style={{ ...mono, color: M }}
                   >
-                    Expires{" "}
+                    {tr("Expires")}{" "}
                     {new Date(Date.now() + dur * 3600000).toLocaleString(
                       "en-US",
                       {
@@ -1417,8 +1575,7 @@ export function SessionsPage() {
                     className="text-[12px] mt-0.5"
                     style={{ ...sans, color: color.textMuted }}
                   >
-                    ≤ {Math.floor((dur * 60) / cool)} executions · {cool}m
-                    cooldown
+                    ≤ {Math.floor((dur * 60) / cool)} {tr("executions")} · {cool}m {tr("cooldown")}
                   </div>
                 </div>
               </div>
@@ -1429,38 +1586,34 @@ export function SessionsPage() {
               <p
                 className="text-xs"
                 style={{ ...sans, color: color.textSecondary }}
-              >
-                Review the bounded policy, run the risk copilot, then sign the
-                on-chain grant. The program enforces these limits on every agent
-                transfer.
-              </p>
+              >{tr("Review the bounded policy, run the risk copilot, then sign the on-chain grant. The program enforces these limits on every agent transfer.")}</p>
               <div>
                 {[
                   [
-                    "Agent",
+                    tr("Agent"),
                     selectedAgent
                       ? `${selectedAgent.name} ${selectedAgent.version}`
-                      : `${FALLBACK_AGENT.name} (new)`,
+                      : `${FALLBACK_AGENT.name} ${tr("(new)")}`,
                     M,
                   ],
                   [
-                    "Rental",
+                    tr("Rental"),
                     activeHire
-                      ? `until ${new Date(activeHire.endsAt).toLocaleDateString()}`
-                      : "not rented — yours to run",
+                      ? `${tr("until")} ${new Date(activeHire.endsAt).toLocaleDateString()}`
+                      : tr("not rented — yours to run"),
                     C,
                   ],
-                  ["Token Scope", tokens.join(", "), C],
+                  [tr("Token Scope"), tokens.join(", "), C],
                   [
-                    "Destinations",
-                    cleanDests.map((d) => short(d, 6)).join(", ") || "none",
+                    tr("Destinations"),
+                    cleanDests.map((d) => short(d, 6)).join(", ") || tr("none"),
                     A,
                   ],
-                  ["Spend Cap", `${cap.toLocaleString()} USDC`, A],
-                  ["Max Txns", `${txn} transactions`, C],
-                  ["Duration", `${dur} hours`, M],
-                  ["Cooldown", `${cool} minutes`, M],
-                  ["Network", "Solana Devnet", C],
+                  [tr("Spend Cap"), `${cap.toLocaleString()} USDC`, A],
+                  [tr("Max Txns"), `${txn} ${tr("transactions")}`, C],
+                  [tr("Duration"), `${dur} ${tr("hours")}`, M],
+                  [tr("Cooldown"), `${cool} ${tr("minutes")}`, M],
+                  [tr("Network"), "Solana Devnet", C],
                 ].map(([k, v, col], ri) => (
                   <div
                     key={`rev-${ri}`}
@@ -1495,9 +1648,7 @@ export function SessionsPage() {
                       <div
                         className="text-xs font-semibold"
                         style={{ color: color.text }}
-                      >
-                        Risk copilot verdict
-                      </div>
+                      >{tr("Risk copilot verdict")}</div>
                       <div
                         className="text-[12px] mt-0.5"
                         style={{ color: color.textMuted }}
@@ -1505,8 +1656,8 @@ export function SessionsPage() {
                         {assessment.source === "openai"
                           ? `OpenAI · ${assessment.model}`
                           : assessment.source === "openai+deterministic-floor"
-                            ? `OpenAI + deterministic safety floor · ${assessment.model}`
-                            : "Deterministic safety fallback"}
+                            ? `${tr("OpenAI + deterministic safety floor")} · ${assessment.model}`
+                            : tr("Deterministic safety fallback")}
                       </div>
                     </div>
                     <div className="text-right">
@@ -1588,9 +1739,7 @@ export function SessionsPage() {
               border: `1px solid ${color.border}`,
               color: color.textSecondary,
             }}
-          >
-            Back
-          </button>
+          >{tr("Back")}</button>
           <button
             type="button"
             onClick={() =>
@@ -1615,14 +1764,14 @@ export function SessionsPage() {
               <>
                 <Shield size={12} />
                 {assessing
-                  ? "Assessing policy…"
+                  ? tr("Assessing policy…")
                   : assessment
-                    ? "Re-run risk assessment"
-                    : "Run AI risk assessment"}
+                    ? tr("Re-run risk assessment")
+                    : tr("Run AI risk assessment")}
               </>
             ) : (
               <>
-                Continue <ChevronRight size={12} />
+                {tr("Continue")} <ChevronRight size={12} />
               </>
             )}
           </button>
@@ -1634,6 +1783,7 @@ export function SessionsPage() {
 
 /* ── 8. SETTINGS ── */
 export function SettingsPage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
@@ -1657,18 +1807,18 @@ export function SettingsPage() {
   const signedIn = useSignedIn(wallet);
   const session = signedIn ? loadSession() : null;
   const tabs = [
-    { label: "Network", detail: "Cluster · program · executor", icon: Network },
+    { label: tr("Network"), detail: tr("Cluster · program · executor"), icon: Network },
     {
-      label: "Wallet & demo assets",
-      detail: "Owner · mints · destinations",
+      label: tr("Wallet & demo assets"),
+      detail: tr("Owner · mints · destinations"),
       icon: Wallet,
     },
     {
-      label: "Policy invariants",
-      detail: "What the program enforces",
+      label: tr("Policy invariants"),
+      detail: tr("What the program enforces"),
       icon: Lock,
     },
-    { label: "Experience", detail: "Sound · depth · motion", icon: Sparkles },
+    { label: tr("Experience"), detail: tr("Sound · depth · motion"), icon: Sparkles },
   ];
 
   // Re-probe on demand. The shared prober owns the pacing, so "Test" here
@@ -1715,12 +1865,8 @@ export function SettingsPage() {
         <h1
           className="text-2xl font-bold"
           style={{ ...sans, color: color.text }}
-        >
-          Settings
-        </h1>
-        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>
-          Live configuration of this REDLINE deployment
-        </p>
+        >{tr("Settings")}</h1>
+        <p className="text-sm mt-0.5" style={{ ...sans, color: color.textDim }}>{tr("Live configuration of this REDLINE deployment")}</p>
       </div>
       <div className="settings-artifact-shell">
         <aside className="settings-artifact-nav" style={{ ...glass() }}>
@@ -1747,7 +1893,7 @@ export function SettingsPage() {
           })}
           <div className="settings-backend-anchor">
             <i className={health ? "is-live" : ""} />
-            <span>Backend anchor · devnet · {healthLabel}</span>
+            <span>{tr("Backend anchor · devnet ·")} {tr(healthLabel)}</span>
           </div>
         </aside>
 
@@ -1756,45 +1902,45 @@ export function SettingsPage() {
             <>
               <header>
                 <div>
-                  <span>NETWORK</span>
-                  <h2>Network</h2>
+                  <span>{tr("NETWORK")}</span>
+                  <h2>{tr("Network")}</h2>
                 </div>
                 <em className={health ? "is-live" : ""}>
                   <i />
-                  {healthLabel.toUpperCase()}
+                  {tr(healthLabel).toUpperCase()}
                 </em>
               </header>
               {/* Cluster and commitment are properties of the deployed API, not
                   switches this page owns. They are reported, not offered — the
                   old three-button rows implied a choice that changed nothing. */}
               <Row
-                label="Cluster"
+                label={tr("Cluster")}
                 value={
                   health?.cluster ??
                   (health?.chain === "mock"
                     ? "mock"
                     : healthState === "checking"
-                      ? "checking…"
-                      : "unreachable")
+                      ? tr("checking…")
+                      : tr("unreachable"))
                 }
                 accent={health ? C : A}
               />
               <Row
-                label="Chain adapter"
-                value={health?.chain ?? "unknown"}
+                label={tr("Chain adapter")}
+                value={health?.chain ?? tr("unknown")}
                 accent={health?.chain === "solana" ? M : A}
               />
-              <Row label="Commitment" value="confirmed" accent={color.textMuted} />
+              <Row label={tr("Commitment")} value="confirmed" accent={color.textMuted} />
               <Row
-                label="Program"
+                label={tr("Program")}
                 value={health?.programId ?? PROGRAM_ID}
                 accent={C}
               />
               <Row
-                label="Executor"
+                label={tr("Executor")}
                 value={
                   health?.executor ??
-                  (healthState === "checking" ? "checking…" : "unreachable")
+                  (healthState === "checking" ? tr("checking…") : tr("unreachable"))
                 }
                 accent={
                   health
@@ -1805,21 +1951,21 @@ export function SettingsPage() {
                 }
               />
               <Row
-                label="Chain indexer"
-                value={health?.indexer ?? "unknown"}
+                label={tr("Chain indexer")}
+                value={health?.indexer ?? tr("unknown")}
                 accent={health?.indexer === "running" ? M : A}
               />
               <Row
-                label="API build"
-                value={health?.version ?? "unknown"}
+                label={tr("API build")}
+                value={health?.version ?? tr("unknown")}
                 accent={color.textMuted}
               />
               <Row
-                label="Rate limit"
+                label={tr("Rate limit")}
                 value={
                   health?.rateLimitPerMinute
-                    ? `${health.rateLimitPerMinute} req/min per IP`
-                    : "unknown"
+                    ? `${health.rateLimitPerMinute} ${tr("req/min per IP")}`
+                    : tr("unknown")
                 }
                 accent={color.textMuted}
               />
@@ -1832,7 +1978,7 @@ export function SettingsPage() {
                     onClick={() => void testHealth()}
                     disabled={healthState === "checking"}
                   >
-                    {healthState === "checking" ? "Testing…" : "Test"}
+                    {healthState === "checking" ? tr("Testing…") : tr("Test")}
                   </button>
                 </div>
               </label>
@@ -1843,12 +1989,12 @@ export function SettingsPage() {
             <>
               <header>
                 <div>
-                  <span>OWNER SESSION</span>
-                  <h2>Wallet & demo assets</h2>
+                  <span>{tr("OWNER SESSION")}</span>
+                  <h2>{tr("Wallet & demo assets")}</h2>
                 </div>
                 <em className={wallet ? "is-live" : ""}>
                   <i />
-                  {wallet ? "CONNECTED" : "NOT CONNECTED"}
+                  {wallet ? tr("CONNECTED") : tr("NOT CONNECTED")}
                 </em>
               </header>
               <div className="settings-wallet-card">
@@ -1857,10 +2003,10 @@ export function SettingsPage() {
                 </span>
                 <div>
                   <strong>
-                    {wallet ? "Connected wallet" : "Wallet required"}
+                    {wallet ? tr("Connected wallet") : tr("Wallet required")}
                   </strong>
                   <code>
-                    {wallet || "Connect through Wallet Standard in the top bar"}
+                    {wallet || tr("Connect through Wallet Standard in the top bar")}
                   </code>
                 </div>
                 {wallet && (
@@ -1874,50 +2020,50 @@ export function SettingsPage() {
                 )}
               </div>
               <Row
-                label="Wallet session"
+                label={tr("Wallet session")}
                 value={
                   signedIn && session
-                    ? `signed in · expires ${new Date(session.expiresAt).toLocaleString()}`
+                    ? `${tr("signed in · expires")} ${new Date(session.expiresAt).toLocaleString()}`
                     : wallet
-                      ? "connected but not signed in"
-                      : "no wallet"
+                      ? tr("connected but not signed in")
+                      : tr("no wallet")
                 }
                 accent={signedIn ? M : A}
               />
               <Row
-                label="Writes require a signature"
+                label={tr("Writes require a signature")}
                 value={
                   health?.identityEnforced === undefined
-                    ? "unknown"
+                    ? tr("unknown")
                     : health.identityEnforced
-                      ? "yes — this is a public deployment"
-                      : "no — local/mock, writes are open"
+                      ? tr("yes — this is a public deployment")
+                      : tr("no — local/mock, writes are open")
                 }
                 accent={health?.identityEnforced ? M : A}
               />
               <Row
-                label="Demo USDC mint (browser)"
+                label={tr("Demo USDC mint (browser)")}
                 value={
                   import.meta.env.VITE_DEMO_USDC_MINT
                     ? String(import.meta.env.VITE_DEMO_USDC_MINT)
-                    : "not configured"
+                    : tr("not configured")
                 }
                 accent={import.meta.env.VITE_DEMO_USDC_MINT ? C : A}
               />
               <Row
-                label="Demo USDC mint (API)"
+                label={tr("Demo USDC mint (API)")}
                 value={
                   health?.demoMintConfigured === undefined
-                    ? "unknown"
+                    ? tr("unknown")
                     : health.demoMintConfigured
                       ? "configured"
-                      : "not configured"
+                      : tr("not configured")
                 }
                 accent={health?.demoMintConfigured ? C : A}
               />
               <Row
-                label="Demo destination"
-                value={DEMO_OPS_DESTINATION || "not configured"}
+                label={tr("Demo destination")}
+                value={DEMO_OPS_DESTINATION || tr("not configured")}
                 accent={DEMO_OPS_DESTINATION ? C : A}
               />
               {/* This row used to read "configured", which sounded like a
@@ -1926,11 +2072,11 @@ export function SettingsPage() {
                   drive-by traffic off the write routes; ownership is proved by
                   the wallet signature above, not by this. */}
               <Row
-                label="Bundled write key"
+                label={tr("Bundled write key")}
                 value={
                   import.meta.env.VITE_API_KEY
-                    ? "present in this bundle — public, not a credential"
-                    : "none (local/mock)"
+                    ? tr("present in this bundle — public, not a credential")
+                    : tr("none (local/mock)")
                 }
                 accent={A}
               />
@@ -1941,40 +2087,32 @@ export function SettingsPage() {
             <>
               <header>
                 <div>
-                  <span>PROGRAM BOUNDARY</span>
-                  <h2>Policy invariants</h2>
+                  <span>{tr("PROGRAM BOUNDARY")}</span>
+                  <h2>{tr("Policy invariants")}</h2>
                 </div>
                 <em className="is-live">
-                  <i />
-                  ON-CHAIN
-                </em>
+                  <i />{tr("ON-CHAIN")}</em>
               </header>
-              <Row label="Gates enforced in order" value="7" />
-              <Row label="Policy digest" value="SHA-256" />
+              <Row label={tr("Gates enforced in order")} value="7" />
+              <Row label={tr("Policy digest")} value="SHA-256" />
               <Row
-                label="Allowlist ceiling"
-                value="4 mints · 4 destinations"
+                label={tr("Allowlist ceiling")}
+                value={tr("4 mints · 4 destinations")}
                 accent={C}
               />
               <Row
-                label="Revocation authority"
-                value="owner signature"
+                label={tr("Revocation authority")}
+                value={tr("owner signature")}
                 accent={C}
               />
               <Row
-                label="Execution behavior"
-                value="first failed gate stops atomically"
+                label={tr("Execution behavior")}
+                value={tr("first failed gate stops atomically")}
                 accent={A}
               />
               <div className="settings-policy-note">
                 <ShieldCheck size={16} />
-                <p>
-                  The program takes one owner-signed revocation per policy
-                  account — but a Solana transaction carries many instructions,
-                  so <strong>Stop all agents</strong> on Guardrails revokes every
-                  active grant in a single signature. Funds stay in the vault;
-                  only the agents' authority ends.
-                </p>
+                <p>{tr("The program takes one owner-signed revocation per policy account — but a Solana transaction carries many instructions, so")}<strong>{tr("Stop all agents")}</strong>{tr("on Guardrails revokes every active grant in a single signature. Funds stay in the vault; only the agents' authority ends.")}</p>
               </div>
             </>
           )}
@@ -1983,13 +2121,11 @@ export function SettingsPage() {
             <>
               <header>
                 <div>
-                  <span>LOCAL PREFERENCES</span>
-                  <h2>Experience</h2>
+                  <span>{tr("LOCAL PREFERENCES")}</span>
+                  <h2>{tr("Experience")}</h2>
                 </div>
                 <em>
-                  <i />
-                  THIS DEVICE
-                </em>
+                  <i />{tr("THIS DEVICE")}</em>
               </header>
               <button
                 type="button"
@@ -1998,8 +2134,8 @@ export function SettingsPage() {
                 aria-pressed={depthEnabled}
               >
                 <span>
-                  <strong>3D depth</strong>
-                  <small>Perspective, stepped shadows and spatial panels</small>
+                  <strong>{tr("3D depth")}</strong>
+                  <small>{tr("Perspective, stepped shadows and spatial panels")}</small>
                 </span>
                 <i />
               </button>
@@ -2010,18 +2146,14 @@ export function SettingsPage() {
                 aria-pressed={motionEnabled}
               >
                 <span>
-                  <strong>Motion</strong>
-                  <small>Page transitions, hover lift and live signals</small>
+                  <strong>{tr("Motion")}</strong>
+                  <small>{tr("Page transitions, hover lift and live signals")}</small>
                 </span>
                 <i />
               </button>
               <div className="settings-experience-note">
                 <Sparkles size={16} />
-                <p>
-                  Depth and motion are stored on this device and applied
-                  immediately. Sound stays in the global header so it follows
-                  you across every page.
-                </p>
+                <p>{tr("Depth and motion are stored on this device and applied immediately. Sound stays in the global header so it follows you across every page.")}</p>
               </div>
             </>
           )}

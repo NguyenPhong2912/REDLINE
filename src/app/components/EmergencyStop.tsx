@@ -15,7 +15,7 @@ import type { AppClient } from "../solana/client";
 import { emergencyStopInstructions } from "../solana/redline";
 import { color, mono, sans } from "../theme";
 import { playSound } from "../lib/soundscape";
-import { useT } from "../i18n/LanguageContext";
+import { useLang, useT } from "../i18n/LanguageContext";
 
 const R = color.danger;
 
@@ -47,6 +47,7 @@ export function EmergencyStop({ grants, chain, onDone }: {
   onDone: () => void | Promise<void>;
 }) {
   const tr = useT(VI);
+  const { lang } = useLang();
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const signMessage = useSignMessage(client);
@@ -140,7 +141,7 @@ export function EmergencyStop({ grants, chain, onDone }: {
 
       {confirming && (
         <div className="emergency-stop-confirm" role="alertdialog" aria-label="Confirm emergency stop">
-          <p><AlertTriangle size={14} style={{ color: R }} /> {describeStopPlan(plan)}</p>
+          <p><AlertTriangle size={14} style={{ color: R }} /> {describeStopPlan(plan, lang)}</p>
           <small>{tr("This cannot be undone. A stopped grant cannot be restarted — you would sign a new policy.")}</small>
           <div>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirming(false)} disabled={!!busy}>
@@ -155,7 +156,7 @@ export function EmergencyStop({ grants, chain, onDone }: {
 
       {result && !confirming && (
         <p className={`emergency-stop-result${result.failed > 0 ? " is-bad" : ""}`} role="status">
-          {describeStopResult(result)}
+          {describeStopResult(result, lang)}
         </p>
       )}
     </div>

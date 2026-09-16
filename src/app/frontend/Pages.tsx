@@ -44,6 +44,158 @@ import { useRealAgents } from "../lib/agents";
 import { api, fmtUsdc, grantExpiresAt, short, type Analytics, type AuditRow } from "../lib/api";
 import { useSignedIn } from "../lib/useSignedIn";
 import { explorerTransactionUrl, type AppClient } from "../solana/client";
+import { useT } from "../i18n/LanguageContext";
+
+const VI: Record<string, string> = {
+  "The Citadel": "Thành Trì",
+  "The Vault": "Kho Bạc",
+  "The Observatory": "Đài Quan Sát",
+  "GUARDRAILS": "GUARDRAILS",
+  "TREASURY": "TREASURY",
+  "AUDIT TRAIL": "NHẬT KÝ KIỂM TOÁN",
+  "Define the boundary. Give every agent a budget, a destination and a deadline. Seven checks turn an intention into bounded authority.": "Vạch ra ranh giới. Cho mỗi agent một ngân sách, một địa chỉ nhận và một thời hạn. Bảy lớp kiểm tra biến một ý định thành quyền hạn có giới hạn.",
+  "A program-owned account only the policy can move. Refill on devnet, withdraw as the owner — never through the agent.": "Một tài khoản do program sở hữu mà chỉ chính sách mới chuyển được. Nạp trên devnet, rút với tư cách chủ sở hữu — không bao giờ qua agent.",
+  "Every allow and every rejection, decoded from Solana. Follow the signature and inspect the evidence independently.": "Mọi lần cho phép và mọi lần từ chối, giải mã từ Solana. Lần theo chữ ký và tự kiểm tra bằng chứng.",
+  "Enforcement": "Thực thi",
+  "Seven gates, one transaction. The first failed gate closes the path before value can move.": "Bảy gate, một giao dịch. Gate lỗi đầu tiên đóng đường đi trước khi tiền kịp chuyển.",
+  "Evidence": "Bằng chứng",
+  "A live feed of allows and rejections, each with a signature you can open on Solana Explorer.": "Luồng trực tiếp các lần cho phép và từ chối, mỗi dòng kèm chữ ký mở được trên Solana Explorer.",
+  "Ownership": "Quyền sở hữu",
+  "Live grants with spend meters and authority controlled by the owner.": "Các grant đang hoạt động với thước đo chi tiêu và quyền hạn do chủ sở hữu kiểm soát.",
+  "Interrogate": "Chất vấn",
+  "Ask the console in English or Vietnamese — grants, gates and reasons for a refusal.": "Hỏi console bằng tiếng Anh hoặc tiếng Việt — về grant, gate và lý do từ chối.",
+  "A NEW ORBIT FOR AUTONOMOUS FINANCE": "MỘT QUỸ ĐẠO MỚI CHO TÀI CHÍNH TỰ CHỦ",
+  "Intelligence,": "Trí tuệ,",
+  "without limits.": "không giới hạn.",
+  "Authority, with them.": "Quyền hạn, có giới hạn.",
+  "Let your agents explore. Keep your assets within reach. Seven on-chain gates protect the boundary between ambition and permission.": "Để agent của bạn khám phá. Giữ tài sản trong tầm kiểm soát. Bảy gate on-chain bảo vệ ranh giới giữa tham vọng và quyền được phép.",
+  "Launch the protocol": "Khởi chạy protocol",
+  "Explore the flow": "Khám phá luồng",
+  "FOLLOW THE CURRENT": "THEO DÒNG CHẢY",
+  "THE SENTINEL CORE": "LÕI CANH GÁC",
+  "SOLANA · DEVNET · BOUNDARY SYSTEM": "SOLANA · DEVNET · HỆ THỐNG RANH GIỚI",
+  "REDLINE UNIVERSE": "VŨ TRỤ REDLINE",
+  "01 — GENESIS": "01 — KHỞI NGUYÊN",
+  "7 GATES · 1 TX": "7 GATE · 1 GIAO DỊCH",
+  "LIVE POLICY BACKBONE": "XƯƠNG SỐNG CHÍNH SÁCH TRỰC TIẾP",
+  "Every proposal rides the current": "Mọi đề xuất đều trôi theo dòng",
+  "through seven hard limits.": "qua bảy giới hạn cứng.",
+  "The agent proposes. The program evaluates the signed envelope in order, link by link. One failed gate stops the transfer atomically — nothing moves.": "Agent đề xuất. Program đánh giá phong bì đã ký theo thứ tự, từng mắt xích một. Một gate lỗi dừng toàn bộ lệnh chuyển — không gì dịch chuyển.",
+  "CHAPTER 01 → THE THREE WORLDS": "CHƯƠNG 01 → BA THẾ GIỚI",
+  "THE REDLINE UNIVERSE / EXPLORE": "VŨ TRỤ REDLINE / KHÁM PHÁ",
+  "One mission.": "Một sứ mệnh.",
+  "Three worlds.": "Ba thế giới.",
+  "Enter this world": "Bước vào thế giới này",
+  "THE PROTOCOL IN FOUR CHAPTERS": "PROTOCOL TRONG BỐN CHƯƠNG",
+  "Read it": "Đọc",
+  "cover to cover.": "từ đầu đến cuối.",
+  "CHAPTER": "CHƯƠNG",
+  "INTERACTIVE FIELD TEST": "THỬ NGHIỆM THỰC ĐỊA TƯƠNG TÁC",
+  "THE CHAIN DECIDES": "CHAIN QUYẾT ĐỊNH",
+  "Every decision,": "Mỗi quyết định,",
+  "a block you can open.": "một khối bạn có thể mở.",
+  "Each block opens a recorded Solana signature. Green blocks confirm transfers; red blocks record a refusal. Grant and revocation events retain their own identities.": "Mỗi khối mở ra một chữ ký Solana đã ghi nhận. Khối xanh xác nhận lệnh chuyển; khối đỏ ghi lại một lần từ chối. Sự kiện tạo grant và thu hồi giữ định danh riêng.",
+  "Propose": "Đề xuất",
+  "An autonomous agent can request an action, but it never receives unrestricted authority.": "Agent tự chủ có thể yêu cầu một hành động, nhưng không bao giờ nhận quyền hạn không giới hạn.",
+  "Constrain": "Ràng buộc",
+  "The owner’s signed policy defines asset, recipient, budget, pace and time.": "Chính sách chủ sở hữu đã ký xác định tài sản, người nhận, ngân sách, nhịp độ và thời gian.",
+  "Prove": "Chứng minh",
+  "Every allow or rejection leaves evidence that can be inspected independently on Solana.": "Mỗi lần cho phép hay từ chối đều để lại bằng chứng có thể kiểm tra độc lập trên Solana.",
+  "REDLINE · AUTONOMOUS FINANCE. HARD LIMITS.": "REDLINE · TÀI CHÍNH TỰ CHỦ. GIỚI HẠN CỨNG.",
+  "THE AGENT PROPOSES ·": "AGENT ĐỀ XUẤT ·",
+  "Sign in with your wallet first — the publisher is taken from the signature, not from this form.": "Đăng nhập bằng ví trước — người xuất bản được lấy từ chữ ký, không phải từ biểu mẫu này.",
+  "Connect and sign in with a wallet to publish.": "Kết nối và đăng nhập bằng ví để xuất bản.",
+  "Version published to the registry.": "Đã xuất bản phiên bản lên sổ đăng ký.",
+  "Publication failed": "Xuất bản thất bại",
+  "VERSIONS": "PHIÊN BẢN",
+  "OF": "TRÊN",
+  "Showing only mine": "Đang chỉ hiện của tôi",
+  "Show only mine": "Chỉ hiện của tôi",
+  "MINE": "CỦA TÔI",
+  "You have not published a version with this wallet.": "Bạn chưa xuất bản phiên bản nào bằng ví này.",
+  "Publish agent version": "Xuất bản phiên bản agent",
+  "Loading versions…": "Đang tải phiên bản…",
+  "Flip identity card for": "Lật thẻ định danh của",
+  "AGENT IDENTITY": "ĐỊNH DANH AGENT",
+  "ACTIVE GRANTS": "GRANT HOẠT ĐỘNG",
+  "Published by you": "Bạn đã xuất bản",
+  "Published by": "Xuất bản bởi",
+  "Unclaimed — published before publishing required a signature": "Chưa nhận — xuất bản trước khi việc xuất bản yêu cầu chữ ký",
+  "ACTIVE": "HOẠT ĐỘNG",
+  "TOTAL GRANTS": "TỔNG GRANT",
+  "SPENT": "ĐÃ CHI",
+  "TRANSFERS": "LỆNH CHUYỂN",
+  "CLICK THE CARD · SEE HOW THE HASH IS BUILT": "BẤM VÀO THẺ · XEM HASH ĐƯỢC TẠO THẾ NÀO",
+  "AGENT HASH · SHA-256 · IMMUTABLE": "AGENT HASH · SHA-256 · BẤT BIẾN",
+  "Every grant binds to this exact build. A change in model, code reference or configuration produces a different identity.": "Mọi grant gắn với đúng bản build này. Thay đổi model, tham chiếu code hay cấu hình sẽ tạo ra định danh khác.",
+  "CLICK TO FLIP BACK": "BẤM ĐỂ LẬT LẠI",
+  "Reputation": "Uy tín",
+  "No policy decisions and no renter reviews recorded yet.": "Chưa có quyết định chính sách hay đánh giá nào từ người thuê.",
+  "Grants bound to this build": "Grant gắn với bản build này",
+  "REVOKED": "ĐÃ THU HỒI",
+  "EXPIRED": "HẾT HẠN",
+  "GRANTED": "ĐÃ CẤP",
+  "No grants bound to this version.": "Chưa có grant nào gắn với phiên bản này.",
+  "Agent identity": "Định danh agent",
+  "Loading agent identity…": "Đang tải định danh agent…",
+  "Publish your first version to create an identity.": "Xuất bản phiên bản đầu tiên để tạo định danh.",
+  "Publish a new version": "Xuất bản phiên bản mới",
+  "DRAFT": "NHÁP",
+  "Name": "Tên",
+  "Version": "Phiên bản",
+  "Strategy": "Chiến lược",
+  "Weekly contributor payouts against the signed allowlist…": "Trả lương hàng tuần cho cộng tác viên theo allowlist đã ký…",
+  "IDENTITY INPUT": "ĐẦU VÀO ĐỊNH DANH",
+  "Connect a wallet to publish": "Kết nối ví để xuất bản",
+  "Sign in with your wallet to publish": "Đăng nhập bằng ví để xuất bản",
+  "Publishing…": "Đang xuất bản…",
+  "Publish to registry": "Xuất bản lên sổ đăng ký",
+  "Connect a wallet to publish.": "Kết nối ví để xuất bản.",
+  "Sign in with your wallet (top bar) — the publisher is taken from the signature, not from this form.": "Đăng nhập bằng ví (thanh trên cùng) — người xuất bản được lấy từ chữ ký, không phải từ biểu mẫu này.",
+  "Confirmed volume": "Khối lượng đã xác nhận",
+  "Active grants": "Grant hoạt động",
+  "Success rate": "Tỷ lệ thành công",
+  "Decision latency": "Độ trễ quyết định",
+  "CONNECTED OWNER": "CHỦ SỞ HỮU ĐÃ KẾT NỐI",
+  "PROTOCOL OVERVIEW": "TỔNG QUAN PROTOCOL",
+  "Recorded state": "Trạng thái đã ghi",
+  "LAST 7 DAYS": "7 NGÀY QUA",
+  "Policy outcomes": "Kết quả chính sách",
+  "CONFIRMED TRANSFERS": "LỆNH CHUYỂN ĐÃ XÁC NHẬN",
+  "Rejected by policy": "Bị chính sách từ chối",
+  "Signed grants": "Grant đã ký",
+  "Agents by confirmed volume": "Agent theo khối lượng đã xác nhận",
+  "REAL TRANSFERS": "LỆNH CHUYỂN THẬT",
+  "grants": "grant",
+  "No confirmed volume recorded yet.": "Chưa ghi nhận khối lượng nào.",
+  "Daily settlement": "Thanh toán theo ngày",
+  "Unable to load events": "Không tải được sự kiện",
+  "Total events": "Tổng sự kiện",
+  "On-chain signatures": "Chữ ký on-chain",
+  "Owner actions": "Hành động của chủ sở hữu",
+  "Rejected / failed": "Từ chối / thất bại",
+  "Search audit events": "Tìm sự kiện kiểm toán",
+  "Search signatures, events, reason codes…": "Tìm chữ ký, sự kiện, mã lý do…",
+  "all": "tất cả",
+  "chain": "chain",
+  "owner": "chủ sở hữu",
+  "rejected": "bị từ chối",
+  "Refresh": "Làm mới",
+  "Chain event stream": "Luồng sự kiện chain",
+  "EVENTS": "SỰ KIỆN",
+  "Loading the ledger…": "Đang tải sổ cái…",
+  "No events match these filters.": "Không có sự kiện nào khớp bộ lọc.",
+  "Load more events": "Tải thêm sự kiện",
+  "Inspect the evidence": "Kiểm tra bằng chứng",
+  "Recorded": "Ghi nhận lúc",
+  "Actor": "Tác nhân",
+  "Open on Solana Explorer": "Mở trên Solana Explorer",
+  "Select an event to inspect its recorded payload and transaction signature.": "Chọn một sự kiện để xem payload đã ghi và chữ ký giao dịch.",
+  "The chain record is unavailable. Open Audit to retry.": "Không lấy được bản ghi chain. Mở Audit để thử lại.",
+  "Open": "Mở",
+  "on Solana Explorer": "trên Solana Explorer",
+  "No signed chain events are available yet.": "Chưa có sự kiện chain nào có chữ ký.",
+};
 
 const vars = (value: Record<string, string | number>) => value as CSSProperties;
 const scroll = (id: string) =>
@@ -144,51 +296,52 @@ function Divider({ children }: { children: string }) {
 }
 
 export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
+  const tr = useT(VI);
   const owner = useOwner();
   const [world, setWorld] = useState(0);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const worlds = [
     {
-      name: "The Citadel",
-      label: "GUARDRAILS",
+      name: tr("The Citadel"),
+      label: tr("GUARDRAILS"),
       image: citadel,
       route: 6,
-      copy: "Define the boundary. Give every agent a budget, a destination and a deadline. Seven checks turn an intention into bounded authority.",
+      copy: tr("Define the boundary. Give every agent a budget, a destination and a deadline. Seven checks turn an intention into bounded authority."),
     },
     {
-      name: "The Vault",
-      label: "TREASURY",
+      name: tr("The Vault"),
+      label: tr("TREASURY"),
       image: vault,
       route: 4,
-      copy: "A program-owned account only the policy can move. Refill on devnet, withdraw as the owner — never through the agent.",
+      copy: tr("A program-owned account only the policy can move. Refill on devnet, withdraw as the owner — never through the agent."),
     },
     {
-      name: "The Observatory",
-      label: "AUDIT TRAIL",
+      name: tr("The Observatory"),
+      label: tr("AUDIT TRAIL"),
       image: observatory,
       route: 5,
-      copy: "Every allow and every rejection, decoded from Solana. Follow the signature and inspect the evidence independently.",
+      copy: tr("Every allow and every rejection, decoded from Solana. Follow the signature and inspect the evidence independently."),
     },
   ];
   const chapters = [
     {
-      title: "Enforcement",
-      copy: "Seven gates, one transaction. The first failed gate closes the path before value can move.",
+      title: tr("Enforcement"),
+      copy: tr("Seven gates, one transaction. The first failed gate closes the path before value can move."),
       id: "enforcement",
     },
     {
-      title: "Evidence",
-      copy: "A live feed of allows and rejections, each with a signature you can open on Solana Explorer.",
+      title: tr("Evidence"),
+      copy: tr("A live feed of allows and rejections, each with a signature you can open on Solana Explorer."),
       id: "evidence",
     },
     {
-      title: "Ownership",
-      copy: "Live grants with spend meters and authority controlled by the owner.",
+      title: tr("Ownership"),
+      copy: tr("Live grants with spend meters and authority controlled by the owner."),
       id: "ownership",
     },
     {
-      title: "Interrogate",
-      copy: "Ask the console in English or Vietnamese — grants, gates and reasons for a refusal.",
+      title: tr("Interrogate"),
+      copy: tr("Ask the console in English or Vietnamese — grants, gates and reasons for a refusal."),
       id: "interrogate",
     },
   ];
@@ -220,34 +373,26 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
         <div className="grid" />
         <div className="copy">
           <span className="kicker">
-            <Sparkles size={11} /> A NEW ORBIT FOR AUTONOMOUS FINANCE
-          </span>
-          <h1>
-            Intelligence,
-            <br />
-            without limits.<span className="acc">Authority, with them.</span>
+            <Sparkles size={11} />{tr("A NEW ORBIT FOR AUTONOMOUS FINANCE")}</span>
+          <h1>{tr("Intelligence,")}<br />{tr("without limits.")}<span className="acc">{tr("Authority, with them.")}</span>
           </h1>
-          <p className="lede">
-            Let your agents explore. Keep your assets within reach. Seven
-            on-chain gates protect the boundary between ambition and permission.
-          </p>
+          <p className="lede">{tr("Let your agents explore. Keep your assets within reach. Seven on-chain gates protect the boundary between ambition and permission.")}</p>
           <div className="actions">
             <button className="btn btn-gold" onClick={() => setNav?.(6)}>
-              Launch the protocol <ArrowUpRight size={14} />
+              {tr("Launch the protocol")} <ArrowUpRight size={14} />
             </button>
             <button
               className="btn btn-ghost"
               onClick={() => scroll("protocol-worlds")}
             >
-              <Play size={12} /> Explore the flow
-            </button>
+              <Play size={12} />{tr("Explore the flow")}</button>
           </div>
           {/* In the copy's flow, not pinned to the hero's bottom edge: the
               hero is a fixed 880px and the copy is centred in it, so an
               absolutely positioned cue landed on top of the buttons whenever
               the copy ran tall (every desktop width). */}
           <button className="scrollcue" onClick={() => scroll("protocol-worlds")}>
-            FOLLOW THE CURRENT <ArrowDown size={13} />
+            {tr("FOLLOW THE CURRENT")} <ArrowDown size={13} />
           </button>
         </div>
         <div className="scene" aria-hidden="true">
@@ -279,9 +424,9 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
           </div>
           <div className="caption">
             0 / 07 <i />
-            <span>THE SENTINEL CORE</span>
+            <span>{tr("THE SENTINEL CORE")}</span>
           </div>
-          <div className="coord">SOLANA · DEVNET · BOUNDARY SYSTEM</div>
+          <div className="coord">{tr("SOLANA · DEVNET · BOUNDARY SYSTEM")}</div>
         </div>
         <WaterDivider height={150} className="water" />
         {[0, 4, 8, 12].map((delay, i) => (
@@ -295,36 +440,33 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
           </div>
         ))}
         <div className="edition">
-          <span>REDLINE UNIVERSE</span>
+          <span>{tr("REDLINE UNIVERSE")}</span>
           <i />
-          <b>01 — GENESIS</b>
+          <b>{tr("01 — GENESIS")}</b>
           <span>SOLANA DEVNET</span>
           <i />
-          <b>7 GATES · 1 TX</b>
+          <b>{tr("7 GATES · 1 TX")}</b>
         </div>
       </section>
       <div className="story">
         <section className="sec" id="enforcement">
           <SectionHead
-            eyebrow="LIVE POLICY BACKBONE"
+            eyebrow={tr("LIVE POLICY BACKBONE")}
             title={
-              <>
-                Every proposal rides the current
-                <br />
-                <em>through seven hard limits.</em>
+              <>{tr("Every proposal rides the current")}<br />
+                <em>{tr("through seven hard limits.")}</em>
               </>
             }
-            copy="The agent proposes. The program evaluates the signed envelope in order, link by link. One failed gate stops the transfer atomically — nothing moves."
+            copy={tr("The agent proposes. The program evaluates the signed envelope in order, link by link. One failed gate stops the transfer atomically — nothing moves.")}
           />
           <ProtocolSpine owner={owner} />
         </section>
-        <Divider>CHAPTER 01 → THE THREE WORLDS</Divider>
+        <Divider>{tr("CHAPTER 01 → THE THREE WORLDS")}</Divider>
         <section className="sec" id="protocol-worlds">
           <SectionHead
-            eyebrow="THE REDLINE UNIVERSE / EXPLORE"
+            eyebrow={tr("THE REDLINE UNIVERSE / EXPLORE")}
             title={
-              <>
-                One mission. <em>Three worlds.</em>
+              <>{tr("One mission.")}<em>{tr("Three worlds.")}</em>
               </>
             }
           />
@@ -354,7 +496,7 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
                 className="wlink"
                 onClick={() => setNav?.(selected.route)}
               >
-                Enter this world <ArrowUpRight size={13} />
+                {tr("Enter this world")} <ArrowUpRight size={13} />
               </button>
             }
           >
@@ -363,10 +505,9 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
         </section>
         <section className="sec">
           <SectionHead
-            eyebrow="THE PROTOCOL IN FOUR CHAPTERS"
+            eyebrow={tr("THE PROTOCOL IN FOUR CHAPTERS")}
             title={
-              <>
-                Read it <em>cover to cover.</em>
+              <>{tr("Read it")}<em>{tr("cover to cover.")}</em>
               </>
             }
           />
@@ -385,7 +526,7 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
                 }
               >
                 <span className="num">0{i + 1}</span>
-                <small>CHAPTER 0{i + 1}</small>
+                <small>{tr("CHAPTER")} 0{i + 1}</small>
                 <h4>{c.title}</h4>
                 <p>{c.copy}</p>
                 <VoxelCube
@@ -396,19 +537,18 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
             ))}
           </div>
         </section>
-        <Divider>INTERACTIVE FIELD TEST</Divider>
+        <Divider>{tr("INTERACTIVE FIELD TEST")}</Divider>
         <div className="sec">
           <PolicyLab />
         </div>
         <section className="sec" id="evidence">
           <SectionHead
-            eyebrow="THE CHAIN DECIDES"
+            eyebrow={tr("THE CHAIN DECIDES")}
             title={
-              <>
-                Every decision, <em>a block you can open.</em>
+              <>{tr("Every decision,")}<em>{tr("a block you can open.")}</em>
               </>
             }
-            copy="Each block opens a recorded Solana signature. Green blocks confirm transfers; red blocks record a refusal. Grant and revocation events retain their own identities."
+            copy={tr("Each block opens a recorded Solana signature. Green blocks confirm transfers; red blocks record a refusal. Grant and revocation events retain their own identities.")}
           />
           <LedgerBlocks />
         </section>
@@ -416,19 +556,19 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
           <div className="pillars">
             {[
               {
-                title: "Propose",
+                title: tr("Propose"),
                 icon: Bot,
-                copy: "An autonomous agent can request an action, but it never receives unrestricted authority.",
+                copy: tr("An autonomous agent can request an action, but it never receives unrestricted authority."),
               },
               {
-                title: "Constrain",
+                title: tr("Constrain"),
                 icon: Layers,
-                copy: "The owner’s signed policy defines asset, recipient, budget, pace and time.",
+                copy: tr("The owner’s signed policy defines asset, recipient, budget, pace and time."),
               },
               {
-                title: "Prove",
+                title: tr("Prove"),
                 icon: Fingerprint,
-                copy: "Every allow or rejection leaves evidence that can be inspected independently on Solana.",
+                copy: tr("Every allow or rejection leaves evidence that can be inspected independently on Solana."),
               },
             ].map((p, i) => (
               <div className="pillar" key={p.title}>
@@ -444,9 +584,8 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
         </section>
       </div>
       <footer className="foot">
-        <span>REDLINE · AUTONOMOUS FINANCE. HARD LIMITS.</span>
-        <span>
-          THE AGENT PROPOSES · <b>THE CHAIN DECIDES</b>
+        <span>{tr("REDLINE · AUTONOMOUS FINANCE. HARD LIMITS.")}</span>
+        <span>{tr("THE AGENT PROPOSES ·")}<b>{tr("THE CHAIN DECIDES")}</b>
         </span>
         <span>FCCS LAB · VLU · 2026</span>
       </footer>
@@ -455,6 +594,7 @@ export function ArtifactProtocol({ setNav }: { setNav?: (n: number) => void }) {
 }
 
 export function ArtifactAgents() {
+  const tr = useT(VI);
   const wallet = useOwner() ?? "";
   // Connecting a wallet only names an address — the API cannot tell that apart
   // from a typed one, and publishing is what puts a build on a marketplace
@@ -481,8 +621,8 @@ export function ArtifactAgents() {
     if (!signedIn) {
       setNotice(
         wallet
-          ? "Sign in with your wallet first — the publisher is taken from the signature, not from this form."
-          : "Connect and sign in with a wallet to publish.",
+          ? tr("Sign in with your wallet first — the publisher is taken from the signature, not from this form.")
+          : tr("Connect and sign in with a wallet to publish."),
       );
       return;
     }
@@ -501,9 +641,9 @@ export function ArtifactAgents() {
       setSelected(result.agent.id);
       setName("");
       setStrategy("");
-      setNotice("Version published to the registry.");
+      setNotice(tr("Version published to the registry."));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "Publication failed");
+      setNotice(e instanceof Error ? e.message : tr("Publication failed"));
     } finally {
       setBusy(false);
     }
@@ -512,9 +652,9 @@ export function ArtifactAgents() {
     <div className="agents-grid">
       <aside>
         <div className="eyebrow">
-          VERSIONS · {visibleAgents.length}
+          {tr("VERSIONS")} · {visibleAgents.length}
           {onlyMine && agents.length !== visibleAgents.length
-            ? ` OF ${agents.length}`
+            ? ` ${tr("OF")} ${agents.length}`
             : ""}
         </div>
         {signedIn && (
@@ -524,7 +664,7 @@ export function ArtifactAgents() {
             onClick={() => setOnlyMine((v) => !v)}
           >
             <Fingerprint size={12} />
-            {onlyMine ? "Showing only mine" : "Show only mine"}
+            {onlyMine ? tr("Showing only mine") : tr("Show only mine")}
           </button>
         )}
         <div className="rail-list">
@@ -552,7 +692,7 @@ export function ArtifactAgents() {
               <span>
                 <b>
                   {a.name}
-                  {a.isMine && <span className="chip chip-gold">MINE</span>}
+                  {a.isMine && <span className="chip chip-gold">{tr("MINE")}</span>}
                 </b>
                 <small>
                   {a.version} · {short(a.agentHash, 4)}{" "}
@@ -563,17 +703,15 @@ export function ArtifactAgents() {
             </button>
           ))}
           {onlyMine && !visibleAgents.length && !loading && (
-            <Empty>You have not published a version with this wallet.</Empty>
+            <Empty>{tr("You have not published a version with this wallet.")}</Empty>
           )}
         </div>
         <button
           className="btn btn-ghost full-button"
           onClick={() => document.getElementById("publish-name")?.focus()}
         >
-          <Plus size={12} />
-          Publish agent version
-        </button>
-        {loading && <Empty>Loading versions…</Empty>}
+          <Plus size={12} />{tr("Publish agent version")}</button>
+        {loading && <Empty>{tr("Loading versions…")}</Empty>}
         {error && (
           <p role="alert" className="error-note">
             {error}
@@ -590,7 +728,7 @@ export function ArtifactAgents() {
                 style={vars({ "--acc": "14,145,205" })}
                 role="button"
                 tabIndex={0}
-                aria-label={`Flip identity card for ${agent.name}`}
+                aria-label={`${tr("Flip identity card for")} ${agent.name}`}
                 aria-pressed={flip}
                 onClick={() => setFlip((v) => !v)}
                 onKeyDown={(e) => {
@@ -602,11 +740,11 @@ export function ArtifactAgents() {
               >
                 <div className="face front" inert={flip}>
                   <div className="kick">
-                    <span>AGENT IDENTITY · {agent.version}</span>
+                    <span>{tr("AGENT IDENTITY")} · {agent.version}</span>
                     <span
                       className={`chip ${agent.activeGrants ? "chip-ok" : "chip-dim"}`}
                     >
-                      {agent.activeGrants} ACTIVE GRANTS
+                      {agent.activeGrants} {tr("ACTIVE GRANTS")}
                     </span>
                   </div>
                   <div className="avatar">
@@ -619,20 +757,20 @@ export function ArtifactAgents() {
                   </h2>
                   <p className="help publisher-line">
                     {agent.isMine
-                      ? "Published by you"
+                      ? tr("Published by you")
                       : agent.publisherWallet
-                        ? `Published by ${short(agent.publisherWallet, 4)}`
-                        : "Unclaimed — published before publishing required a signature"}
+                        ? `${tr("Published by")} ${short(agent.publisherWallet, 4)}`
+                        : tr("Unclaimed — published before publishing required a signature")}
                   </p>
                   <div className="stat4">
                     {[
-                      ["ACTIVE", agent.activeGrants],
-                      ["TOTAL GRANTS", agent.totalGrants],
+                      [tr("ACTIVE"), agent.activeGrants],
+                      [tr("TOTAL GRANTS"), agent.totalGrants],
                       [
-                        "SPENT",
+                        tr("SPENT"),
                         `${agent.totalSpentUsdc.toLocaleString()} USDC`,
                       ],
-                      ["TRANSFERS", agent.totalTx],
+                      [tr("TRANSFERS"), agent.totalTx],
                     ].map(([l, v]) => (
                       <div className="stat" key={l}>
                         <small>{l}</small>
@@ -641,13 +779,11 @@ export function ArtifactAgents() {
                     ))}
                   </div>
                   <div className="hint">
-                    <RefreshCw size={11} /> CLICK THE CARD · SEE HOW THE HASH IS
-                    BUILT
-                  </div>
+                    <RefreshCw size={11} />{tr("CLICK THE CARD · SEE HOW THE HASH IS BUILT")}</div>
                 </div>
                 <div className="face back" inert={!flip}>
                   <div className="kick">
-                    <span>AGENT HASH · SHA-256 · IMMUTABLE</span>
+                    <span>{tr("AGENT HASH · SHA-256 · IMMUTABLE")}</span>
                   </div>
                   <h3>
                     {agent.name} · {agent.version}
@@ -660,31 +796,24 @@ export function ArtifactAgents() {
                     <b>+</b>
                     <span>config</span>
                   </div>
-                  <p className="help">
-                    Every grant binds to this exact build. A change in model,
-                    code reference or configuration produces a different
-                    identity.
-                  </p>
+                  <p className="help">{tr("Every grant binds to this exact build. A change in model, code reference or configuration produces a different identity.")}</p>
                   <div className="hint">
-                    <RefreshCw size={11} /> CLICK TO FLIP BACK
-                  </div>
+                    <RefreshCw size={11} />{tr("CLICK TO FLIP BACK")}</div>
                 </div>
               </div>
             </div>
             <Panel
-              title="Reputation"
+              title={tr("Reputation")}
               meta={<RatingBadge rating={agent.rating} />}
             >
               {agent.rating ? (
                 <RatingDetail rating={agent.rating} />
               ) : (
-                <Empty>
-                  No policy decisions and no renter reviews recorded yet.
-                </Empty>
+                <Empty>{tr("No policy decisions and no renter reviews recorded yet.")}</Empty>
               )}
             </Panel>
             <Panel
-              title="Grants bound to this build"
+              title={tr("Grants bound to this build")}
               meta={<span className="chip chip-gold">{agent.totalGrants}</span>}
             >
               {agent.grants.length ? (
@@ -695,10 +824,10 @@ export function ArtifactAgents() {
                       className={`chip ${g.revoked ? "chip-bad" : "chip-ok"}`}
                     >
                       {g.revoked
-                        ? "REVOKED"
+                        ? tr("REVOKED")
                         : grantExpiresAt(g) <= Date.now()
-                          ? "EXPIRED"
-                          : "GRANTED"}{" "}
+                          ? tr("EXPIRED")
+                          : tr("GRANTED")}{" "}
                       · {fmtUsdc(g.spentUnits)} /{" "}
                       {fmtUsdc(g.policyVersion.spendCapUnits)}
                     </span>
@@ -712,16 +841,16 @@ export function ArtifactAgents() {
                   </div>
                 ))
               ) : (
-                <Empty>No grants bound to this version.</Empty>
+                <Empty>{tr("No grants bound to this version.")}</Empty>
               )}
             </Panel>
           </>
         ) : (
-          <Panel title="Agent identity">
+          <Panel title={tr("Agent identity")}>
             <Empty>
               {loading
-                ? "Loading agent identity…"
-                : "Publish your first version to create an identity."}
+                ? tr("Loading agent identity…")
+                : tr("Publish your first version to create an identity.")}
             </Empty>
           </Panel>
         )}
@@ -729,13 +858,11 @@ export function ArtifactAgents() {
       <aside>
         <Panel
           className="pubform"
-          title="Publish a new version"
-          meta={<span className="chip chip-dim">DRAFT</span>}
+          title={tr("Publish a new version")}
+          meta={<span className="chip chip-dim">{tr("DRAFT")}</span>}
         >
           <form onSubmit={publish}>
-            <label className="field">
-              Name
-              <input
+            <label className="field">{tr("Name")}<input
                 id="publish-name"
                 className="in"
                 required
@@ -745,9 +872,7 @@ export function ArtifactAgents() {
                 placeholder="Payroll Runner"
               />
             </label>
-            <label className="field">
-              Version
-              <input
+            <label className="field">{tr("Version")}<input
                 className="in"
                 required
                 maxLength={32}
@@ -755,19 +880,17 @@ export function ArtifactAgents() {
                 onChange={(e) => setVersion(e.target.value)}
               />
             </label>
-            <label className="field">
-              Strategy
-              <textarea
+            <label className="field">{tr("Strategy")}<textarea
                 className="in"
                 required
                 rows={4}
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value)}
-                placeholder="Weekly contributor payouts against the signed allowlist…"
+                placeholder={tr("Weekly contributor payouts against the signed allowlist…")}
               />
             </label>
             <div className="inset hash-preview">
-              <small>IDENTITY INPUT</small>
+              <small>{tr("IDENTITY INPUT")}</small>
               <code>sha256(modelRef | codeRef | config)</code>
             </div>
             <button
@@ -775,24 +898,21 @@ export function ArtifactAgents() {
               disabled={busy || !signedIn}
               title={
                 !wallet
-                  ? "Connect a wallet to publish"
+                  ? tr("Connect a wallet to publish")
                   : !signedIn
-                    ? "Sign in with your wallet to publish"
+                    ? tr("Sign in with your wallet to publish")
                     : ""
               }
             >
               <Upload size={13} />
-              {busy ? "Publishing…" : "Publish to registry"}
+              {busy ? tr("Publishing…") : tr("Publish to registry")}
               <ArrowRight size={13} />
             </button>
             {!wallet && (
-              <p className="help">Connect a wallet to publish.</p>
+              <p className="help">{tr("Connect a wallet to publish.")}</p>
             )}
             {wallet && !signedIn && (
-              <p className="help">
-                Sign in with your wallet (top bar) — the publisher is taken
-                from the signature, not from this form.
-              </p>
+              <p className="help">{tr("Sign in with your wallet (top bar) — the publisher is taken from the signature, not from this form.")}</p>
             )}
             {notice && (
               <p className="help" role="status">
@@ -807,19 +927,20 @@ export function ArtifactAgents() {
 }
 
 export function ArtifactAnalytics() {
+  const tr = useT(VI);
   const { data, error, owner } = useAnalytics();
   const kpis = [
     [
-      "Confirmed volume",
+      tr("Confirmed volume"),
       data ? `${data.totalVolumeUsdc.toLocaleString()} USDC` : "—",
     ],
-    ["Active grants", data?.activeGrants ?? "—"],
+    [tr("Active grants"), data?.activeGrants ?? "—"],
     [
-      "Success rate",
+      tr("Success rate"),
       data?.successRatePct == null ? "—" : `${data.successRatePct}%`,
     ],
     [
-      "Decision latency",
+      tr("Decision latency"),
       data?.avgDecisionLatencyMs == null
         ? "—"
         : `${data.avgDecisionLatencyMs} ms`,
@@ -828,7 +949,7 @@ export function ArtifactAnalytics() {
   return (
     <div className="analytics-bento">
       <div className="analytics-scope chip chip-info">
-        {owner ? "CONNECTED OWNER" : "PROTOCOL OVERVIEW"}
+        {owner ? tr("CONNECTED OWNER") : tr("PROTOCOL OVERVIEW")}
       </div>
       {error && (
         <p role="alert" className="error-note">
@@ -840,14 +961,14 @@ export function ArtifactAnalytics() {
           <div className="kpi" key={label}>
             <small>{label}</small>
             <strong>{value}</strong>
-            <span>Recorded state</span>
+            <span>{tr("Recorded state")}</span>
           </div>
         ))}
       </div>
       <Panel
         className="volume-panel"
-        title="Confirmed volume"
-        meta={<span className="chip chip-gold">LAST 7 DAYS</span>}
+        title={tr("Confirmed volume")}
+        meta={<span className="chip chip-gold">{tr("LAST 7 DAYS")}</span>}
       >
         <div className="chart-stage">
           <ResponsiveContainer width="100%" height="100%">
@@ -885,25 +1006,25 @@ export function ArtifactAnalytics() {
           </ResponsiveContainer>
         </div>
       </Panel>
-      <Panel className="outcome-panel" title="Policy outcomes">
+      <Panel className="outcome-panel" title={tr("Policy outcomes")}>
         <div className="outcome-orbit">
           <VoxelCube size={66} tone="ok" />
           <strong>{data?.totalTransactions ?? "—"}</strong>
-          <small>CONFIRMED TRANSFERS</small>
+          <small>{tr("CONFIRMED TRANSFERS")}</small>
         </div>
         <div className="metric-line">
-          <span>Rejected by policy</span>
+          <span>{tr("Rejected by policy")}</span>
           <b>{data?.totalRejections ?? "—"}</b>
         </div>
         <div className="metric-line">
-          <span>Signed grants</span>
+          <span>{tr("Signed grants")}</span>
           <b>{data?.totalGrants ?? "—"}</b>
         </div>
       </Panel>
       <Panel
         className="ranking-panel"
-        title="Agents by confirmed volume"
-        meta={<span className="chip chip-info">REAL TRANSFERS</span>}
+        title={tr("Agents by confirmed volume")}
+        meta={<span className="chip chip-info">{tr("REAL TRANSFERS")}</span>}
       >
         {data?.topAgentsByVolume.length ? (
           data.topAgentsByVolume.map((a, i) => (
@@ -913,7 +1034,7 @@ export function ArtifactAnalytics() {
               </span>
               <span>
                 <b>{a.name}</b>
-                <small>{a.grants} grants</small>
+                <small>{a.grants} {tr("grants")}</small>
               </span>
               <strong>{a.volumeUsdc.toLocaleString()} USDC</strong>
               <div className="bar">
@@ -926,10 +1047,10 @@ export function ArtifactAnalytics() {
             </div>
           ))
         ) : (
-          <Empty>No confirmed volume recorded yet.</Empty>
+          <Empty>{tr("No confirmed volume recorded yet.")}</Empty>
         )}
       </Panel>
-      <Panel className="daily-panel" title="Daily settlement">
+      <Panel className="daily-panel" title={tr("Daily settlement")}>
         <div className="chart-stage small-chart">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data?.weeklyVolume ?? []}>
@@ -949,6 +1070,7 @@ export function ArtifactAnalytics() {
 const isRejected = (row: AuditRow) => /reject|fail|deny/.test(row.eventType) || row.payload.allow === false;
 
 export function ArtifactAudit() {
+  const tr = useT(VI);
   const [rows, setRows] = useState<AuditRow[]>([]),
     [query, setQuery] = useState(""),
     [kind, setKind] = useState("all"),
@@ -965,7 +1087,7 @@ export function ArtifactAudit() {
       );
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load events");
+      setError(e instanceof Error ? e.message : tr("Unable to load events"));
     } finally {
       setLoading(false);
     }
@@ -991,11 +1113,11 @@ export function ArtifactAudit() {
     <div className="audit-workspace">
       <div className="kpi-row">
         {[
-          ["Total events", rows.length],
-          ["On-chain signatures", rows.filter((r) => r.chainSignature).length],
-          ["Owner actions", rows.filter((r) => r.actorType === "owner").length],
+          [tr("Total events"), rows.length],
+          [tr("On-chain signatures"), rows.filter((r) => r.chainSignature).length],
+          [tr("Owner actions"), rows.filter((r) => r.actorType === "owner").length],
           [
-            "Rejected / failed",
+            tr("Rejected / failed"),
             rows.filter((r) => isRejected(r)).length,
           ],
         ].map(([label, value]) => (
@@ -1009,8 +1131,8 @@ export function ArtifactAudit() {
         <label className="search">
           <Search size={15} />
           <input
-            aria-label="Search audit events"
-            placeholder="Search signatures, events, reason codes…"
+            aria-label={tr("Search audit events")}
+            placeholder={tr("Search signatures, events, reason codes…")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -1023,14 +1145,12 @@ export function ArtifactAudit() {
               aria-pressed={kind === k}
               onClick={() => setKind(k)}
             >
-              {k}
+              {tr(k)}
             </button>
           ))}
         </div>
         <button className="btn btn-ghost" onClick={() => void load()}>
-          <RefreshCw size={14} />
-          Refresh
-        </button>
+          <RefreshCw size={14} />{tr("Refresh")}</button>
       </div>
       {error && (
         <p className="error-note" role="alert">
@@ -1039,13 +1159,13 @@ export function ArtifactAudit() {
       )}
       <div className="audit-columns">
         <Panel
-          title="Chain event stream"
+          title={tr("Chain event stream")}
           meta={
-            <span className="chip chip-info">{filtered.length} EVENTS</span>
+            <span className="chip chip-info">{filtered.length} {tr("EVENTS")}</span>
           }
         >
           {loading ? (
-            <Empty>Loading the ledger…</Empty>
+            <Empty>{tr("Loading the ledger…")}</Empty>
           ) : filtered.length ? (
             filtered.slice(0, limit).map((r) => (
               <button
@@ -1075,27 +1195,25 @@ export function ArtifactAudit() {
               </button>
             ))
           ) : (
-            <Empty>No events match these filters.</Empty>
+            <Empty>{tr("No events match these filters.")}</Empty>
           )}
           {filtered.length > limit && (
             <button
               className="btn btn-ghost full-button"
               onClick={() => setLimit((n) => n + 100)}
-            >
-              Load more events
-            </button>
+            >{tr("Load more events")}</button>
           )}
         </Panel>
-        <Panel title="Inspect the evidence" meta={<Fingerprint size={17} />}>
+        <Panel title={tr("Inspect the evidence")} meta={<Fingerprint size={17} />}>
           {selected ? (
             <>
               <span className="chip chip-gold">{selected.eventType}</span>
               <div className="metric-line">
-                <span>Recorded</span>
+                <span>{tr("Recorded")}</span>
                 <b>{new Date(selected.createdAt).toLocaleString()}</b>
               </div>
               <div className="metric-line">
-                <span>Actor</span>
+                <span>{tr("Actor")}</span>
                 <b>{selected.actorType}</b>
               </div>
               <code className="hash-preview">{selected.subjectId}</code>
@@ -1109,17 +1227,14 @@ export function ArtifactAudit() {
                   rel="noreferrer"
                   href={explorerTransactionUrl(selected.chainSignature)}
                 >
-                  Open on Solana Explorer <ArrowUpRight size={13} />
+                  {tr("Open on Solana Explorer")} <ArrowUpRight size={13} />
                 </a>
               )}
             </>
           ) : (
             <Empty>
               <Fingerprint size={32} />
-              <p>
-                Select an event to inspect its recorded payload and transaction
-                signature.
-              </p>
+              <p>{tr("Select an event to inspect its recorded payload and transaction signature.")}</p>
             </Empty>
           )}
         </Panel>
@@ -1129,6 +1244,7 @@ export function ArtifactAudit() {
 }
 
 function LedgerBlocks() {
+  const tr = useT(VI);
   const [events, setEvents] = useState<AuditRow[]>([]),
     [error, setError] = useState("");
   useEffect(() => {
@@ -1150,7 +1266,7 @@ function LedgerBlocks() {
         })
         .catch(() => {
           if (live)
-            setError("The chain record is unavailable. Open Audit to retry.");
+            setError(tr("The chain record is unavailable. Open Audit to retry."));
         });
     void load();
     const timer = setInterval(load, 20000);
@@ -1175,7 +1291,7 @@ function LedgerBlocks() {
                 href={explorerTransactionUrl(event.chainSignature!)}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`Open ${event.eventType} on Solana Explorer`}
+                aria-label={`${tr("Open")} ${event.eventType} ${tr("on Solana Explorer")}`}
               >
                 <VoxelCube
                   size={74}
@@ -1198,7 +1314,7 @@ function LedgerBlocks() {
           })}
         </div>
       ) : (
-        <Empty>{error || "No signed chain events are available yet."}</Empty>
+        <Empty>{error || tr("No signed chain events are available yet.")}</Empty>
       )}
     </div>
   );

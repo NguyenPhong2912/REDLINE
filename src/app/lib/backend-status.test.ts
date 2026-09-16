@@ -106,3 +106,18 @@ describe("backendMessage", () => {
     expect(backendMessage({ phase: "online", health: null, elapsedMs: 300, progress: 0, error: null }).label).toBe("LIVE");
   });
 });
+
+describe("backendMessage in Vietnamese", () => {
+  it("explains the wait without alarming", () => {
+    const m = backendMessage({ phase: "waking", health: null, elapsedMs: 12_000, progress: 0.13, error: null }, "vi");
+    expect(m.label).toBe("ĐANG KHỞI ĐỘNG");
+    expect(m.detail).toContain("12s");
+    expect(m.detail).not.toMatch(/offline|unreachable|error/i);
+  });
+
+  it("still says offline plainly, with the real error", () => {
+    const m = backendMessage({ phase: "offline", health: null, elapsedMs: 90_000, progress: 1, error: "fetch failed" }, "vi");
+    expect(m.label).toBe("MẤT KẾT NỐI");
+    expect(m.detail).toContain("fetch failed");
+  });
+});

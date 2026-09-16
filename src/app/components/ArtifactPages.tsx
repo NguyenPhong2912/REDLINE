@@ -20,6 +20,83 @@ import { useBackendStatus } from "./BackendStatus";
 import type { AppClient } from "../solana/client";
 import { color } from "../theme";
 import { ProtocolConsole } from "./ProtocolConsole";
+import { useT } from "../i18n/LanguageContext";
+
+const VI: Record<string, string> = {
+  "Configured model": "Mô hình đã cấu hình",
+  "Backend · grounded assistant": "Backend · trợ lý có căn cứ",
+  "Deterministic floor": "Sàn tất định",
+  "Rules · always available": "Quy tắc · luôn sẵn sàng",
+  "Gate registry": "Sổ gate",
+  "Seven on-chain checks": "Bảy lớp kiểm tra on-chain",
+  "Assistant stack": "Bộ trợ lý",
+  "Grounding": "Căn cứ dữ liệu",
+  "Ledger events": "Sự kiện sổ cái",
+  "LIVE": "TRỰC TIẾP",
+  "Scope": "Phạm vi",
+  "THIS WALLET": "VÍ NÀY",
+  "ALL WALLETS": "MỌI VÍ",
+  "Ask the ledger. Verify the answer.": "Hỏi sổ cái. Kiểm chứng câu trả lời.",
+  "GROUNDED": "CÓ CĂN CỨ",
+  "Running now": "Đang chạy",
+  "Operations assistant": "Trợ lý vận hành",
+  "Answers use recorded grants, audit events and the same seven gate definitions shown across REDLINE.": "Câu trả lời dựa trên grant đã ghi, sự kiện kiểm toán và cùng bảy định nghĩa gate hiển thị khắp REDLINE.",
+  "GATES": "GATE",
+  "SCOPE": "PHẠM VI",
+  "OPENAI-COMPATIBLE BACKEND": "BACKEND TƯƠNG THÍCH OPENAI",
+  "The assistant explains. Your wallet remains the only signer.": "Trợ lý giải thích. Ví của bạn vẫn là bên ký duy nhất.",
+  "Connectivity check failed": "Kiểm tra kết nối thất bại",
+  "Grounds answers in recorded state": "Căn cứ câu trả lời vào trạng thái đã ghi",
+  "Names the refusing gate and reason code": "Nêu tên gate từ chối và mã lý do",
+  "Keeps signing authority in the wallet": "Giữ quyền ký trong ví",
+  "Falls back to deterministic rules": "Dự phòng bằng quy tắc tất định",
+  "Avoids inventing unknown figures": "Không bịa số liệu chưa biết",
+  "MODEL UNDER TEST · BACKEND": "MÔ HÌNH ĐANG KIỂM TRA · BACKEND",
+  "Configured assistant": "Trợ lý đã cấu hình",
+  "The active model is discovered through a real grounded request. Until then, REDLINE reports configuration without inventing hardware figures.": "Mô hình đang hoạt động được phát hiện qua một yêu cầu thật. Trước đó, REDLINE chỉ báo cấu hình chứ không bịa số liệu phần cứng.",
+  "SOURCE": "NGUỒN",
+  "LATENCY": "ĐỘ TRỄ",
+  "GROUNDING": "CĂN CỨ",
+  "LEDGER": "SỔ CÁI",
+  "AUTHORITY": "QUYỀN HẠN",
+  "READ ONLY": "CHỈ ĐỌC",
+  "Running check…": "Đang kiểm tra…",
+  "Run grounded benchmark": "Chạy benchmark có căn cứ",
+  "Measured latency": "Độ trễ đo được",
+  "one live grounded request": "một yêu cầu thật",
+  "Answer source": "Nguồn câu trả lời",
+  "reported by the API": "do API báo",
+  "Policy gates": "Gate chính sách",
+  "enforced on-chain": "thực thi on-chain",
+  "Signing access": "Quyền ký",
+  "model cannot sign": "mô hình không thể ký",
+  "Latency profile": "Hồ sơ độ trễ",
+  "LIVE CHECK": "KIỂM TRA TRỰC TIẾP",
+  "Measured request latency in milliseconds": "Độ trễ yêu cầu đo bằng mili giây",
+  "Request": "Yêu cầu",
+  "No measurements yet. Run a benchmark to start.": "Chưa có số đo. Chạy benchmark để bắt đầu.",
+  "Last 12 successful requests in this session. Values include network and server response time.": "12 yêu cầu thành công gần nhất trong phiên này. Giá trị bao gồm thời gian mạng và phản hồi máy chủ.",
+  "Trust boundary checklist": "Danh sách ranh giới tin cậy",
+  "5 CONTROLS": "5 KIỂM SOÁT",
+  "DESIGN": "THIẾT KẾ",
+  "OWNER IDENTITY · SOLANA": "ĐỊNH DANH CHỦ SỞ HỮU · SOLANA",
+  "Wallet not connected": "Chưa kết nối ví",
+  "Connect a wallet to load the owner-scoped profile.": "Kết nối ví để tải hồ sơ của chủ sở hữu.",
+  "REDLINE OPERATOR": "NGƯỜI VẬN HÀNH REDLINE",
+  "Registry versions": "Phiên bản trong sổ",
+  "Active grants": "Grant hoạt động",
+  "Total grants": "Tổng grant",
+  "Confirmed volume": "Khối lượng đã xác nhận",
+  "Transactions": "Giao dịch",
+  "Success rate": "Tỷ lệ thành công",
+  "Blocked": "Bị chặn",
+  "Built from the wallet's seven-day confirmed volume.": "Tính từ khối lượng đã xác nhận trong bảy ngày của ví.",
+  "LIVE LEDGER": "SỔ CÁI TRỰC TIẾP",
+  "Connect a wallet to load its recorded activity.": "Kết nối ví để tải hoạt động đã ghi.",
+  "LOW": "THẤP",
+  "OWNER-SCOPED ACTIVITY": "HOẠT ĐỘNG CỦA CHỦ SỞ HỮU",
+  "HIGH": "CAO",
+};
 
 const panel: CSSProperties = {
   background: color.surface,
@@ -33,6 +110,7 @@ const modelOptions = [
 ];
 
 export function CopilotPage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const owner = connected ? String(connected.account.address) : undefined;
@@ -46,45 +124,45 @@ export function CopilotPage() {
     <div className="route-page page-copilot artifact-page-grid">
       <div className="route-local-heading" aria-hidden="true" />
       <aside className="artifact-side-panel copilot-model-rail" style={panel}>
-        <div className="artifact-panel-kicker"><span />Assistant stack</div>
+        <div className="artifact-panel-kicker"><span />{tr("Assistant stack")}</div>
         {modelOptions.map((model, index) => (
           <div className="artifact-model-option" key={model.name}>
             <span className="artifact-icon" style={{ color: model.tone }}><Bot size={15} /></span>
-            <span><strong>{model.name}</strong><small>{model.note}</small></span>
+            <span><strong>{tr(model.name)}</strong><small>{tr(model.note)}</small></span>
             <i style={{ background: model.tone }} />
           </div>
         ))}
-        <div className="artifact-panel-kicker artifact-panel-kicker-spaced"><span />Grounding</div>
+        <div className="artifact-panel-kicker artifact-panel-kicker-spaced"><span />{tr("Grounding")}</div>
         <div className="artifact-grounding-list">
-          <span>Ledger events</span><b>LIVE</b>
-          <span>Gate registry</span><b>7</b>
-          <span>Scope</span><b>{owner ? "THIS WALLET" : "ALL WALLETS"}</b>
+          <span>{tr("Ledger events")}</span><b>{tr("LIVE")}</b>
+          <span>{tr("Gate registry")}</span><b>7</b>
+          <span>{tr("Scope")}</span><b>{owner ? tr("THIS WALLET") : tr("ALL WALLETS")}</b>
         </div>
       </aside>
 
       <section className="copilot-console-stage">
         <div className="artifact-stage-head">
-          <div><span>REDLINE COPILOT</span><strong>Ask the ledger. Verify the answer.</strong></div>
-          <em><i /> GROUNDED</em>
+          <div><span>REDLINE COPILOT</span><strong>{tr("Ask the ledger. Verify the answer.")}</strong></div>
+          <em><i />{tr("GROUNDED")}</em>
         </div>
         <ProtocolConsole owner={owner} />
       </section>
 
       <aside className="artifact-side-panel copilot-status-panel" style={panel}>
-        <div className="artifact-panel-kicker"><span />Running now</div>
-        <h3>Operations assistant</h3>
-        <p>Answers use recorded grants, audit events and the same seven gate definitions shown across REDLINE.</p>
+        <div className="artifact-panel-kicker"><span />{tr("Running now")}</div>
+        <h3>{tr("Operations assistant")}</h3>
+        <p>{tr("Answers use recorded grants, audit events and the same seven gate definitions shown across REDLINE.")}</p>
         <div className="artifact-metric-grid">
           <div><small>API</small><strong>{healthState.toUpperCase()}</strong></div>
           <div><small>CHAIN</small><strong>{health?.chain ?? "—"}</strong></div>
-          <div><small>GATES</small><strong>7</strong></div>
-          <div><small>SCOPE</small><strong>{owner ? "THIS WALLET" : "ALL WALLETS"}</strong></div>
+          <div><small>{tr("GATES")}</small><strong>7</strong></div>
+          <div><small>{tr("SCOPE")}</small><strong>{owner ? tr("THIS WALLET") : tr("ALL WALLETS")}</strong></div>
         </div>
         <div className="artifact-connection-card">
           <Server size={14} />
-          <span><small>OPENAI-COMPATIBLE BACKEND</small><code>{API_URL}</code></span>
+          <span><small>{tr("OPENAI-COMPATIBLE BACKEND")}</small><code>{API_URL}</code></span>
         </div>
-        <p className="artifact-trust-note"><ShieldCheck size={14} /> The assistant explains. Your wallet remains the only signer.</p>
+        <p className="artifact-trust-note"><ShieldCheck size={14} />{tr("The assistant explains. Your wallet remains the only signer.")}</p>
       </aside>
     </div>
   );
@@ -93,6 +171,7 @@ export function CopilotPage() {
 type Benchmark = { latency: number; source: string; model: string } | null;
 
 export function ModelsPage() {
+  const tr = useT(VI);
   const [benchmark, setBenchmark] = useState<Benchmark>(null);
   const [busy, setBusy] = useState(false);
   const [measurements, setMeasurements] = useState<number[]>([]);
@@ -108,7 +187,7 @@ export function ModelsPage() {
       setBenchmark({ latency, source: reply.source, model: reply.model });
       setMeasurements(values => [...values.slice(-11), latency]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Connectivity check failed");
+      setError(cause instanceof Error ? cause.message : tr("Connectivity check failed"));
     } finally {
       setBusy(false);
     }
@@ -127,42 +206,42 @@ export function ModelsPage() {
       <div className="route-local-heading" aria-hidden="true" />
       <aside className="model-identity-card" style={panel}>
         <div className="model-prism" aria-hidden="true"><span /><span /><span /></div>
-        <small>MODEL UNDER TEST · BACKEND</small>
-        <h2>{benchmark?.model || "Configured assistant"}</h2>
-        <p>The active model is discovered through a real grounded request. Until then, REDLINE reports configuration without inventing hardware figures.</p>
+        <small>{tr("MODEL UNDER TEST · BACKEND")}</small>
+        <h2>{benchmark?.model || tr("Configured assistant")}</h2>
+        <p>{tr("The active model is discovered through a real grounded request. Until then, REDLINE reports configuration without inventing hardware figures.")}</p>
         <div className="artifact-metric-grid">
-          <div><small>SOURCE</small><strong>{benchmark?.source ?? "—"}</strong></div>
-          <div><small>LATENCY</small><strong>{benchmark ? `${benchmark.latency} ms` : "—"}</strong></div>
-          <div><small>GROUNDING</small><strong>LEDGER</strong></div>
-          <div><small>AUTHORITY</small><strong>READ ONLY</strong></div>
+          <div><small>{tr("SOURCE")}</small><strong>{benchmark?.source ?? "—"}</strong></div>
+          <div><small>{tr("LATENCY")}</small><strong>{benchmark ? `${benchmark.latency} ms` : "—"}</strong></div>
+          <div><small>{tr("GROUNDING")}</small><strong>{tr("LEDGER")}</strong></div>
+          <div><small>{tr("AUTHORITY")}</small><strong>{tr("READ ONLY")}</strong></div>
         </div>
         <button type="button" className="artifact-primary-button" onClick={() => void runBenchmark()} disabled={busy}>
-          <Play size={14} />{busy ? "Running check…" : "Run grounded benchmark"}
+          <Play size={14} />{busy ? tr("Running check…") : tr("Run grounded benchmark")}
         </button>
         {error && <p className="artifact-error"><AlertTriangle size={13} />{error}</p>}
       </aside>
 
       <section className="model-observability-grid">
         {[
-          { label: "Measured latency", value: benchmark ? `${benchmark.latency} ms` : "—", icon: Gauge, sub: "one live grounded request" },
-          { label: "Answer source", value: benchmark?.source?.toUpperCase() ?? "—", icon: Cpu, sub: "reported by the API" },
-          { label: "Policy gates", value: "7", icon: ShieldCheck, sub: "enforced on-chain" },
-          { label: "Signing access", value: "0", icon: Wallet, sub: "model cannot sign" },
+          { label: tr("Measured latency"), value: benchmark ? `${benchmark.latency} ms` : "—", icon: Gauge, sub: tr("one live grounded request") },
+          { label: tr("Answer source"), value: benchmark?.source?.toUpperCase() ?? "—", icon: Cpu, sub: tr("reported by the API") },
+          { label: tr("Policy gates"), value: "7", icon: ShieldCheck, sub: tr("enforced on-chain") },
+          { label: tr("Signing access"), value: "0", icon: Wallet, sub: tr("model cannot sign") },
         ].map(item => (
           <article className="artifact-kpi-card" style={panel} key={item.label}>
-            <item.icon size={14} /><small>{item.label}</small><strong>{item.value}</strong><span>{item.sub}</span>
+            <item.icon size={14} /><small>{tr(item.label)}</small><strong>{item.value}</strong><span>{tr(item.sub)}</span>
           </article>
         ))}
         <article className="model-chart-card" style={panel}>
-          <header><h3>Latency profile</h3><span>LIVE CHECK</span></header>
-          <div className="model-bars" aria-label="Measured request latency in milliseconds">
-            {measurements.length ? measurements.map((ms, index) => <i key={index} title={`Request ${index + 1}: ${ms} ms`} style={{ height: `${ms / Math.max(...measurements) * 90}%` }}><span>{ms} ms</span></i>) : <p>No measurements yet. Run a benchmark to start.</p>}
+          <header><h3>{tr("Latency profile")}</h3><span>{tr("LIVE CHECK")}</span></header>
+          <div className="model-bars" aria-label={tr("Measured request latency in milliseconds")}>
+            {measurements.length ? measurements.map((ms, index) => <i key={index} title={`${tr("Request")} ${index + 1}: ${ms} ms`} style={{ height: `${ms / Math.max(...measurements) * 90}%` }}><span>{ms} ms</span></i>) : <p>{tr("No measurements yet. Run a benchmark to start.")}</p>}
           </div>
-          <p>Last 12 successful requests in this session. Values include network and server response time.</p>
+          <p>{tr("Last 12 successful requests in this session. Values include network and server response time.")}</p>
         </article>
         <article className="model-check-card" style={panel}>
-          <header><h3>Trust boundary checklist</h3><span>5 CONTROLS</span></header>
-          {checks.map(check => <div key={check}><CheckCircle2 size={14} /><span>{check}</span><small>DESIGN</small></div>)}
+          <header><h3>{tr("Trust boundary checklist")}</h3><span>{tr("5 CONTROLS")}</span></header>
+          {checks.map(check => <div key={check}><CheckCircle2 size={14} /><span>{tr(check)}</span><small>{tr("DESIGN")}</small></div>)}
         </article>
       </section>
     </div>
@@ -170,6 +249,7 @@ export function ModelsPage() {
 }
 
 export function ProfilePage() {
+  const tr = useT(VI);
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const wallet = connected ? String(connected.account.address) : "";
@@ -195,15 +275,15 @@ export function ProfilePage() {
       <div className="route-local-heading" aria-hidden="true" />
       <aside className="profile-identity-card" style={panel}>
         <div className="profile-avatar"><Wallet size={25} /></div>
-        <small>OWNER IDENTITY · SOLANA</small>
-        <h2>{wallet ? short(wallet, 6) : "Wallet not connected"}</h2>
-        <p>{wallet || "Connect a wallet to load the owner-scoped profile."}</p>
-        <div className="profile-rank"><Sparkles size={14} /><span>REDLINE OPERATOR</span></div>
+        <small>{tr("OWNER IDENTITY · SOLANA")}</small>
+        <h2>{wallet ? short(wallet, 6) : tr("Wallet not connected")}</h2>
+        <p>{wallet || tr("Connect a wallet to load the owner-scoped profile.")}</p>
+        <div className="profile-rank"><Sparkles size={14} /><span>{tr("REDLINE OPERATOR")}</span></div>
         <dl>
-          <div><dt>Registry versions</dt><dd>{agents.length}</dd></div>
-          <div><dt>Active grants</dt><dd>{analytics?.activeGrants ?? "—"}</dd></div>
-          <div><dt>Total grants</dt><dd>{analytics?.totalGrants ?? "—"}</dd></div>
-          <div><dt>Confirmed volume</dt><dd>{analytics ? `${analytics.totalVolumeUsdc.toLocaleString()} USDC` : "—"}</dd></div>
+          <div><dt>{tr("Registry versions")}</dt><dd>{agents.length}</dd></div>
+          <div><dt>{tr("Active grants")}</dt><dd>{analytics?.activeGrants ?? "—"}</dd></div>
+          <div><dt>{tr("Total grants")}</dt><dd>{analytics?.totalGrants ?? "—"}</dd></div>
+          <div><dt>{tr("Confirmed volume")}</dt><dd>{analytics ? `${analytics.totalVolumeUsdc.toLocaleString()} USDC` : "—"}</dd></div>
         </dl>
       </aside>
 
@@ -214,15 +294,15 @@ export function ProfilePage() {
             ["Transactions", analytics?.totalTransactions ?? "—"],
             ["Success rate", analytics?.successRatePct == null ? "—" : `${analytics.successRatePct}%`],
             ["Blocked", analytics?.totalRejections ?? "—"],
-          ].map(([label, value]) => <article style={panel} key={label}><small>{label}</small><strong>{value}</strong><Activity size={14} /></article>)}
+          ].map(([label, value]) => <article style={panel} key={label}><small>{tr(String(label))}</small><strong>{value}</strong><Activity size={14} /></article>)}
         </div>
         <article className="profile-activity-card" style={panel}>
-          <header><div><h3>Confirmed volume</h3><p>Built from the wallet's seven-day confirmed volume.</p></div><span>LIVE LEDGER</span></header>
+          <header><div><h3>{tr("Confirmed volume")}</h3><p>{tr("Built from the wallet's seven-day confirmed volume.")}</p></div><span>{tr("LIVE LEDGER")}</span></header>
           <div className="profile-heatmap">
             {activity.map((point, index) => <div key={index}><i style={{ opacity: point.opacity }} /><small>{point.t}</small><b>{point.volumeUsdc.toLocaleString()} USDC</b></div>)}
-            {!activity.length && <p>Connect a wallet to load its recorded activity.</p>}
+            {!activity.length && <p>{tr("Connect a wallet to load its recorded activity.")}</p>}
           </div>
-          <footer><span>LOW</span><span>OWNER-SCOPED ACTIVITY</span><span>HIGH</span></footer>
+          <footer><span>{tr("LOW")}</span><span>{tr("OWNER-SCOPED ACTIVITY")}</span><span>{tr("HIGH")}</span></footer>
         </article>
       </section>
     </div>
