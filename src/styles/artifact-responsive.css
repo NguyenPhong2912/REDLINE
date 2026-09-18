@@ -1603,6 +1603,7 @@ code {
   border-radius: 6px;
   background: var(--inset);
   font-size: 13px;
+  color: #ffffff !important;
 }
 .redline-console-note {
   padding: 14px;

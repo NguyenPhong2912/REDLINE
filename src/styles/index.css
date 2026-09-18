@@ -1081,7 +1081,7 @@ body {
 .redline-console-good { color: #186547; }
 .redline-console-caret { color: #094ed2; }
 .redline-console-input { border-color: #dbe5f2; background: #f8fbff; }
-.redline-console-input input { color: #182033; }
+.redline-console-input input { color: #ffffff !important; }
 .redline-console-input button, .redline-console-note { border-color: #dbe5f2; }
 .redline-console-input button:hover:not(:disabled) { color: #094ed2; border-color: #8ab3ee; }
 .redline-console-input:focus-within { outline-color: rgba(75,134,247,.48); }
@@ -1671,7 +1671,7 @@ html, body, #root { background: #cbd5df; }
 
 .redline-console { border-color: #9eafbf; background: #d9e1e8; box-shadow: 0 14px 34px rgba(31,47,65,.10); }
 .redline-console-bar, .redline-console-input { border-color: #aebdcb; background: #cbd6df; }
-.redline-console-input input { color: #172330; }
+.redline-console-input input { color: #ffffff !important; }
 
 @media (min-width: 1700px) {
   .route-page > :first-child h1 { font-size: clamp(2.5rem,2.9vw,3.8rem) !important; }

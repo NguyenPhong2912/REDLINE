@@ -1,10 +1,43 @@
 import type { FastifyInstance } from "fastify";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { z } from "zod";
 import { prisma } from "../db/client.js";
 import { MESSAGES } from "../policy/engine.js";
 import { askForJson, isConfigured, modelName } from "../llm-client.js";
 import { POLICY_GATES } from "./protocol.js";
 import { json } from "./json.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROMPT_PATH = path.join(__dirname, "../copilot-prompt.txt");
+
+const DEFAULT_SYSTEM_PROMPT = [
+  "You are the REDLINE operations assistant for an on-chain agent guardrail system on Solana.",
+  "The user's brief below is the ONLY source of fact available to you. Every number you state must appear in it.",
+  "The verified baseline is computed directly from the ledger. Do not contradict it, relabel its counts, or invent a limit from an unrelated number.",
+  "If the brief does not contain what was asked, say so plainly and describe what would be needed — never estimate, and never recall figures from elsewhere.",
+  "Gates are checked in order and the first failure stops the transfer; a refusal means nothing moved.",
+  "A grant and its limits are immutable after signing. A revoked or expired grant cannot be restored or edited; the owner must review and sign a new grant.",
+  "Answer in the same language as the user's question, including Vietnamese.",
+  "Infer the user's intent from natural language, answer it directly, and give up to three concrete next actions.",
+  "Prefer naming the gate, reason code, and policy field that would change the outcome over general advice.",
+].join(" ");
+
+function loadSystemPrompt(): string {
+  try {
+    if (fs.existsSync(PROMPT_PATH)) {
+      const text = fs.readFileSync(PROMPT_PATH, "utf-8").trim();
+      if (text) return text;
+    }
+    console.log(`[Assistant] Prompt file not found or empty at ${PROMPT_PATH}, using default prompt`);
+  } catch (err) {
+    console.warn(`[Assistant] Error reading system prompt from ${PROMPT_PATH}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  return DEFAULT_SYSTEM_PROMPT;
+}
+
 
 // An assistant that can only talk about what this system actually recorded.
 //
@@ -20,7 +53,7 @@ import { json } from "./json.js";
 
 const Body = z.object({
   question: z.string().trim().min(1).max(400),
-  owner: z.string().min(32).max(44).optional(),
+  owner: z.preprocess(v => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().min(32).max(44).optional()),
 });
 
 export interface Grounding {
@@ -122,16 +155,18 @@ const isVietnamese = (question: string) =>
   /[ăâđêôơưàáạảãèéẹẻẽìíịỉĩòóọỏõùúụủũỳýỵỷỹ]/i.test(question)
   || hasAny(question.toLowerCase(), [" vì ", " sao ", " của tôi", " bị ", " không ", " nên ", " thế nào"]);
 
-/** Questions with an exact answer in the ledger should never be handed to a model. */
 export function isOperationalQuestion(question: string, g: Grounding): boolean {
   const q = ` ${question.toLowerCase().normalize("NFC")} `;
   const mentionsReasonCode = Object.keys(g.reasonCodes).some(reason => question.toUpperCase().includes(reason));
-  return mentionsReasonCode || hasAny(q, [
+  if (mentionsReasonCode) return true;
+
+  const opsTerms = [
     "agent", "grant", "policy", "gate", "block", "stuck", "refus", "reject", "failed", "failure",
-    "budget", "spend", "cap", "usdc", "expire", "expiry", "lapse", "active", "status", "fix", "should",
-    "agent", "grant", "chính sách", "gate", "bị chặn", "từ chối", "không chạy", "thất bại", "lỗi",
-    "ngân sách", "chi tiêu", "hạn mức", "số dư", "hết hạn", "thời hạn", "hoạt động", "trạng thái", "nên", "sửa", "làm gì",
-  ]);
+    "budget", "spend", "cap", "usdc", "expire", "expiry", "lapse",
+    "chính sách", "bị chặn", "từ chối", "không chạy", "thất bại",
+    "ngân sách", "chi tiêu", "hạn mức", "hết hạn", "thời hạn",
+  ];
+  return opsTerms.some(term => q.includes(term));
 }
 
 function gateAdvice(gateId: number, vi: boolean): Suggestion {
@@ -157,15 +192,36 @@ export function withoutModel(g: Grounding, question: string): { answer: string; 
   const q = ` ${question.toLowerCase().normalize("NFC")} `;
   const vi = isVietnamese(q);
   const busiest = [...g.gates].sort((a, b) => b.refusals - a.refusals)[0];
+
+  const code = Object.keys(g.reasonCodes).find(reason => question.toUpperCase().includes(reason));
+  const codeGate = code ? POLICY_GATES.find(gate => (gate.reasonCodes as readonly string[]).includes(code)) : undefined;
+
+  const isGreeting = hasAny(q, ["hello", "hi", "xin chào", "chào", "bạn là ai", "who are you", "tro ly", "trợ lý"]);
   const asksBlocked = hasAny(q, ["block", "stuck", "refus", "reject", "failed", "failure", "bị chặn", "từ chối", "không chạy", "thất bại", "lỗi"]);
   const asksBudget = hasAny(q, ["budget", "spend", "cap", "usdc", "ngân sách", "chi tiêu", "hạn mức", "số dư"]);
   const asksExpiry = hasAny(q, ["expire", "expiry", "lapse", "hết hạn", "thời hạn", "bao lâu"]);
-  const asksGrant = hasAny(q, ["grant", "policy", "agent", "active", "status", "quyền", "chính sách", "hoạt động", "trạng thái"]);
-  const code = Object.keys(g.reasonCodes).find(reason => question.toUpperCase().includes(reason));
-  const codeGate = code ? POLICY_GATES.find(gate => (gate.reasonCodes as readonly string[]).includes(code)) : undefined;
-  let answer: string;
+  const asksGrant = hasAny(q, ["grant", "policy", "active", "status", "quyền", "chính sách", "hoạt động", "trạng thái", "doing", "how are"]);
 
-  if (code) {
+  const asksWallet = hasAny(q, ["kết nối ví", "connect wallet", "phantom", "solflare", "backpack"]);
+  const asksTreasury = hasAny(q, ["treasury", "nạp tiền", "rút tiền", "withdraw", "deposit", "kho tiền"]);
+  const asksAudit = hasAny(q, ["audit", "nhật ký", "audit trail", "kiểm toán"]);
+  const asksAnalytics = hasAny(q, ["analytics", "biểu đồ analytics"]);
+  const asksProfile = hasAny(q, ["profile", "hồ sơ", "chủ sở hữu", "owner profile"]);
+  const asksSettings = hasAny(q, ["settings", "cài đặt", "phím tắt", "devnet"]);
+  const asksModels = hasAny(q, ["models", "mô hình", "gemini", "groq", "profiling"]);
+  const asksAgentsPage = hasAny(q, ["trang agent", "agents page", "agenthash"]);
+  const asksShortcut = hasAny(q, ["⌘k", "ctrl+k", "command palette"]);
+  const asksMarket = hasAny(q, ["marketplace", "chợ", "thuê agent", "đăng agent"]);
+  const asksLab = hasAny(q, ["lab", "giả lập", "policy lab"]);
+  const asksGuide = hasAny(q, ["hướng dẫn", "cách dùng", "sử dụng", "làm sao", "thế nào", "làm cách nào"]);
+
+  let answer: string | undefined;
+
+  if (isGreeting) {
+    answer = vi
+      ? "Xin chào! Tôi là REDLINE Copilot — Trợ lý vận hành và giám sát On-Chain. Bạn có thể hỏi tôi về 12 trang chức năng trên web (kết nối ví, Treasury Vault, Marketplace, Audit Trail, Guardrails...), hoặc giải thích các giao dịch bị 7 Gates chặn."
+      : "Hello! I am REDLINE Copilot — your On-Chain Operations & Monitoring Assistant. You can ask me about all 12 web pages (connecting wallet, Treasury Vault, Marketplace, Audit Trail, Guardrails...), or explaining transfers blocked by the 7 Safety Gates.";
+  } else if (code) {
     answer = vi
       ? `${code} thuộc gate ${codeGate?.id ?? "?"}${codeGate ? ` (${codeGate.label})` : ""}: ${g.reasonCodes[code]}`
       : `${code} belongs to gate ${codeGate?.id ?? "?"}${codeGate ? ` (${codeGate.label})` : ""}: ${g.reasonCodes[code]}`;
@@ -187,7 +243,68 @@ export function withoutModel(g: Grounding, question: string): { answer: string; 
     answer = vi
       ? `${g.scope === "wallet" ? "Ví này" : "Giao thức"} có ${g.grants.active} grant đang hoạt động trong tổng số ${g.grants.total}; ${g.grants.revoked} grant đã bị thu hồi. Có ${g.decisions.allowed} giao dịch được phép và ${g.decisions.refused} giao dịch bị từ chối.`
       : `${g.scope === "wallet" ? "This wallet" : "The protocol"} holds ${g.grants.active} active ${g.grants.active === 1 ? "grant" : "grants"} of ${g.grants.total}; ${g.grants.revoked} are revoked. ${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused.`;
-  } else {
+  } else if (asksWallet) {
+    answer = vi
+      ? "Để kết nối ví Solana trên REDLINE, bạn nhấn nút 'Select Wallet' ở góc trên bên phải màn hình, chọn ví của bạn (Phantom, Solflare, Backpack...) và chấp nhận yêu cầu kết nối."
+      : "To connect your Solana wallet on REDLINE, click the 'Select Wallet' button at the top right of the screen, pick your provider (Phantom, Solflare, Backpack...), and approve the connection.";
+  } else if (asksTreasury) {
+    answer = vi
+      ? "Trang Treasury (/#/treasury) cho phép quản lý Kho tiền Vault PDA do Solana Program kiểm soát (Non-Custodial). Bạn có thể nạp tiền thử nghiệm trên Devnet, xem tổng số dư dự trữ và thực hiện rút tiền (Withdraw) an toàn về ví cá nhân."
+      : "The Treasury page (/#/treasury) manages your program-owned non-custodial Vault PDA. You can refill on Devnet, inspect reserves, and withdraw funds back to your wallet.";
+  } else if (asksAudit) {
+    answer = vi
+      ? "Trang Audit Trail (/#/audit) lưu trữ nhật ký kiểm toán công khai on-chain. Mọi đề xuất giao dịch, kết quả kiểm duyệt từ 7 Gates (ALLOW/REFUSE) và chữ ký giao dịch Solana đều được ghi nhận minh bạch và không thể chỉnh sửa."
+      : "The Audit Trail page (/#/audit) provides a transparent on-chain audit log. Every transaction intent, 7-gate decision, and Solana transaction signature is recorded immutably.";
+  } else if (asksAnalytics) {
+    answer = vi
+      ? "Trang Analytics (/#/analytics) cung cấp báo cáo phân tích chuyên sâu: thống kê tổng khối lượng giao dịch đã duyệt, biểu đồ phân bổ các nguyên nhân từ chối (Reason Codes) và độ trễ ra quyết định của policy."
+      : "The Analytics page (/#/analytics) delivers deep insights: confirmed volume, policy decision latency, and refusal distribution across the 7 Safety Gates.";
+  } else if (asksProfile) {
+    answer = vi
+      ? "Trang Owner Profile (/#/profile) thể hiện định danh ví của bạn, danh sách các Vault PDA đã tạo, các Grant chính sách đang sở hữu và lịch sử hoạt động cá nhân trên giao thức."
+      : "The Owner Profile page (/#/profile) displays your wallet identity, created Vault PDAs, signed grant authorities, and confirmed on-chain activity.";
+  } else if (asksSettings) {
+    answer = vi
+      ? "Trang Settings (/#/settings) cho phép tùy chỉnh cấu hình mạng (Solana Devnet/Localnet), URL Backend API, bật/tắt âm thanh tương tác và chuyển đổi ngôn ngữ Tiếng Việt/Tiếng Anh."
+      : "The Settings page (/#/settings) lets you configure network endpoints (Devnet/Localnet), backend API URL, sound effects, and language preferences.";
+  } else if (asksModels) {
+    answer = vi
+      ? "Trang Model Profiling (/#/models) giúp kiểm tra hiệu năng các mô hình LLM (Gemini 3.8 Flash, OpenAI, Groq), đo tốc độ phản hồi (latency) và kiểm tra tính hợp lệ của API Key."
+      : "The Model Profiling page (/#/models) lets you test LLM provider performance (Gemini 3.8 Flash, OpenAI, Groq), measure latency, and validate API keys.";
+  } else if (asksAgentsPage) {
+    answer = vi
+      ? "Trang My Agents (/#/agents) quản lý tất cả AI Agent mà bạn sở hữu hoặc đã thuê. Mỗi agent được xác minh bằng mã hash duy nhất (agentHash) và có lịch sử lượt chạy (Agent Runs) riêng."
+      : "The My Agents page (/#/agents) manages all agents you own or rented. Each build is pinned by an immutable agentHash with detailed Agent Run history.";
+  } else if (asksShortcut) {
+    answer = vi
+      ? "Bạn có thể nhấn phím tắt `⌘K` (hoặc `Ctrl+K`) hoặc bấm nút 'Find' trên góc thanh công cụ để mở Command Palette, tìm kiếm và nhảy nhanh đến bất kỳ trang nào trong 12 trang."
+      : "Press `⌘K` (or `Ctrl+K`) or click 'Find' in the header to open the Command Palette and navigate to any of the 12 pages instantly.";
+  } else if (asksMarket) {
+    answer = vi
+      ? "Tại Agent Marketplace (/#/marketplace), bạn có thể chọn và thuê các AI Agent đã được niêm yết với mã build cố định (hash). Thuê agent bằng SOL thật trên Solana Devnet để chạy chiến lược tự động."
+      : "In the Agent Marketplace (/#/marketplace), you can browse and hire verified AI Agents using SOL on Solana Devnet to run automated strategies.";
+  } else if (asksLab) {
+    answer = vi
+      ? "Policy Lab / Guardrails (/#/guardrails hoặc /#/simulation) cho phép bạn giả lập cấu hình 7 Cổng An Toàn (Seven Gates) hoàn toàn miễn phí gas trước khi tiến hành ký duyệt chính thức."
+      : "Policy Lab & Guardrails (/#/guardrails) lets you simulate testing the 7 Safety Gates completely free of gas fees before signing live grants.";
+  } else if (asksGuide) {
+    answer = vi
+      ? "Các bước sử dụng REDLINE: 1) Kết nối ví Solana ở góc phải -> 2) Nạp USDC/SOL vào Vault PDA ở trang Treasury -> 3) Thiết lập & ký duyệt Grant ở Guardrails -> 4) Theo dõi agent giao dịch an toàn với 7 Cổng An Toàn."
+      : "REDLINE quick guide: 1) Connect Solana wallet -> 2) Deposit into Vault PDA in Treasury -> 3) Sign Grant in Guardrails -> 4) Monitor agent protected by the 7 Safety Gates.";
+  }
+
+  const isUnknownNonOps = hasAny(q, ["nấu ăn", "thời tiết", "ăn gì", "bạn tên gì", "mấy giờ", "yêu", "hát"]);
+
+  if (!answer) {
+    if (isUnknownNonOps) {
+      return {
+        answer: vi
+          ? "Tôi vẫn đang trong quá trình cải thiện web , tôi sẽ trả lời câu hỏi của bạn sau"
+          : "I am still in the process of improving the website, I will answer your question later",
+        suggestions: [],
+      };
+    }
+
     answer = vi
       ? `${g.scope === "wallet" ? "Ví này" : "Giao thức"} có ${g.grants.active}/${g.grants.total} grant đang hoạt động. ${g.decisions.allowed} giao dịch được phép, ${g.decisions.refused} giao dịch bị từ chối${busiest?.refusals ? `; phần lớn dừng ở gate ${busiest.id} (${busiest.label})` : ""}.`
       : `${g.scope === "wallet" ? "This wallet" : "The protocol"} holds ${g.grants.active} active ${g.grants.active === 1 ? "grant" : "grants"} of ${g.grants.total}. ${g.decisions.allowed} transfers were allowed and ${g.decisions.refused} refused${busiest?.refusals ? `; most stopped at gate ${busiest.id}, ${busiest.label.toLowerCase()}` : ""}.`;
@@ -216,34 +333,37 @@ export async function assistantRoutes(app: FastifyInstance) {
     const body = Body.parse(req.body);
     const grounding = await gather(body.owner);
     const floor = withoutModel(grounding, body.question);
-    // Ledger questions have deterministic answers. Keeping them out of the
-    // model prevents refusal counts from being relabelled as grant counts and
-    // prevents impossible advice such as restoring an immutable revoked grant.
-    if (!isConfigured() || isOperationalQuestion(body.question, grounding)) {
+
+    // If no LLM key is configured, fallback directly to deterministic Rules Engine output.
+    if (!isConfigured()) {
       return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
     }
 
     try {
       const answered = await askForJson<{ answer: string; suggestions: { title: string; detail: string }[] }>({
-        system: [
-          "You are the REDLINE operations assistant for an on-chain agent guardrail system on Solana.",
-          "The user's brief below is the ONLY source of fact available to you. Every number you state must appear in it.",
-          "The verified baseline is computed directly from the ledger. Do not contradict it, relabel its counts, or invent a limit from an unrelated number.",
-          "If the brief does not contain what was asked, say so plainly and describe what would be needed — never estimate, and never recall figures from elsewhere.",
-          "Gates are checked in order and the first failure stops the transfer; a refusal means nothing moved.",
-          "A grant and its limits are immutable after signing. A revoked or expired grant cannot be restored or edited; the owner must review and sign a new grant.",
-          "Answer in the same language as the user's question, including Vietnamese.",
-          "Infer the user's intent from natural language, answer it directly, and give up to three concrete next actions.",
-          "Prefer naming the gate, reason code, and policy field that would change the outcome over general advice.",
-        ].join(" "),
+        system: `${loadSystemPrompt()}
+
+CHỈ THỊ CỐT LÕI VỀ DIỄN ĐẠT:
+1. Trả lời tự nhiên, mạch lạc, dễ hiểu theo đúng câu hỏi của người dùng.
+2. Nếu câu hỏi liên quan đến hướng dẫn thao tác trên website (kết nối ví, tạo grant, dùng marketplace, treasury...), hãy trả lời trực tiếp các bước hướng dẫn một cách thân thiện. KHÔNG tự động chèn các số liệu thống kê giao thức trừ khi người dùng chủ động hỏi báo cáo số liệu.
+3. Với những câu hỏi ngoài phạm vi dự án REDLINE, không có thông tin hoặc câu hỏi không biết trả lời, bắt buộc phải trả lời: "Tôi vẫn đang trong quá trình cải thiện web , tôi sẽ trả lời câu hỏi của bạn sau".
+4. Trả lời bằng cùng ngôn ngữ với câu hỏi người dùng (ưu tiên Tiếng Việt).
+5. Dùng văn bản thuần túy (Plain Text hoặc Markdown ngắn gọn), KHÔNG chèn thẻ HTML (như <ul>, <li>, <b>).`,
         input: { question: body.question, brief: grounding, verifiedBaseline: floor },
         schemaName: "redline_assistant_reply",
         schema,
-        maxTokens: 700,
+        maxTokens: 4000,
       });
       if (!answered) return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
-      return json({ ...answered, source: "model", model: modelName(), grounding });
+      return json({
+        ...answered,
+        source: "model",
+        groundedBy: "rules",
+        model: modelName(),
+        grounding,
+      });
     } catch (err) {
+      console.error("[Assistant Route Error]:", err);
       req.log.warn({ err: err instanceof Error ? err.message : String(err), model: modelName() }, "assistant call failed; answering from recorded figures");
       return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
     }
