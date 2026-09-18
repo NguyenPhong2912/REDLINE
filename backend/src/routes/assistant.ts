@@ -334,8 +334,11 @@ export async function assistantRoutes(app: FastifyInstance) {
     const grounding = await gather(body.owner);
     const floor = withoutModel(grounding, body.question);
 
-    // If no LLM key is configured, fallback directly to deterministic Rules Engine output.
-    if (!isConfigured()) {
+    const q = ` ${body.question.toLowerCase().normalize("NFC")} `;
+    const isGreeting = hasAny(q, ["hello", "hi", "xin chào", "chào", "bạn là ai", "who are you", "tro ly", "trợ lý"]);
+
+    // If no LLM key is configured, or it's a greeting/fallback message, return rules output directly.
+    if (!isConfigured() || isGreeting || floor.answer.includes("Tôi vẫn đang trong quá trình cải thiện web")) {
       return json({ ...floor, source: "rules", model: "redline-rules-v2", grounding });
     }
 
