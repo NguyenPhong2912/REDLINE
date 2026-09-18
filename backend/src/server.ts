@@ -25,7 +25,7 @@ import { analyticsRoutes } from "./routes/analytics.js";
 import { protocolRoutes } from "./routes/protocol.js";
 import { assistantRoutes } from "./routes/assistant.js";
 import { simulationRoutes } from "./routes/simulation.js";
-import { getLLMConfigStatus } from "./llm-client.js";
+import { publicLLMStatus } from "./llm-client.js";
 
 const app = Fastify({
   logger: {
@@ -114,7 +114,7 @@ app.get("/health", async () => {
     rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120),
     demoMintConfigured: Boolean(process.env.DEMO_USDC_MINT),
     cluster: chain.kind === "solana" ? "devnet" : "mock",
-    llmStatus: getLLMConfigStatus(),
+    llmStatus: publicLLMStatus(),
   };
 });
 

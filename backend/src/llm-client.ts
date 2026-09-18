@@ -78,6 +78,26 @@ export function validateKeyFormat(key?: string, baseUrl?: string): { valid: bool
   return { valid: true };
 }
 
+/**
+ * What an unauthenticated caller may learn about the copilot: whether one is
+ * configured, and which model answers.
+ *
+ * /health is public and used to return getLLMConfigStatus() whole, which
+ * includes the first eight and last four characters of the API key plus its
+ * length. A masked key is fine in a server log, where only operators read it.
+ * On an open endpoint it is twelve characters of a live secret handed to
+ * anyone who asks, and it names the provider to try them against.
+ */
+export function publicLLMStatus() {
+  const key = getApiKey();
+  return {
+    configured: Boolean(key),
+    model: modelName(),
+    keyFormatValid: validateKeyFormat(key, getBaseUrl()).valid,
+  };
+}
+
+/** Full diagnostic, including a masked key. Server logs only — never a response body. */
 export function getLLMConfigStatus() {
   const key = getApiKey();
   const trimmedKey = (key ?? "").trim();

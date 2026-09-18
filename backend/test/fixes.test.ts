@@ -3,7 +3,7 @@ import { isTransientChainError } from "../src/chain/solana.js";
 import { canonicalJson } from "../src/routes/agents.js";
 import { redactPayload } from "../src/redact.js";
 import { withoutModel, type Grounding } from "../src/routes/assistant.js";
-import { maskKey, validateKeyFormat } from "../src/llm-client.js";
+import { maskKey, publicLLMStatus, validateKeyFormat } from "../src/llm-client.js";
 
 // Regression tests for the logic bugs found in the audit of fc0a4e4. Each one
 // is written as the failure was observed, so a reintroduction reads as the
@@ -104,3 +104,24 @@ describe("LLM client diagnostic utils", () => {
   });
 });
 
+
+describe("publicLLMStatus — what /health may say about the copilot", () => {
+  // /health is unauthenticated. It used to include a masked key: eight leading
+  // characters, four trailing, and the length. Masking is for logs; on a public
+  // endpoint it is still part of a live secret.
+  it("reveals that a key exists, and nothing of the key itself", () => {
+    const secret = "gsk_TESTONLYabcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHtail";
+    const before = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = secret;
+    try {
+      const body = JSON.stringify(publicLLMStatus());
+      expect(publicLLMStatus().configured).toBe(true);
+      for (const fragment of [secret.slice(0, 8), secret.slice(0, 4), secret.slice(-4), String(secret.length)]) {
+        expect(body, `leaked "${fragment}"`).not.toContain(fragment);
+      }
+      expect(Object.keys(publicLLMStatus()).sort()).toEqual(["configured", "keyFormatValid", "model"]);
+    } finally {
+      if (before === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = before;
+    }
+  });
+});
