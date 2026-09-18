@@ -1,3 +1,4 @@
+import { coalesce } from "../lib/coalesce";
 import { useCallback, useEffect, useState } from "react";
 import { Key, ExternalLink, Activity, ShieldCheck, ShieldOff } from "lucide-react";
 import { api, subscribeFeed, fmtUsdc, short, type Grant } from "../lib/api";
@@ -37,7 +38,12 @@ export function DashboardLiveGrants({ onNavigate }: { onNavigate?: () => void })
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => subscribeFeed("*", () => { void load(); }), [load]);
+  // Same burst the grants panel sees: collapse it into one reload.
+  useEffect(() => {
+    const reload = coalesce(load);
+    const off = subscribeFeed("*", () => reload.request());
+    return () => { off(); reload.cancel(); };
+  }, [load]);
 
   const active = grants.filter(g => !g.revoked);
   const revoked = grants.filter(g => g.revoked);

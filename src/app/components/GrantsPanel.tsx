@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useConnectedWallet, useSignMessage } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import { ChevronRight, ExternalLink, Key, LoaderCircle, Play, ShieldOff, Zap } from "lucide-react";
 import { api, fmtUsdc, grantExpiresAt, short, subscribeFeed, type Grant, type IntentRow } from "../lib/api";
+import { coalesce } from "../lib/coalesce";
+import { isSettled, mergeGrants } from "../lib/grant-merge";
 import { sessionFor, signIn } from "../lib/signin";
 import type { AppClient } from "../solana/client";
 import { explorerTransactionUrl } from "../solana/client";
@@ -62,14 +64,32 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const [openGrant, setOpenGrant] = useState("");
   const [intents, setIntents] = useState<Record<string, IntentRow[]>>({});
 
+  // What is on screen, readable from inside `load` without making it depend
+  // on state (which would re-subscribe the feed on every refresh).
+  const grantsRef = useRef<Grant[]>([]);
+  const loadSeq = useRef(0);
+
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
       const list = await api.grants();
-      const withChain = await Promise.all(list.map(g => api.grant(g.id).catch(() => g)));
-      setGrants(withChain);
+      const known = new Map(grantsRef.current.map(g => [g.id, g]));
+      // Each detail read costs the API an RPC call. A revoked grant's chain
+      // state cannot change again, so once it is known it is not re-read —
+      // that alone removes most of the traffic a busy run used to generate.
+      const withChain = await Promise.all(list.map(g => {
+        const before = known.get(g.id);
+        return before && isSettled(before) ? g : api.grant(g.id).catch(() => g);
+      }));
+      // A newer load started while this one was waiting; its answer wins, and
+      // painting this one would show the past.
+      if (seq !== loadSeq.current) return;
+      const merged = mergeGrants(grantsRef.current, withChain);
+      grantsRef.current = merged;
+      setGrants(merged);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "API unreachable");
+      if (seq === loadSeq.current) setError(e instanceof Error ? e.message : "API unreachable");
     }
   }, []);
 
@@ -87,10 +107,19 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     }
   }, []);
 
-  useEffect(() => subscribeFeed("*", () => {
-    void load();
-    if (openGrant) void loadIntents(openGrant);
-  }), [load, loadIntents, openGrant]);
+  // One proposal is about five feed events, and reloading on each made the
+  // panel repaint with whichever of five overlapping answers landed last. The
+  // events now only ask for a reload; bursts collapse into one.
+  const openGrantRef = useRef(openGrant);
+  useEffect(() => { openGrantRef.current = openGrant; }, [openGrant]);
+  useEffect(() => {
+    const reload = coalesce(async () => {
+      await load();
+      if (openGrantRef.current) await loadIntents(openGrantRef.current);
+    });
+    const off = subscribeFeed("*", () => reload.request());
+    return () => { off(); reload.cancel(); };
+  }, [load, loadIntents]);
 
   // Starting a run or forcing an intent makes the executor spend from this
   // grant's vault, so the API asks for a session proving the caller owns it.
