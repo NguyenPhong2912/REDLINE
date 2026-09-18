@@ -288,7 +288,7 @@ export function AuditPage() {
                   style={{ ...sans, color: selectedGrant === g.id ? M : color.textSecondary, background: selectedGrant === g.id ? `${M}08` : "transparent", borderColor: color.border }}>
                   <div className="flex items-center justify-between">
                     <span>{g.agentVersion.name} <span style={{ color: color.textDim }}>{g.agentVersion.version}</span></span>
-                    <span style={{ ...mono, color: g.revoked ? R : C, fontSize: 10 }}>{g.revoked ? "REVOKED" : "ACTIVE"}</span>
+                    <span style={{ ...mono, color: g.revoked ? R : C, fontSize: 11.5 }}>{g.revoked ? "REVOKED" : "ACTIVE"}</span>
                   </div>
                   <div className="text-[12px] mt-0.5" style={{ ...mono, color: color.textDim }}>grant {short(g.grantPda)} · {short(g.id)}</div>
                 </button>

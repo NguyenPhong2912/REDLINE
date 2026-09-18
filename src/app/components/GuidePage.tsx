@@ -258,7 +258,7 @@ function SectionCard({
         <div className="p-1.5 rounded-lg" style={{ background: `${accent}14`, border: `1px solid ${accent}25` }}>
           <Icon size={13} style={{ color: accent }} />
         </div>
-        <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: accent }}>{eyebrow}</span>
+        <span className="text-[12px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: accent }}>{eyebrow}</span>
       </div>
       <h2 className="text-lg font-bold mb-3" style={{ ...sans, color: color.text }}>{title}</h2>
       <div className="space-y-3 text-[13.5px] leading-relaxed" style={{ ...sans, color: color.textSecondary }}>
@@ -309,7 +309,7 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
           describes, made clickable since this copy lives inside the app that
           already knows how to get there. */}
       <div className="rounded-2xl p-5 sm:p-6" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
-        <div className="text-[11px] font-bold tracking-[0.18em] uppercase mb-4" style={{ ...mono, color: color.textDim }}>{tr("Quick start")}</div>
+        <div className="text-[12px] font-bold tracking-[0.18em] uppercase mb-4" style={{ ...mono, color: color.textDim }}>{tr("Quick start")}</div>
         <div className="grid sm:grid-cols-4 gap-3">
           {[
             { n: "01", label: tr("Connect wallet"), hint: tr("Top-right corner · Connect Solana"), icon: PlugZap, nav: null },
@@ -326,11 +326,11 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
               style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold" style={{ ...mono, color: color.textDim }}>{step.n}</span>
+                <span className="text-[12px] font-bold" style={{ ...mono, color: color.textDim }}>{step.n}</span>
                 <step.icon size={14} style={{ color: M }} />
               </div>
               <div className="text-[13px] font-semibold" style={{ ...sans, color: color.text }}>{step.label}</div>
-              <div className="text-[11.5px] mt-1" style={{ ...sans, color: color.textDim }}>{step.hint}</div>
+              <div className="text-[12px] mt-1" style={{ ...sans, color: color.textDim }}>{step.hint}</div>
             </button>
           ))}
         </div>
@@ -469,7 +469,7 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
               {GATES.map(([n, code, reason]) => (
                 <tr key={code} className="ledger-row">
                   <td className="py-2.5 pr-3 align-top">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10.5px] font-bold" style={{ ...mono, background: `${R}12`, color: R }}>{n}</span>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[11.5px] font-bold" style={{ ...mono, background: `${R}12`, color: R }}>{n}</span>
                   </td>
                   <td className="py-2.5 pr-4 align-top font-semibold whitespace-nowrap" style={{ ...mono, color: color.text, fontSize: "12px" }}>{code}</td>
                   <td className="py-2.5 align-top" style={{ color: color.textSecondary }}>{tr(reason)}</td>
@@ -553,7 +553,7 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
             >
               <item.icon size={14} style={{ color: M }} className="mb-2" />
               <div className="text-[13px] font-semibold flex items-center gap-1" style={{ color: color.text }}>{item.label} <ArrowUpRight size={11} /></div>
-              <div className="text-[11.5px] mt-1" style={{ color: color.textDim }}>{item.desc}</div>
+              <div className="text-[12px] mt-1" style={{ color: color.textDim }}>{item.desc}</div>
             </button>
           ))}
         </div>

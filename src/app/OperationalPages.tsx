@@ -1242,7 +1242,7 @@ export function SessionsPage() {
                   }}
                 />
                 <span
-                  className="text-[11px] font-semibold hidden sm:block"
+                  className="text-[12px] font-semibold hidden sm:block"
                   style={{
                     ...mono,
                     color:

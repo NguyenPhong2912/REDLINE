@@ -205,14 +205,14 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
     <div className="space-y-2">
       {/* Plain Language Authority Summary (Rule 6) */}
       <div className="p-3 rounded-xl space-y-1.5" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
-        <div className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: color.text }}>
+        <div className="text-[12px] uppercase tracking-wider font-semibold" style={{ color: color.text }}>
           📋 {tr("Plain-Language Authority Summary")}
         </div>
         <p className="text-[12px] leading-relaxed" style={{ color: color.textMuted }}>
           {tr("You are granting")} <strong>{policy.agentName || "Agent"}</strong> {tr("authority to spend up to")} <strong className="font-mono text-slate-900">{policy.spendCapUsdc} USDC</strong> {tr("in total over")} <strong>{policy.durationHours} hours</strong> {tr("(max")} <strong className="font-mono text-slate-900">{policy.maxTransactions} txs</strong>, <strong>{policy.cooldownMinutes} min</strong> {tr("cooldown).")} {tr("Funds can")} <em>{tr("only")}</em> {tr("be transferred to")} {destinations.length > 0 ? `${destinations.length} ${tr("specified destination(s)")}` : tr("allowlisted addresses")}.
         </p>
         {assessment && (
-          <div className="text-[11px] pt-1 flex items-start gap-1.5 border-t" style={{ borderColor: color.border, color: assessment.decision === "BLOCK" ? color.danger : assessment.decision === "REVIEW" ? color.warn : color.verified }}>
+          <div className="text-[12px] pt-1 flex items-start gap-1.5 border-t" style={{ borderColor: color.border, color: assessment.decision === "BLOCK" ? color.danger : assessment.decision === "REVIEW" ? color.warn : color.verified }}>
             <span className="font-semibold font-mono">{tr("Copilot Verdict:")} [{assessment.decision}]</span>
             <span className="truncate flex-1">— {assessment.summary || tr("Rules verified against safety guidelines.")}</span>
           </div>

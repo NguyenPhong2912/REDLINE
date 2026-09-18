@@ -121,7 +121,7 @@ export function ProtocolSpine({ owner }: { owner?: string }) {
               <div key={item.label} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: color.surfaceSubtle, border: `1px solid ${color.border}` }}>
                 <Icon size={13} style={{ color: color.primary }} />
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.12em]" style={{ ...sans, color: color.textDim }}>{item.label}</div>
+                  <div className="text-[12px] uppercase tracking-[0.12em]" style={{ ...sans, color: color.textDim }}>{item.label}</div>
                   <div className="mt-0.5 text-[13px] font-semibold" style={{ ...mono, color: color.text }}>{item.value}</div>
                 </div>
               </div>

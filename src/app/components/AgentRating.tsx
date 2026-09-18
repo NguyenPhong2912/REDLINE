@@ -54,7 +54,7 @@ const GOOD = color.verified, WARN = color.warn, STAR = color.primary, INFO = col
 
 export function Stars({ value, size = 12 }: { value: number | null; size?: number }) {
   const tr = useT(VI);
-  if (value === null) return <span className="text-[11px]" style={{ ...mono, color: color.textMuted }}>{tr("unrated")}</span>;
+  if (value === null) return <span className="text-[12px]" style={{ ...mono, color: color.textMuted }}>{tr("unrated")}</span>;
   return (
     <span className="inline-flex items-center gap-0.5" aria-label={`${value.toFixed(1)} out of 5`}>
       {[1, 2, 3, 4, 5].map(i => (
@@ -76,14 +76,14 @@ export function RatingBadge({ rating }: { rating: AgentRating | null | undefined
   const tr = useT(VI);
   if (!rating || rating.basis === "insufficient") {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px]"
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px]"
         style={{ ...mono, background: color.surfaceInset, border: `1px solid ${color.border}`, color: color.textMuted }}
         title={tr("No decisions and no reviews yet — unrated is not the same as badly rated")}>{tr("UNRATED")}</span>
     );
   }
   const tone = rating.score !== null && rating.score >= 80 ? GOOD : rating.score !== null && rating.score >= 50 ? WARN : color.danger;
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-semibold"
       style={{ ...mono, background: tint(tone, 0.14), border: `1px solid ${tint(tone, 0.32)}`, color: tone }}
       title={`${rating.score}/100 · ${tr(BASIS_LABEL[rating.basis])}`}>
       <ShieldCheck size={10} />{rating.score}
@@ -102,8 +102,8 @@ export function RatingDetail({ rating }: { rating: AgentRating | null | undefine
     <div className="rounded-xl p-4 space-y-3" style={{ background: color.surfaceInset, border: `1px solid ${color.border}` }}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: color.textDim }}>{tr("Reputation")}</div>
-          <div className="text-[11px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{tr(BASIS_LABEL[rating.basis])}</div>
+          <div className="text-[11.5px] font-bold tracking-[0.18em] uppercase" style={{ ...mono, color: color.textDim }}>{tr("Reputation")}</div>
+          <div className="text-[12px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{tr(BASIS_LABEL[rating.basis])}</div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold" style={{ ...mono, color: rating.score === null ? color.textMuted : GOOD }}>
@@ -120,13 +120,13 @@ export function RatingDetail({ rating }: { rating: AgentRating | null | undefine
           { label: tr("Renter reviews"), value: String(rating.reviews.count), hint: rating.reviews.average ? `${rating.reviews.average.toFixed(2)} ${tr("average")}` : tr("none yet") },
         ].map(cell => (
           <div key={cell.label} className="rounded-lg p-2.5" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
-            <div className="text-[9px] uppercase tracking-wider" style={{ ...mono, color: color.textDim }}>{cell.label}</div>
+            <div className="text-[10.5px] uppercase tracking-wider" style={{ ...mono, color: color.textDim }}>{cell.label}</div>
             <div className="text-sm font-bold mt-0.5" style={{ ...mono, color: color.text }}>{cell.value}</div>
-            <div className="text-[9px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{cell.hint}</div>
+            <div className="text-[10.5px] mt-0.5" style={{ ...sans, color: color.textMuted }}>{cell.hint}</div>
           </div>
         ))}
       </div>
-      <p className="text-[10px]" style={{ ...sans, color: color.textMuted, lineHeight: 1.6 }}>{tr("Compliance and on-chain success come from recorded policy decisions and transaction results — they cannot be voted on. Reviews come only from wallets that paid to rent this agent.")}</p>
+      <p className="text-[11.5px]" style={{ ...sans, color: color.textMuted, lineHeight: 1.6 }}>{tr("Compliance and on-chain success come from recorded policy decisions and transaction results — they cannot be voted on. Reviews come only from wallets that paid to rent this agent.")}</p>
     </div>
   );
 }
@@ -182,7 +182,7 @@ export function ReviewPanel({ listingId, wallet }: { listingId: string; wallet: 
 
       {reviewable?.canReview && openHire && (
         <div className="rounded-xl p-3 space-y-2" style={{ background: color.surfaceInset, border: `1px solid ${tint(GOOD, 0.3)}` }}>
-          <div className="text-[11px] font-semibold" style={{ ...sans, color: color.text }}>
+          <div className="text-[12px] font-semibold" style={{ ...sans, color: color.text }}>
             {openHire.reviewed ? tr("Update your review") : tr("You rented this agent — leave a review")}
           </div>
           <div className="flex items-center gap-1">
@@ -194,10 +194,10 @@ export function ReviewPanel({ listingId, wallet }: { listingId: string; wallet: 
           </div>
           <textarea value={comment} onChange={e => setComment(e.target.value.slice(0, 600))} rows={2}
             placeholder={tr("Did it stay inside the policy? Anything a treasury should know?")}
-            className="w-full px-3 py-2 rounded-lg text-[11px] outline-none"
+            className="w-full px-3 py-2 rounded-lg text-[12px] outline-none"
             style={{ ...sans, background: color.surface, border: `1px solid ${color.border}`, color: color.text }} />
           <button type="button" onClick={submit} disabled={busy}
-            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-40"
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold disabled:opacity-40"
             style={{ ...sans, background: tint(GOOD, 0.16), border: `1px solid ${tint(GOOD, 0.36)}`, color: GOOD }}>
             {busy ? <LoaderCircle size={11} className="animate-spin inline" /> : null} {openHire.reviewed ? tr("Update review") : tr("Submit review")}
           </button>
@@ -205,12 +205,12 @@ export function ReviewPanel({ listingId, wallet }: { listingId: string; wallet: 
       )}
 
       {reviewable && !reviewable.canReview && (
-        <p className="text-[10px]" style={{ ...sans, color: color.textMuted }}>
+        <p className="text-[11.5px]" style={{ ...sans, color: color.textMuted }}>
           {reviewable.reason === "no-rental" ? tr("Only wallets that rented this agent can review it — that is what keeps the score honest.") : tr("Sign in with your wallet to review.")}
         </p>
       )}
       {!signedIn && wallet && (
-        <p className="text-[10px]" style={{ ...sans, color: color.textMuted }}>{tr("Sign in with your wallet to leave a review.")}</p>
+        <p className="text-[11.5px]" style={{ ...sans, color: color.textMuted }}>{tr("Sign in with your wallet to leave a review.")}</p>
       )}
 
       {reviews.length > 0 && (
@@ -219,17 +219,17 @@ export function ReviewPanel({ listingId, wallet }: { listingId: string; wallet: 
             <div key={r.id} className="rounded-lg p-2.5" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
               <div className="flex items-center justify-between gap-2">
                 <Stars value={r.rating} size={11} />
-                <span className="text-[9px]" style={{ ...mono, color: color.textDim }}>
+                <span className="text-[10.5px]" style={{ ...mono, color: color.textDim }}>
                   {r.isMine ? tr("you") : `${r.reviewerWallet.slice(0, 4)}…${r.reviewerWallet.slice(-4)}`} · {new Date(r.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              {r.comment && <p className="text-[11px] mt-1.5" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>{r.comment}</p>}
+              {r.comment && <p className="text-[12px] mt-1.5" style={{ ...sans, color: color.textSecondary, lineHeight: 1.6 }}>{r.comment}</p>}
             </div>
           ))}
         </div>
       )}
-      {error && <p role="alert" className="text-[10px]" style={{ ...mono, color: color.danger }}>{error}</p>}
-      <p className="text-[9px]" style={{ ...mono, color: INFO, opacity: 0.7 }}>{tr("One rental buys one review.")}</p>
+      {error && <p role="alert" className="text-[11.5px]" style={{ ...mono, color: color.danger }}>{error}</p>}
+      <p className="text-[10.5px]" style={{ ...mono, color: INFO, opacity: 0.7 }}>{tr("One rental buys one review.")}</p>
     </div>
   );
 }

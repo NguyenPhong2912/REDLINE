@@ -244,7 +244,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                     </div>
                     {/* Isolated Destructive / Danger Actions Zone */}
                     <div className="flex items-center gap-2 pl-3 border-l" style={{ borderColor: color.border }}>
-                      <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">{tr("Stress Test & Revoke:")}</span>
+                      <span className="text-[12px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">{tr("Stress Test & Revoke:")}</span>
                       {/* Gate 6 is `spent + amount > cap`, so exactly `cap` on a
                           fresh grant is *inside* the cap: the old button sent
                           `cap` and, before the agent had spent anything, made a
