@@ -571,3 +571,11 @@
    two-letter code is the whole point of the control on a phone. */
 .lang-toggle { cursor: pointer; }
 .lang-toggle b { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+
+/* The grant card is a fixed-height tile with its stamp pinned to the bottom
+   edge. Raising the sub-12px labels added a few pixels to the flow above it —
+   enough for the spend bar to slide underneath "CLOSED · NOTHING MORE CAN
+   MOVE". The tile and the deck that fans it get the room back. */
+.policy-deck { height: 344px; }
+.policy-deck .gcard,
+[data-route="guardrails"] .policy-deck .gcard { height: 252px; }

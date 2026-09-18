@@ -209,7 +209,7 @@ export function GrantSignButton({ policy, assessment, destinations, destinations
           📋 {tr("Plain-Language Authority Summary")}
         </div>
         <p className="text-[12px] leading-relaxed" style={{ color: color.textMuted }}>
-          {tr("You are granting")} <strong>{policy.agentName || "Agent"}</strong> {tr("authority to spend up to")} <strong className="font-mono text-slate-900">{policy.spendCapUsdc} USDC</strong> {tr("in total over")} <strong>{policy.durationHours} hours</strong> {tr("(max")} <strong className="font-mono text-slate-900">{policy.maxTransactions} txs</strong>, <strong>{policy.cooldownMinutes} min</strong> {tr("cooldown).")} {tr("Funds can")} <em>{tr("only")}</em> {tr("be transferred to")} {destinations.length > 0 ? `${destinations.length} ${tr("specified destination(s)")}` : tr("allowlisted addresses")}.
+          {tr("You are granting")} <strong>{policy.agentName || "Agent"}</strong> {tr("authority to spend up to")} <strong className="font-mono" style={{ color: color.text }}>{policy.spendCapUsdc} USDC</strong> {tr("in total over")} <strong>{policy.durationHours} hours</strong> {tr("(max")} <strong className="font-mono" style={{ color: color.text }}>{policy.maxTransactions} txs</strong>, <strong>{policy.cooldownMinutes} min</strong> {tr("cooldown).")} {tr("Funds can")} <em>{tr("only")}</em> {tr("be transferred to")} {destinations.length > 0 ? `${destinations.length} ${tr("specified destination(s)")}` : tr("allowlisted addresses")}.
         </p>
         {assessment && (
           <div className="text-[12px] pt-1 flex items-start gap-1.5 border-t" style={{ borderColor: color.border, color: assessment.decision === "BLOCK" ? color.danger : assessment.decision === "REVIEW" ? color.warn : color.verified }}>

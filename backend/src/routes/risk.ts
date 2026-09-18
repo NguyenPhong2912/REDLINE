@@ -70,15 +70,27 @@ const scoreFloorFor = (decision: Decision): number => (decision === "BLOCK" ? 80
 const harsherDecision = (a: Decision, b: Decision): Decision => (decisionRank[a] >= decisionRank[b] ? a : b);
 const harsherLevel = (a: Level, b: Level): Level => (levelRank[a] >= levelRank[b] ? a : b);
 
+/** The most the model may add to the deterministic score. One band is 20–25 wide. */
+export const MAX_MODEL_RAISE = 25;
+
 export function mergeAssessments(baseline: Assessment, ai: Assessment, model: string): Assessment {
   // Severity only ever goes up, on every axis — and the axes have to agree.
   // Raising the score to match a decision was never enough on its own: a model
   // that answered "85, but ALLOW" produced a critical number beside a green
   // verdict, and signing stayed enabled because only the verdict is read.
-  const raised = Math.max(baseline.score, ai.score);
-  const decision = harsherDecision(harsherDecision(baseline.decision, ai.decision), decisionForScore(raised));
+  //
+  // It also only goes up SO FAR. Seen live: 500 USDC, six transfers, one day —
+  // 28 by the rules — came back from the model as 90, BLOCK, and the owner could
+  // not sign a policy smaller than most test transfers. A second opinion that
+  // can overrule the rules by any margin is not a second opinion, it is the
+  // only one, and it is the one that gives a different answer when asked twice.
+  // The model may move the score by MAX_MODEL_RAISE: enough to tip a policy
+  // that is already near a boundary, never enough to invent a BLOCK from a LOW.
+  const meant = Math.max(ai.score, scoreFloorFor(ai.decision)); // "40, but REVIEW" means at least 60
+  const raised = Math.max(baseline.score, Math.min(meant, baseline.score + MAX_MODEL_RAISE));
+  const decision = harsherDecision(baseline.decision, decisionForScore(raised));
   const score = Math.max(raised, scoreFloorFor(decision));
-  const level = harsherLevel(harsherLevel(baseline.level, ai.level), levelForScore(score));
+  const level = harsherLevel(baseline.level, levelForScore(score));
 
   // The sentence has to belong to the verdict it sits under. The old rule fell
   // back to the baseline's sentence whenever the merge changed anything — so a
@@ -119,8 +131,11 @@ export async function riskRoutes(app: FastifyInstance) {
           // mandatory — so the same 500 USDC policy came back ALLOW on one call
           // and REVIEW on the next.
           "Facts that hold for EVERY policy and are enforced on-chain by the REDLINE program, so never flag them as missing: transfers can only go to an owner-signed allowlist of 1 to 4 destination addresses; only allowlisted token mints can move; every transfer needs the next nonce, so none can be replayed; the grant expires at a fixed time; the owner can revoke it at any moment; funds sit in a program-owned vault and the agent never holds a key to them.",
-          "One real limitation to weigh: there is no per-transfer limit, so a single transfer may spend the entire remaining cap. Treat the spend cap as the worst-case single loss.",
-          "Judge only the numbers supplied. Do not raise severity for controls you were not told about.",
+          // An earlier wording called the missing per-transfer limit "a real
+          // limitation to weigh". The model weighed it at +60 on every policy.
+          "The spend cap is the worst-case loss, because one transfer may use all of it. That is equally true of every policy and the baseline score already counts it, so do not list it as a finding and do not raise severity for it: judge the SIZE of the cap.",
+          "Calibration: a cap under 1,000 USDC open for a day or less is LOW unless another number is extreme. REVIEW is for caps in the thousands combined with a long window or a very short cooldown. BLOCK is for policies near the 10,000 USDC ceiling with several aggravating numbers at once.",
+          "Judge only the numbers supplied. Do not restate the always-true facts above as findings, and do not raise severity for controls you were not told about.",
         ].join(" "),
         input,
         schemaName: "redline_agent_risk_assessment",

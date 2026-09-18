@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { ZodError } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mergeAssessments, riskRoutes } from "../src/routes/risk.js";
+import { MAX_MODEL_RAISE, mergeAssessments, riskRoutes } from "../src/routes/risk.js";
 
 const originalApiKey = process.env.OPENAI_API_KEY;
 
@@ -153,9 +153,10 @@ describe("deterministic floor", () => {
   });
 
   it("lets the model raise severity above the baseline", () => {
+    // 45 → 65: inside what the model is allowed to add, and across a boundary.
     const baseline = {
-      score: 20,
-      level: "LOW" as const,
+      score: 45,
+      level: "MEDIUM" as const,
       decision: "ALLOW" as const,
       summary: "Bounded.",
       findings: ["Narrow scope."],
@@ -183,14 +184,14 @@ describe("deterministic floor", () => {
 });
 
 describe("mergeAssessments — the sentence belongs to the verdict", () => {
-  // Seen live: the model pushed a 500 USDC policy to 60, the merge made it
-  // REVIEW, and the caption underneath still read "bounded enough for a pilot".
-  const base = { level: "LOW" as const, findings: ["f"], recommendations: ["r"], source: "x", model: "m" };
+  const base = { findings: ["f"], recommendations: ["r"], source: "x", model: "m" };
 
   it("does not caption a REVIEW with the baseline's ALLOW sentence", () => {
+    // The model scores it 70 but writes ALLOW; the merge makes it REVIEW, and
+    // neither side's sentence fits, so the canonical one is used.
     const merged = mergeAssessments(
-      { ...base, score: 8, decision: "ALLOW", summary: "Policy is bounded enough for a monitored Devnet pilot." },
-      { ...base, score: 60, decision: "ALLOW", summary: "Looks fine to me." },
+      { ...base, score: 50, level: "MEDIUM", decision: "ALLOW", summary: "Policy is bounded enough for a monitored Devnet pilot." },
+      { ...base, score: 70, level: "LOW", decision: "ALLOW", summary: "Looks fine to me." },
       "m",
     );
     expect(merged.decision).toBe("REVIEW");
@@ -200,7 +201,7 @@ describe("mergeAssessments — the sentence belongs to the verdict", () => {
 
   it("keeps the model's own sentence when the verdict is the model's", () => {
     const merged = mergeAssessments(
-      { ...base, score: 20, decision: "ALLOW", summary: "baseline says allow" },
+      { ...base, score: 50, level: "MEDIUM", decision: "ALLOW", summary: "baseline says allow" },
       { ...base, score: 65, level: "HIGH", decision: "REVIEW", summary: "Window is long for this cap." },
       "m",
     );
@@ -210,10 +211,57 @@ describe("mergeAssessments — the sentence belongs to the verdict", () => {
   it("keeps the baseline's sentence when the floor is what decided", () => {
     const merged = mergeAssessments(
       { ...base, score: 94, level: "CRITICAL", decision: "BLOCK", summary: "Policy exceeds the safety envelope and should not be signed." },
-      { ...base, score: 10, decision: "ALLOW", summary: "All good." },
+      { ...base, score: 10, level: "LOW", decision: "ALLOW", summary: "All good." },
       "m",
     );
     expect(merged.decision).toBe("BLOCK");
     expect(merged.summary).toMatch(/should not be signed/);
+  });
+});
+
+describe("mergeAssessments — how far the model may move the rules", () => {
+  const base = { findings: ["f"], recommendations: ["r"], source: "x", model: "m", summary: "s" };
+
+  it("cannot turn a LOW policy into a BLOCK", () => {
+    // The live case: 500 USDC, six transfers, 24 hours, two-minute cooldown.
+    // The rules say 28. The model said 90 and the sign button locked.
+    const merged = mergeAssessments(
+      { ...base, score: 28, level: "LOW", decision: "ALLOW" },
+      { ...base, score: 90, level: "CRITICAL", decision: "BLOCK" },
+      "m",
+    );
+    expect(merged.score).toBe(28 + MAX_MODEL_RAISE);
+    expect(merged.decision).toBe("ALLOW");
+    expect(merged.level).toBe("MEDIUM");
+  });
+
+  it("can still tip a policy that is already near a boundary", () => {
+    const merged = mergeAssessments(
+      { ...base, score: 60, level: "HIGH", decision: "REVIEW" },
+      { ...base, score: 95, level: "CRITICAL", decision: "BLOCK" },
+      "m",
+    );
+    expect(merged.decision).toBe("BLOCK");
+    expect(merged.score).toBe(85);
+  });
+
+  it("bounds a harsh verdict the same as a harsh score", () => {
+    // "12, but BLOCK" is the model meaning at least 80 — and is bounded as 80.
+    const merged = mergeAssessments(
+      { ...base, score: 8, level: "LOW", decision: "ALLOW" },
+      { ...base, score: 12, level: "LOW", decision: "BLOCK" },
+      "m",
+    );
+    expect(merged.decision).toBe("ALLOW");
+    expect(merged.score).toBe(8 + MAX_MODEL_RAISE);
+  });
+
+  it("never lowers what the rules decided", () => {
+    const merged = mergeAssessments(
+      { ...base, score: 78, level: "HIGH", decision: "REVIEW" },
+      { ...base, score: 5, level: "LOW", decision: "ALLOW" },
+      "m",
+    );
+    expect(merged).toMatchObject({ score: 78, decision: "REVIEW", level: "HIGH" });
   });
 });
