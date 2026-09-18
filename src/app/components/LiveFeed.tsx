@@ -51,7 +51,7 @@ export function LiveFeed({ grantId = "*", limit = 12 }: { grantId?: string; limi
   }, [grantId, limit]);
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={panel()}>
+    <div className="rounded-2xl overflow-hidden px-block" style={panel()}>
       <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: color.border, background: color.surfaceSubtle }}>
         <div className="flex gap-1.5">{[R, A, M].map((c, i) => <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: 0.7 }} />)}</div>
         <Terminal size={11} style={{ color: M }} />

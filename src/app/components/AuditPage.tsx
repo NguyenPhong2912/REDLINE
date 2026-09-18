@@ -238,7 +238,7 @@ export function AuditPage() {
         ].map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={`audit-stat-${i}`} title={s.hint} className="rounded-2xl p-5 relative overflow-hidden group transition-transform duration-300 hover:-translate-y-0.5"
+            <div key={`audit-stat-${i}`} title={s.hint} className="rounded-2xl p-5 relative overflow-hidden group px-block px-lift"
               style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
               <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${s.color}50, transparent)` }} />
               <div className="flex items-center gap-2 mb-2">
@@ -347,7 +347,7 @@ export function AuditPage() {
       )}
 
       {/* Audit table */}
-      <div className="audit-ledger rounded-2xl overflow-hidden" style={{ ...glass() }}>
+      <div className="audit-ledger rounded-2xl overflow-hidden px-block" style={{ ...glass() }}>
         {/* Table header */}
         <div className="grid items-center px-5 py-3 border-b audit-ledger-head"
           style={{ gridTemplateColumns: "90px 130px 1fr 120px 90px", borderColor: color.border, background: color.surfaceSubtle }}>

@@ -251,7 +251,7 @@ function SectionCard({
     <section
       id={id}
       ref={el => register(id, el)}
-      className="rounded-2xl p-6 sm:p-7 card-glow-hover scroll-mt-24"
+      className="rounded-2xl p-6 sm:p-7 card-glow-hover scroll-mt-24 px-block"
       style={{ background: color.surface, border: `1px solid ${color.border}` }}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -308,7 +308,7 @@ export function GuidePage({ setNav }: { setNav?: (index: number) => void }) {
       {/* Quick-start flow — the same 4-step path docs/WEBSITE_DESIGN_OVERVIEW.md
           describes, made clickable since this copy lives inside the app that
           already knows how to get there. */}
-      <div className="rounded-2xl p-5 sm:p-6" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
+      <div className="rounded-2xl p-5 sm:p-6 px-block" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
         <div className="text-[12px] font-bold tracking-[0.18em] uppercase mb-4" style={{ ...mono, color: color.textDim }}>{tr("Quick start")}</div>
         <div className="grid sm:grid-cols-4 gap-3">
           {[

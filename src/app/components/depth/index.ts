@@ -8,3 +8,4 @@ export { TransferLane } from "./TransferLane";
 export { VaultScene } from "./VaultScene";
 export { PolicyDeck } from "./PolicyDeck";
 export { FlipCard } from "./FlipCard";
+export { VoxelStack } from "./VoxelStack";

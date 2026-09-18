@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, Check, Circle, FlaskConical, X } from "lucide-react";
 import { api, isSignedIn, loadSession, type AuditRow, type Grant } from "../lib/api";
+import { VoxelStack } from "./depth";
 import { useT } from "../i18n/LanguageContext";
 
 // deriveProgress stays in English so its tests read as written; the component
@@ -177,6 +178,7 @@ export function DemoGuide({ navigate }: { navigate?: (slug: string) => void }) {
               : tr("Four steps. Each one ticks itself only when the records say it happened.")}
           </small>
         </div>
+        <VoxelStack size={15} className="demo-guide-vox" />
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
           setDismissed(true);
           try { localStorage.setItem(DISMISSED_KEY, "1"); } catch { /* fine either way */ }

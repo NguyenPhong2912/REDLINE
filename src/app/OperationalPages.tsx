@@ -1194,8 +1194,8 @@ export function SessionsPage() {
 
       {/* New session wizard */}
       <div
-        className="rounded-2xl overflow-hidden"
-        style={{ ...glass(), boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}
+        className="rounded-2xl overflow-hidden px-block"
+        style={{ ...glass() }}
       >
         <div
           className="px-6 py-4 border-b"
@@ -1732,7 +1732,7 @@ export function SessionsPage() {
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0}
-            className="px-4 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-25"
+            className="px-btn px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-25"
             style={{
               ...sans,
               background: color.surfaceInset,
@@ -1748,7 +1748,7 @@ export function SessionsPage() {
                 : void assessPolicy()
             }
             disabled={assessing}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+            className="px-btn flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
             style={{
               ...sans,
               background: step === STEPS.length - 1 ? color.primary : `${M}12`,

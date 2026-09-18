@@ -12,7 +12,7 @@ import { revokeGrantInstruction } from "../solana/redline";
 import { color, mono, sans } from "../theme";
 import { CopyChip } from "./CopyChip";
 import { EmergencyStop } from "./EmergencyStop";
-import { PolicyDeck } from "./depth";
+import { PolicyDeck, VoxelStack } from "./depth";
 import { useT } from "../i18n/LanguageContext";
 import { playSound } from "../lib/soundscape";
 
@@ -166,9 +166,9 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
+    <div className="rounded-2xl overflow-hidden px-block" style={{ background: color.surface, border: `1px solid ${color.border}` }}>
       <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: color.border }}>
-        <span className="text-sm font-semibold" style={{ ...sans, color: color.text }}>{tr("Grants")}</span>
+        <span className="text-sm font-semibold inline-flex items-center gap-3" style={{ ...sans, color: color.text }}><VoxelStack size={13} />{tr("Grants")}</span>
         <div className="flex items-center gap-3">
           {/* Revoking everything belongs next to the count of what is running,
               not buried per row: it is the one control someone reaches for
@@ -250,7 +250,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 </span>
               </div>
             </div>
-            <div className="relative rounded-full overflow-hidden" style={{ background: color.surfaceInset, height: 6 }}>
+            <div className="px-meter relative overflow-hidden" style={{ background: color.surfaceInset, height: 8 }}>
               <div
                 className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
                 style={{
@@ -339,7 +339,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 function Btn({ icon: Icon, label, accent, onClick, disabled, busy }: { icon: React.ElementType; label: string; accent: string; onClick: () => void; disabled?: boolean; busy?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-40"
+      className="px-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-semibold disabled:opacity-40"
       style={{ ...sans, background: `${accent}12`, border: `1px solid ${accent}30`, color: accent }}>
       {busy ? <LoaderCircle size={11} className="animate-spin" /> : <Icon size={11} />}{label}
     </button>

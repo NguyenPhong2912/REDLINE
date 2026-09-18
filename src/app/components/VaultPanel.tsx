@@ -84,7 +84,7 @@ export function VaultPanel() {
 
   const balance = view?.balanceUnits ? fmtUsdc(view.balanceUnits) : "—";
   return (
-    <div className="rounded-2xl p-6 relative overflow-hidden vault-panel" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
+    <div className="rounded-2xl p-6 relative overflow-hidden vault-panel px-block" style={{ background: color.surface, border: `1px solid ${M}18`, boxShadow: "0 18px 48px rgba(4, 2, 12, 0.55)" }}>
       <div className="absolute top-0 left-12 right-12 h-px" style={{ background: `linear-gradient(90deg, transparent, ${M}60, transparent)` }} />
       <VaultScene balanceUnits={owner ? view?.balanceUnits : null} busy={busy} exists={view?.exists} label={owner ? tr("Program vault · live from Devnet") : "CONNECT YOUR OWNER WALLET"} />
       <div className="flex items-start gap-4 flex-wrap">
