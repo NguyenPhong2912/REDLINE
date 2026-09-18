@@ -74,7 +74,9 @@ describe("POST /risk-assess", () => {
     const res = await app.inject({
       method: "POST",
       url: "/risk-assess",
-      payload: { ...safePolicy, spendCapUsdc: 15_000, maxTransactions: 150, durationHours: 100, cooldownMinutes: 4 },
+      // A cap at the pilot ceiling is REVIEW on its own (60); a generous
+      // transaction allowance keeps it there (69) without tipping into BLOCK.
+      payload: { ...safePolicy, spendCapUsdc: 10_000, maxTransactions: 150 },
     });
     const body = res.json();
 

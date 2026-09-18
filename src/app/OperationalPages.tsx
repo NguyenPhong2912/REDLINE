@@ -32,6 +32,7 @@ import { api, API_URL, checkHealth, loadSession, short, type AgentVersion, type 
 import { useBackendStatus } from "./components/BackendStatus";
 import { useSignedIn } from "./lib/useSignedIn";
 import {
+  assessPolicyLocally,
   requestRiskAssessment,
   type AgentPolicyInput,
   type RiskAssessment,
@@ -1077,6 +1078,10 @@ export function SessionsPage() {
     durationHours: dur,
     cooldownMinutes: cool,
   };
+  // The same rules the copilot and the server apply, run live as the sliders
+  // move. The tile below used to have thresholds of its own and called a policy
+  // HIGH that the verdict two steps later called LOW.
+  const liveRisk = assessPolicyLocally(policy);
 
   // Destinations are part of the signed policy digest, so a change to them
   // invalidates the reviewed policy just as a cap change does.
@@ -1496,8 +1501,8 @@ export function SessionsPage() {
                   },
                   {
                     label: tr("Risk"),
-                    value: cap > 5000 ? "HIGH" : cap > 1000 ? "MED" : "LOW",
-                    color: cap > 5000 ? color.danger : cap > 1000 ? A : M,
+                    value: `${liveRisk.level} · ${liveRisk.score}`,
+                    color: liveRisk.score >= 60 ? color.danger : liveRisk.score >= 35 ? A : M,
                   },
                   { label: tr("Tokens"), value: String(tokens.length), color: C },
                 ].map((row, ri) => (

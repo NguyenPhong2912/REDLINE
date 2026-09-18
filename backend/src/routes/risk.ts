@@ -28,8 +28,17 @@ export function deterministic(input: RiskInput): Assessment {
   const findings: string[] = [];
   const recommendations: string[] = [];
   const strategy = input.strategy.toLowerCase();
-  if (input.spendCapUsdc > 10_000) { score += 28; findings.push("Spend cap exceeds the recommended pilot threshold."); recommendations.push("Stage capital and require approval before increasing exposure."); }
+  // The cap is weighted hardest because the program has no per-transfer limit:
+  // gate 6 only asks whether the running total stays under the cap, so the
+  // FIRST transfer may take all of it. Cooldown and the transaction count slow
+  // nothing down until that transfer has already happened. The old weights
+  // treated the cap as one knob among six, and the heaviest tier was "> 10,000"
+  // — unreachable from a wizard whose slider stops at exactly 10,000 — so the
+  // largest policy the product can build scored 22 and was waved through.
+  if (input.spendCapUsdc >= 10_000) { score += 52; findings.push("Spend cap is at or above the 10,000 USDC pilot ceiling, and nothing limits a single transfer: the whole cap can leave at once."); recommendations.push("Stage capital: start with a smaller cap and raise it once the agent has a record."); }
+  else if (input.spendCapUsdc >= 5_000) { score += 30; findings.push("Large single-transfer exposure: nothing limits one transfer below the cap."); }
   else if (input.spendCapUsdc > 2_500) score += 14;
+  else if (input.spendCapUsdc > 1_000) score += 6;
   if (input.maxTransactions > 250) { score += 18; findings.push("High transaction allowance increases blast radius."); }
   else if (input.maxTransactions > 100) score += 9;
   if (input.durationHours > 72) score += 16; else if (input.durationHours > 24) score += 7;
