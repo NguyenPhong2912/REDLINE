@@ -70,21 +70,16 @@ code {
 }
 .hdr {
   flex: none;
-  gap: 16px;
+  gap: 10px;
+  padding: 0 20px;
 }
-.hdr .nav {
-  min-width: 0;
-  white-space: nowrap;
-}
-.hdr .tools {
-  gap: 8px;
-}
-/* The nav is nowrap and used to shrink below its content, so at a tight width
-   the last items ran underneath the tools. Now it clips and scrolls instead,
-   and the tools keep their width. The block padding keeps the active-page
-   diamond (drawn 1px below the button) inside the clip. */
 .hdr .nav {
   flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: 6px;
@@ -93,8 +88,20 @@ code {
 .hdr .nav::-webkit-scrollbar {
   display: none;
 }
+.hdr .nav button {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 6px 7px;
+  font-size: 11.5px;
+}
 .hdr .tools {
   flex: none;
+  gap: 6px;
+}
+.hdr .tools .tool {
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 11.5px;
 }
 .brand {
   flex: none;
