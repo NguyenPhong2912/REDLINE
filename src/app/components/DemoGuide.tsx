@@ -15,7 +15,7 @@ const VI: Record<string, string> = {
   "On the grant you just made, press Start agent. It proposes transfers inside the policy.": "Trên grant vừa tạo, bấm Start agent. Nó sẽ đề xuất các lệnh chuyển trong phạm vi chính sách.",
   "Counters move on the grant itself — they are read back from the chain, not from the server.": "Bộ đếm thay đổi ngay trên grant — đọc lại từ chain, không phải từ server.",
   "Watch the chain refuse one": "Xem chain từ chối một lệnh",
-  "The agent tries to spend past the cap. Or press Force over-cap to skip the wait.": "Agent thử chi vượt hạn mức. Hoặc bấm Force over-cap để khỏi chờ.",
+  "On the grant, press Force over-cap. It proposes one unit more than the grant has left and sends it straight to Solana.": "Trên grant, bấm Force over-cap. Nó đề xuất nhiều hơn đúng một đơn vị so với số còn lại và gửi thẳng lên Solana.",
   "The transaction lands on Solana and fails with SPEND_CAP_EXCEEDED. Open the explorer link: the token balances before and after are identical. Nothing moved.": "Giao dịch lên Solana và thất bại với SPEND_CAP_EXCEEDED. Mở link explorer: số dư token trước và sau y hệt nhau. Không gì dịch chuyển.",
   "Take the authority back": "Thu hồi quyền",
   "Revoke the grant from your wallet, then let the agent try again.": "Revoke grant từ ví của bạn, rồi để agent thử lại.",
@@ -104,9 +104,9 @@ export function deriveProgress(grants: Grant[], audit: AuditRow[], signedIn: boo
     {
       key: "refused",
       title: "Watch the chain refuse one",
-      detail: "The agent tries to spend past the cap. Or press Force over-cap to skip the wait.",
+      detail: "On the grant, press Force over-cap. It proposes one unit more than the grant has left and sends it straight to Solana.",
       look: "The transaction lands on Solana and fails with SPEND_CAP_EXCEEDED. Open the explorer link: the token balances before and after are identical. Nothing moved.",
-      slug: "audit",
+      slug: "guardrails",
       done: refused,
     },
     {

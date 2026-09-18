@@ -242,7 +242,7 @@ export const api = {
     req<IntentPreview>("/intents/preview", { method: "POST", body: JSON.stringify(b) }),
   // (`submitEvenIfDenied` used to be offered here; the API never read it — a
   // denied precheck is never submitted — so the type no longer promises it.)
-  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number }) =>
+  submitIntent: (b: { grantId: string; mint: string; amountUnits: string; destination: string; reason?: string; nonce?: number; proveOnChain?: boolean }) =>
     req<{ intentId: string; precheck: { reasonCode: string; message: string }; submitted: boolean; signature?: string; onchainSuccess?: boolean; onchainReason?: string }>("/intents", { method: "POST", body: JSON.stringify(b) }),
   startRun: (grantId: string, mode: "scripted" | "llm" = "scripted") => req<{ id: string }>("/runs", { method: "POST", body: JSON.stringify({ grantId, mode }) }),
   // Fastify rejects a JSON content-type with an empty body (400), and req()

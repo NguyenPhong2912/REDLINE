@@ -17,7 +17,15 @@ export const IntentBody = z.object({
   destination: SolanaAddressSchema,
   reason: z.string().max(200).optional(),
   nonce: z.number().int().min(0).optional(),
+  // Send a denied proposal to Solana anyway, so the program is the one that
+  // refuses it. See ProcessOptions.proveOnChain.
+  proveOnChain: z.boolean().optional(),
 });
+
+// Each proof is a real transaction the executor pays for. One per grant every
+// few seconds is plenty to watch the chain say no, and not enough to drain fees.
+const PROOF_GAP_MS = 8_000;
+const lastProofAt = new Map<string, number>();
 
 export async function intentRoutes(app: FastifyInstance) {
   // Dry run: same gates, no DB write, no fee. For the UI's "what would happen".
@@ -33,12 +41,22 @@ export async function intentRoutes(app: FastifyInstance) {
   });
 
   // Manual submission is safe by construction: the executor records every
-  // proposal, but sends it to Solana only when the current policy allows it.
+  // proposal, but sends it to Solana only when the current policy allows it —
+  // unless the owner sets `proveOnChain`, which sends a denied proposal so the
+  // program is the one that refuses it. Nothing moves either way.
   app.post("/intents", async (req, reply) => {
     const body = IntentBody.parse(req.body);
     // Submitting an intent is what actually moves funds, within the policy.
     await requireGrantOwner(req, body.grantId);
-    const result = await processIntent(body.grantId, { mint: body.mint, amountUnits: BigInt(body.amountUnits), destination: body.destination, reason: body.reason, nonce: body.nonce });
+    const prove = body.proveOnChain === true && process.env.ONCHAIN_PROOF !== "off";
+    if (prove) {
+      const last = lastProofAt.get(body.grantId) ?? 0;
+      if (Date.now() - last < PROOF_GAP_MS) {
+        return reply.code(429).send({ error: "one on-chain proof per grant every few seconds — each is a real transaction the executor pays for" });
+      }
+      lastProofAt.set(body.grantId, Date.now());
+    }
+    const result = await processIntent(body.grantId, { mint: body.mint, amountUnits: BigInt(body.amountUnits), destination: body.destination, reason: body.reason, nonce: body.nonce }, { proveOnChain: prove });
     return reply.code(201).send(json(result));
   });
 

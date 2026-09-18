@@ -12,6 +12,20 @@ import type { GrantState, Intent, Verdict } from "../policy/types.js";
 export interface ProcessOptions {
   runId?: string;
   now?: () => number;
+  /**
+   * Submit even when the precheck denies, so the refusal on record is the
+   * program's and carries a signature.
+   *
+   * Off by default, and that default is deliberate: a refused transfer still
+   * costs the executor a fee, and an agent that spams doomed transactions is a
+   * worse agent. But with it always off, the dashboard never once showed Solana
+   * refusing anything — every "rejected" row was this server's own opinion,
+   * with nothing to open on Explorer — while the product's one claim is that
+   * the chain decides. This is the owner's explicit exception, for proof.
+   * Nothing can move: the gates it fails off-chain are the gates it fails
+   * on-chain.
+   */
+  proveOnChain?: boolean;
 }
 
 export interface ProcessResult {
@@ -77,7 +91,7 @@ export async function processIntent(
     payload: { grantId, allow: precheck.allow, reasonCode: precheck.reasonCode, gate: precheck.gate, message: precheck.message, ruleSnapshotHash: snapshot },
   });
 
-  if (!precheck.allow) {
+  if (!precheck.allow && !opts.proveOnChain) {
     await prisma.policyDecision.create({
       data: { intentId: row.id, allow: false, reasonCode: precheck.reasonCode, ruleSnapshotHash: snapshot, stage: "precheck" },
     });

@@ -59,7 +59,7 @@ describe("deriveProgress", () => {
   it("navigates by slug, because the shell maps legacy indices through a table", () => {
     // A number here would silently mean a different page than it reads.
     const slugs = deriveProgress([], [], true).steps.map(s => s.slug);
-    expect(slugs).toEqual(["guardrails", "guardrails", "audit", "guardrails"]);
+    expect(slugs).toEqual(["guardrails", "guardrails", "guardrails", "guardrails"]);
   });
 
   it("counts a full run as complete", () => {

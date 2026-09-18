@@ -90,7 +90,7 @@ On a deployment with no `REDLINE_API_KEY` these checks stand down: that configur
 | GET | `/grants/:id` | full for the owner; redacted for anyone else (`onchain` carries counters and limits only) |
 | POST | `/grants/:id/revoke` | record an owner-signed `revoke_grant` (signature required on Solana; refused with 409 while the account still reads active) |
 | POST | `/intents/preview` | dry-run the gates; no write, no fee |
-| POST | `/intents` | record one intent and submit it only when the current policy precheck allows it |
+| POST | `/intents` | record one intent and submit it only when the current policy precheck allows it; `proveOnChain: true` submits a denied one too, so the program refuses it and the refusal carries a signature |
 | GET | `/grants/:id/intents` | intents with decisions and chain transactions; destinations redacted for anyone but the owner |
 | POST | `/runs` · `/runs/:id/stop` | start / stop the agent runtime (`mode: scripted | llm`). Runs left `running` by a restart are closed at boot; a run under a rental stops when the rental ends |
 | GET | `/grants/:id/feed` | server-sent events (`*` = all grants). Redacted unless the subscriber owns the grant. `EventSource` cannot send headers, so this one route accepts the session token as `?access_token=` |
@@ -243,7 +243,7 @@ rated — `basis` says which halves the score used.
 - `scripted` — three paced transfers of 20% of the cap, then stop. Rejection cases run in Policy Lab without fees or failed transactions.
 - `llm` — a model proposes an action under a strict JSON schema; the proposal is clamped to the allowlists and judged by the program like any other intent. Needs `OPENAI_API_KEY`.
 
-Transaction requests accept canonical 32-byte Solana addresses and positive base-unit amounts up to `u64::MAX`. `/intents/preview` returns the nonce and exact verdict used by the UI; `/intents` rechecks the live state and never bypasses a denied precheck. The program remains the final authority if chain state changes between those calls.
+Transaction requests accept canonical 32-byte Solana addresses and positive base-unit amounts up to `u64::MAX`. `/intents/preview` returns the nonce and exact verdict used by the UI; `/intents` rechecks the live state and does not bypass a denied precheck unless the grant owner sets `proveOnChain`, in which case the denied proposal is sent so that Solana — not this server — is what refuses it (paced per grant; disable with `ONCHAIN_PROOF=off`). The program remains the final authority if chain state changes between those calls.
 
 Both the planner and the risk copilot talk to any OpenAI-compatible chat-completions endpoint (`src/llm-client.ts`). Set `OPENAI_BASE_URL` to point at one — Groq's free tier needs no card — or leave it unset for OpenAI, which has no free tier. `OPENAI_MODEL` must name a model that endpoint serves; when it does not, the call fails and the copilot answers from the deterministic floor, with the reason logged.
 

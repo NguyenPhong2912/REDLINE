@@ -50,7 +50,9 @@ const VI: Record<string, string> = {
 
 // Real grants from the API with the three demo controls:
 //   Start agent  → POST /runs (scripted: 3 compliant transfers + 1 over cap)
-//   Force over-cap → POST /intents with (remaining + 1) units; the precheck refuses it at gate 6
+//   Force over-cap → POST /intents with (remaining + 1) units and proveOnChain: the server predicts
+//                    gate 6 will refuse it, sends it anyway, and the PROGRAM refuses it — so the row
+//                    carries a failed Solana transaction you can open, not just the server's word
 //   Revoke → owner signs revoke_grant in the wallet, API records the signature
 export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const tr = useT(VI);
@@ -280,7 +282,7 @@ export function GrantsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                           real transfer of the whole budget. One unit past what
                           is left is the smallest amount the program must refuse. */}
                       <Btn icon={Zap} label={`${tr("Force")} >${fmtUsdc(Math.max(cap - spent, 0))} ${tr("USDC (over cap)")}`} accent={color.blocked} disabled={!!busy} busy={busy === `force-${g.id}`}
-                        onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(Math.max(cap - spent, 0) + 1), destination: dest, reason: "Manual over-cap attempt from dashboard" }), g.owner.wallet)} />
+                        onClick={() => run(`force-${g.id}`, () => api.submitIntent({ grantId: g.id, mint, amountUnits: String(Math.max(cap - spent, 0) + 1), destination: dest, reason: "Manual over-cap attempt from dashboard", proveOnChain: true }), g.owner.wallet)} />
                       <Btn icon={ShieldOff} label={tr("Revoke")} accent={color.blocked} disabled={!!busy} busy={busy === `revoke-${g.id}`} onClick={() => run(`revoke-${g.id}`, () => revoke(g))} />
                     </div>
                   </>
