@@ -990,6 +990,121 @@ export function VaultPage() {
   );
 }
 
+/* ── range control ── */
+// This lived inside SessionsPage, as `function SliderCtl` in the component
+// body. A function declared during render is a NEW component type on every
+// render, so each time a slider reported a value React unmounted the <input>
+// under the pointer and mounted a fresh one. A click survived that — one change,
+// one remount — but a drag did not: the element being dragged no longer existed
+// after its first step. Declared here, its identity is stable and the native
+// drag runs to completion.
+const THUMB = 14;
+
+function SliderCtl({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  unit,
+  accent,
+  step = 1,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  unit: string;
+  accent: string;
+  step?: number;
+}) {
+  const ratio = (value - min) / (max - min);
+  // What is being typed, kept apart from the committed value so a half-typed
+  // "5" is not clamped up to the minimum before the second digit arrives.
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const n = Number(draft);
+    if (draft.trim() !== "" && Number.isFinite(n)) onChange(Math.min(max, Math.max(min, Math.round(n))));
+    setDraft(null);
+  };
+  // A pixel of a 400px track is 25 USDC on the cap slider, so dragging alone
+  // cannot land on an exact figure. Arrow keys step by one unit; with Shift, ten.
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const dir = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+    if (!dir || !e.shiftKey) return;
+    e.preventDefault();
+    onChange(Math.min(max, Math.max(min, value + dir * step * 10)));
+  };
+  return (
+    <div className="space-y-2.5">
+      <div className="flex justify-between items-center gap-3">
+        <span className="text-xs" style={{ ...sans, color: color.textSecondary }}>
+          {label}
+        </span>
+        <label
+          className="rl-range-value text-xs font-semibold px-2 py-0.5 rounded-md inline-flex items-baseline"
+          style={{ ...mono, color: accent, background: `${accent}12`, border: `1px solid ${accent}20` }}
+        >
+          <input
+            type="text"
+            inputMode="numeric"
+            aria-label={label}
+            value={draft ?? value.toLocaleString()}
+            onFocus={(e) => { setDraft(String(value)); requestAnimationFrame(() => e.target.select()); }}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { commit(); (e.target as HTMLInputElement).blur(); }
+              if (e.key === "Escape") { setDraft(null); (e.target as HTMLInputElement).blur(); }
+            }}
+            style={{ width: `${Math.max(2, (draft ?? value.toLocaleString()).length) + 0.5}ch`, color: "inherit" }}
+          />
+          {unit}
+        </label>
+      </div>
+      <div className="rl-range relative h-6 flex items-center" style={{ "--rl-accent": accent } as React.CSSProperties}>
+        <div
+          className="absolute left-0 right-0 h-1.5 rounded-full pointer-events-none"
+          style={{ background: color.surfaceInset }}
+        />
+        {/* The fill and the thumb follow the same geometry the browser uses for
+            the hidden native thumb: its centre travels from half a thumb in to
+            half a thumb from the end, not from 0 to 100%. The old maths was off
+            by up to 7px at either end, so a click did not land where it looked. */}
+        <div
+          className="absolute left-0 h-1.5 rounded-full pointer-events-none"
+          style={{
+            width: `calc(${THUMB / 2}px + (100% - ${THUMB}px) * ${ratio})`,
+            background: `linear-gradient(90deg, ${accent}60, ${accent})`,
+          }}
+        />
+        <input
+          type="range"
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(+e.target.value)}
+          onKeyDown={onKey}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+        />
+        {/* No transition on `left`: it made the thumb trail the pointer. */}
+        <div
+          className="rl-range-thumb absolute pointer-events-none"
+          style={{
+            left: `calc((100% - ${THUMB}px) * ${ratio})`,
+            background: color.surface,
+            borderColor: accent,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ── 7. SESSIONS ── */
 export function SessionsPage() {
   const tr = useT(VI);
@@ -1104,81 +1219,6 @@ export function SessionsPage() {
     } finally {
       setAssessing(false);
     }
-  }
-
-  function SliderCtl({
-    label,
-    value,
-    onChange,
-    min,
-    max,
-    unit,
-    accent,
-  }: {
-    label: string;
-    value: number;
-    onChange: (v: number) => void;
-    min: number;
-    max: number;
-    unit: string;
-    accent: string;
-  }) {
-    const pct = ((value - min) / (max - min)) * 100;
-    return (
-      <div className="space-y-2.5">
-        <div className="flex justify-between">
-          <span
-            className="text-xs"
-            style={{ ...sans, color: color.textSecondary }}
-          >
-            {label}
-          </span>
-          <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-md"
-            style={{
-              ...mono,
-              color: accent,
-              background: `${accent}12`,
-              border: `1px solid ${accent}20`,
-            }}
-          >
-            {value.toLocaleString()}
-            {unit}
-          </span>
-        </div>
-        <div className="relative h-6 flex items-center">
-          <div
-            className="absolute left-0 right-0 h-1.5 rounded-full pointer-events-none"
-            style={{ background: color.surfaceInset }}
-          />
-          <div
-            className="absolute left-0 h-1.5 rounded-full pointer-events-none"
-            style={{
-              width: `${pct}%`,
-              background: `linear-gradient(90deg, ${accent}60, ${accent})`,
-            }}
-          />
-          <input
-            type="range"
-            aria-label={label}
-            min={min}
-            max={max}
-            value={value}
-            onChange={(e) => onChange(+e.target.value)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          />
-          <div
-            className="absolute w-3.5 h-3.5 rounded-full border-2 transition-all pointer-events-none"
-            style={{
-              left: `calc(${pct}% - 7px)`,
-              background: color.surface,
-              borderColor: accent,
-              boxShadow: "0 2px 8px rgba(4, 2, 12, 0.7)",
-            }}
-          />
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -1480,6 +1520,7 @@ export function SessionsPage() {
                 onChange={setCap}
                 min={10}
                 max={10000}
+                step={10}
                 unit=" USDC"
                 accent={A}
               />
@@ -1786,6 +1827,38 @@ export function SessionsPage() {
   );
 }
 
+/* A settings line. Module-level for the same reason as SliderCtl: declared inside
+   SettingsPage it was a new component type on every render. */
+function Row({
+  label,
+  value,
+  accent = M,
+}: {
+  label: string;
+  value: string;
+  accent?: string;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between py-3 border-b gap-4"
+      style={{ borderColor: color.border }}
+    >
+      <span
+        className="text-xs shrink-0"
+        style={{ ...sans, color: color.textSecondary }}
+      >
+        {label}
+      </span>
+      <span
+        className="text-xs font-semibold text-right break-all"
+        style={{ ...mono, color: accent }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 /* ── 8. SETTINGS ── */
 export function SettingsPage() {
   const tr = useT(VI);
@@ -1833,36 +1906,6 @@ export function SettingsPage() {
 
 
   const healthLabel = healthState === "checking" ? "checking" : healthState;
-
-  function Row({
-    label,
-    value,
-    accent = M,
-  }: {
-    label: string;
-    value: string;
-    accent?: string;
-  }) {
-    return (
-      <div
-        className="flex items-center justify-between py-3 border-b gap-4"
-        style={{ borderColor: color.border }}
-      >
-        <span
-          className="text-xs shrink-0"
-          style={{ ...sans, color: color.textSecondary }}
-        >
-          {label}
-        </span>
-        <span
-          className="text-xs font-semibold text-right break-all"
-          style={{ ...mono, color: accent }}
-        >
-          {value}
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div className="route-page page-settings">

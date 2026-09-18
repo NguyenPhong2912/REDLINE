@@ -579,3 +579,55 @@
 .policy-deck { height: 344px; }
 .policy-deck .gcard,
 [data-route="guardrails"] .policy-deck .gcard { height: 252px; }
+
+/* ── Range control ───────────────────────────────────────────────────────────
+   The native <input type=range> is invisible and does the work; the track and
+   thumb drawn over it are only a picture of where it is. For the picture to be
+   true, the native thumb has to be the size the maths assumes (14px). */
+.rl-range input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  background: transparent;
+  touch-action: pan-y;
+}
+.rl-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 24px;
+  cursor: grab;
+}
+.rl-range input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+}
+.rl-range input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; }
+.rl-range input[type="range"]:active::-moz-range-thumb { cursor: grabbing; }
+.rl-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid;
+  border-radius: 3px;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--rl-accent) 45%, #05070d), 0 4px 10px rgba(4, 2, 12, 0.7);
+  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
+}
+.rl-range input[type="range"]:hover ~ .rl-range-thumb { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 color-mix(in srgb, var(--rl-accent) 55%, #05070d), 0 6px 12px rgba(4, 2, 12, 0.75); }
+.rl-range input[type="range"]:active ~ .rl-range-thumb { transform: translate(1px, 1px) scale(1.08); box-shadow: 0 0 0 transparent, 0 0 0 4px color-mix(in srgb, var(--rl-accent) 22%, transparent); }
+/* The real input is transparent, so its focus ring would be too. */
+.rl-range input[type="range"]:focus-visible ~ .rl-range-thumb { outline: 2px solid var(--rl-accent); outline-offset: 3px; }
+.rl-range-value { cursor: text; }
+.rl-range-value input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  font: inherit;
+  text-align: right;
+  min-width: 2ch;
+}
+.rl-range-value:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 35%, transparent); }
+html[data-depth="off"] .rl-range-thumb { box-shadow: 0 2px 6px rgba(4, 2, 12, 0.6); transform: none !important; }
