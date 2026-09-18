@@ -299,7 +299,14 @@ export const grantExpiresAt = (g: Pick<Grant, "expiresAt" | "policyVersion"> & {
     : g.onchain?.expiresAt ? g.onchain.expiresAt * 1000
       : new Date(g.policyVersion.expiresAt).getTime();
 
-export const fmtUsdc = (units: string | number | bigint, decimals = 6) => (Number(units) / 10 ** decimals).toLocaleString("en-US", { maximumFractionDigits: 2 });
+// Two decimals for ordinary amounts. An amount too small to survive that — the
+// dashboard's own over-cap probe is a single base unit, 0.000001 — keeps enough
+// digits to be seen: "0 USDC" read as though nothing had been attempted.
+export const fmtUsdc = (units: string | number | bigint, decimals = 6) => {
+  const value = Number(units) / 10 ** decimals;
+  const tiny = value !== 0 && Math.abs(value) < 0.01;
+  return value.toLocaleString("en-US", { maximumFractionDigits: tiny ? decimals : 2 });
+};
 export const short = (s: string, n = 4) => (s.length > n * 2 + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s);
 
 // Compact relative time: "<1m", "5m", "3h", "2d". Language-neutral units so it

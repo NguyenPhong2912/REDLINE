@@ -91,7 +91,8 @@ export async function processIntent(
     payload: { grantId, allow: precheck.allow, reasonCode: precheck.reasonCode, gate: precheck.gate, message: precheck.message, ruleSnapshotHash: snapshot },
   });
 
-  if (!precheck.allow && !opts.proveOnChain) {
+  const prove = opts.proveOnChain === true && process.env.ONCHAIN_PROOF !== "off";
+  if (!precheck.allow && !prove) {
     await prisma.policyDecision.create({
       data: { intentId: row.id, allow: false, reasonCode: precheck.reasonCode, ruleSnapshotHash: snapshot, stage: "precheck" },
     });

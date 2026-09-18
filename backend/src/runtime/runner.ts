@@ -13,6 +13,19 @@ import { llmPlan } from "./llm.js";
 
 const active = new Map<string, { stop: () => void }>();
 
+/**
+ * How many of a run's refused proposals are sent to Solana anyway.
+ *
+ * The refusal worth showing is the one the agent walks into by itself: the
+ * owner revokes while it is mid-run, or the budget runs out while it is still
+ * working. Left at the precheck, that moment was the server's word with no
+ * signature. Sent on-chain, it is a failed transaction anyone can open. But
+ * each one costs the executor a fee, and an agent that keeps being denied
+ * should not keep billing for it — so the first few are proven and the rest
+ * are recorded at the precheck as before.
+ */
+export const PROOFS_PER_RUN = 2;
+
 // Every promise this loop lets go of lands here. Node 15+ turns an unhandled
 // rejection into a process exit, and Fastify installs no handler, so a single
 // failed `agentRun.update` during a stop — one DB blip — used to take the
@@ -43,6 +56,7 @@ export async function startRun(grantId: string, mode: "scripted" | "llm", tickMs
   const hireEndsAt = grant.hire?.endsAt.getTime() ?? null;
   let step = 0;
   let stopped = false;
+  let proofsLeft = PROOFS_PER_RUN;
 
   const finish = async (status: "stopped" | "failed", reason: string) => {
     if (stopped) return;
@@ -64,7 +78,8 @@ export async function startRun(grantId: string, mode: "scripted" | "llm", tickMs
       const plan = mode === "scripted" ? scriptedPlan(fresh, step) : await llmPlan(fresh, grant.id);
       if (!plan) return finish("stopped", "script complete");
       step += 1;
-      const res = await processIntent(grantId, plan, { runId: run.id });
+      const res = await processIntent(grantId, plan, { runId: run.id, proveOnChain: proofsLeft > 0 });
+      if (!res.precheck.allow && res.submitted) proofsLeft -= 1;
       // A revoked grant ends the run; any other rejection lets the loop go on
       // so the owner can watch the agent keep getting denied.
       if (res.precheck.reasonCode === "REVOKED" || res.onchainReason === "REVOKED") return finish("stopped", "grant revoked");
