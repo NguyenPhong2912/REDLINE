@@ -3,6 +3,7 @@ import { isTransientChainError } from "../src/chain/solana.js";
 import { canonicalJson } from "../src/routes/agents.js";
 import { redactPayload } from "../src/redact.js";
 import { withoutModel, type Grounding } from "../src/routes/assistant.js";
+import { maskKey, validateKeyFormat } from "../src/llm-client.js";
 
 // Regression tests for the logic bugs found in the audit of fc0a4e4. Each one
 // is written as the failure was observed, so a reintroduction reads as the
@@ -81,3 +82,25 @@ describe("assistant gate advice matches POLICY_GATES numbering", () => {
     expect(withoutModel(grounded(5, "DESTINATION_NOT_ALLOWED"), "why is my agent stuck?").suggestions.some(s => s.title === "Use an allowed destination")).toBe(true);
   });
 });
+
+describe("LLM client diagnostic utils", () => {
+  it("safely masks API key prefixes", () => {
+    expect(maskKey(undefined)).toBe("<none>");
+    expect(maskKey("")).toBe("<none>");
+    expect(maskKey("short")).toBe("sho***");
+    expect(maskKey("AQ.TestMockKeyPrefix123456789012345678901234567890END104g")).toBe("AQ.TestM...104g (len 57)");
+  });
+  it("validates Gemini API key format and accepts AIzaSy and AQ prefixes", () => {
+    const invalidGemini = validateKeyFormat("INVALID_PREFIX_12345678901234567890", "https://generativelanguage.googleapis.com/v1beta/openai/");
+    expect(invalidGemini.valid).toBe(false);
+    expect(invalidGemini.warning).toContain("Gemini API key should start with 'AIzaSy' or 'AQ.'");
+
+    const validLegacyGemini = validateKeyFormat("AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6", "https://generativelanguage.googleapis.com/v1beta/openai/");
+    expect(validLegacyGemini.valid).toBe(true);
+
+    const validAuthGemini = validateKeyFormat("AQ.TestMockValidationKeyString12345678901234567890", "https://generativelanguage.googleapis.com/v1beta/openai/");
+    expect(validAuthGemini.valid).toBe(true);
+    expect(validAuthGemini.warning).toBeUndefined();
+  });
+});
+

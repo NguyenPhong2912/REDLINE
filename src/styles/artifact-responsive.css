@@ -70,21 +70,17 @@ code {
 }
 .hdr {
   flex: none;
-  gap: 16px;
-}
-.hdr .nav {
-  min-width: 0;
-  white-space: nowrap;
-}
-.hdr .tools {
   gap: 8px;
+  padding: 0 16px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
-/* The nav is nowrap and used to shrink below its content, so at a tight width
-   the last items ran underneath the tools. Now it clips and scrolls instead,
-   and the tools keep their width. The block padding keeps the active-page
-   diamond (drawn 1px below the button) inside the clip. */
 .hdr .nav {
   flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: 6px;
@@ -93,11 +89,46 @@ code {
 .hdr .nav::-webkit-scrollbar {
   display: none;
 }
+.hdr .nav button {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  padding: 5px 7px !important;
+  font-size: 11.5px !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-weight: 600 !important;
+  color: #dce6f5 !important;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition: color .2s, background .2s, text-shadow .2s;
+}
+.hdr .nav button:hover {
+  color: #ffffff !important;
+  background: rgba(92, 130, 188, 0.22) !important;
+}
+.hdr .nav button[aria-current="page"] {
+  color: #fce7c0 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 12px rgba(223, 195, 140, 0.4);
+}
 .hdr .tools {
   flex: none;
+  gap: 4px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+.hdr .tools .tool {
+  padding: 0 7px;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600 !important;
+  color: #c9d8ee !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
 }
 .brand {
   flex: none;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.16em !important;
+  color: #ffffff !important;
 }
 .main-scroll {
   flex: 1;
@@ -178,21 +209,17 @@ code {
 }
 .wallet-slot {
   flex: none;
-  max-width: 260px;
+  display: flex;
+  align-items: center;
 }
 .wallet-slot > span {
   display: none;
 }
+.wallet-slot button,
+.wallet-slot > div,
 .wallet-slot > div > button {
-  color: #101827 !important;
-  background: linear-gradient(#eed5a3, #dfc38c) !important;
-  border: 1px solid #dfc38c !important;
-  box-shadow: 0 3px 0 #8f7340;
-  border-radius: 6px;
-  min-height: 34px;
-}
-.wallet-slot > div > button svg {
-  color: #101827;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 .mobile-navigation {
   position: absolute;
@@ -1603,6 +1630,7 @@ code {
   border-radius: 6px;
   background: var(--inset);
   font-size: 13px;
+  color: #ffffff !important;
 }
 .redline-console-note {
   padding: 14px;
@@ -1714,30 +1742,47 @@ code {
     width: 100%;
   }
 }
+@media (max-width: 1680px) {
+  .hdr {
+    gap: 8px;
+    padding-inline: 16px;
+  }
+  .hdr .nav button {
+    padding-inline: 5px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  .tools .netpill,
+  .tools .tool > span {
+    display: none !important;
+  }
+}
 @media (max-width: 1400px) {
   .hdr {
-    gap: 10px;
-    padding-inline: 24px;
+    gap: 6px;
+    padding-inline: 12px;
   }
   .hdr .nav {
     margin-left: 0;
   }
   .hdr .nav button {
-    padding-inline: 7px;
-    font-size: 12px;
+    /* Tight, but not below 11px: the nav scrolls when it runs out of room, so
+       it never has to shrink the type to fit. */
+    padding-inline: 5px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
   .tools .netpill,
   .tools .tool > span {
-    display: none;
+    display: none !important;
   }
   .topline {
     grid-template-columns: auto 1fr auto;
   }
   .tl-dots {
     display: none;
-  }
-  .wallet-slot {
-    max-width: 240px;
   }
   [data-route="agents"] .agents-grid {
     grid-template-columns: 210px minmax(0, 1fr) 310px;

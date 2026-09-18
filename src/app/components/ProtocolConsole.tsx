@@ -105,12 +105,11 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
   async function answerQuestion(question: string) {
     const reply = await api.ask(question, owner);
     push(line("out", reply.answer));
-    for (const s of reply.suggestions) {
-      push(line("warn", `→ ${s.title}`), line("out", `  ${s.detail}`));
+    if (reply.suggestions && reply.suggestions.length > 0) {
+      for (const s of reply.suggestions) {
+        push(line("dim", `💡 ${s.title}: ${s.detail}`));
+      }
     }
-    push(line("dim", reply.source === "model"
-      ? `${tr("answered by")} ${reply.model}${tr(", grounded in recorded state")}`
-      : tr("smart rules + live data")));
   }
 
   async function runCommand(raw: string) {
@@ -249,7 +248,7 @@ export function ProtocolConsole({ owner }: { owner?: string }) {
           aria-label={tr("Console command")}
           spellCheck={false}
           autoComplete="off"
-          style={{ ...mono }}
+          style={{ ...mono, color: "#ffffff", caretColor: "#38bdf8" }}
         />
         <button type="submit" disabled={busy} aria-label={tr("Run command")}><CornerDownLeft size={12} /></button>
       </form>

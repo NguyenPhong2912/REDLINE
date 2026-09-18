@@ -102,7 +102,7 @@ export function SolanaWalletControl() {
     const short = `${owner.slice(0, 4)}…${owner.slice(-4)}`;
     const signedIn = !!sessionFor(owner) && sessionWallet === owner;
     return (
-      <div className="relative flex items-center gap-2">
+      <div className="relative flex items-center gap-2 whitespace-nowrap shrink-0">
         <WalletBalance owner={owner} />
         {!signedIn && (
           <button
@@ -123,32 +123,32 @@ export function SolanaWalletControl() {
               }
             }}
             disabled={signingIn}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-60"
-            style={{ background: "#38bdf80e", border: "1px solid #38bdf835", color: color.info }}
+            className="hidden sm:inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-all disabled:opacity-60"
+            style={{ background: "#38bdf814", border: "1px solid #38bdf845", color: color.info, whiteSpace: "nowrap", flexShrink: 0, lineHeight: 1 }}
             title={tr("Prove you hold this wallet. Signs a message only — no transfer, no funds moved.")}
           >
             {signingIn ? <LoaderCircle size={12} className="animate-spin" /> : <KeyRound size={12} />}
-            {signingIn ? tr("Check your wallet…") : tr("Sign in")}
+            <span className="whitespace-nowrap leading-none">{signingIn ? tr("Check your wallet…") : tr("Sign in")}</span>
           </button>
         )}
-        {signinError && <span role="alert" className="hidden lg:inline text-[12px]" style={{ color: color.danger }}>{signinError}</span>}
+        {signinError && <span role="alert" className="hidden lg:inline text-[12px] whitespace-nowrap shrink-0" style={{ color: color.danger }}>{signinError}</span>}
         <div
-          className="flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: `${ACCENT}0e`, border: `1px solid ${ACCENT}35`, color: ACCENT }}
+          className="flex items-center gap-1.5 h-8 pl-3 pr-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0"
+          style={{ background: `${ACCENT}0e`, border: `1px solid ${ACCENT}35`, color: ACCENT, whiteSpace: "nowrap", flexShrink: 0 }}
         >
-          <Wallet size={13} />
+          <Wallet size={13} className="shrink-0" />
           <CopyChip
             value={owner}
             label={short}
             title={tr("Copy full wallet address")}
             toastLabel={short}
           />
-          {signedIn && <KeyRound size={11} style={{ color: color.info }} />}
-          <span className="w-1.5 h-1.5 rounded-full glow-pulse-dot" style={{ background: ACCENT }} />
+          {signedIn && <KeyRound size={11} className="shrink-0" style={{ color: color.info }} />}
+          <span className="w-1.5 h-1.5 rounded-full glow-pulse-dot shrink-0" style={{ background: ACCENT }} />
           <button
             type="button"
             onClick={() => { signOut(); setSessionWallet(null); disconnect.dispatch(); toast(tr("Disconnected"), { description: short }); }}
-            className="p-1.5 rounded-lg transition-colors hover:bg-black/[0.06]"
+            className="p-1 rounded-md transition-colors hover:bg-black/[0.06] shrink-0"
             title={tr("Disconnect Solana wallet")}
           >
             <LogOut size={12} />

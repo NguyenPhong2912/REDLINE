@@ -111,6 +111,7 @@ export interface AssistantReply {
   answer: string;
   suggestions: { title: string; detail: string }[];
   source: "model" | "rules";
+  groundedBy?: "rules";
   model: string;
 }
 export interface Analytics {
