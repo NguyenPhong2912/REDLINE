@@ -51,8 +51,13 @@ export function deterministic(input: RiskInput): Assessment {
   const decision: Decision = score >= 80 ? "BLOCK" : score >= 60 ? "REVIEW" : "ALLOW";
   if (!findings.length) findings.push("Policy scope is narrow and time-bounded for a pilot.");
   if (!recommendations.length) recommendations.push("Keep simulation and anomaly alerts enabled.");
-  return { score, level, decision, summary: decision === "ALLOW" ? "Policy is bounded enough for a monitored Devnet pilot." : decision === "REVIEW" ? "Policy requires human review before signing." : "Policy exceeds the safety envelope and should not be signed.", findings, recommendations, source: "deterministic-fallback", model: "redline-rules-v1" };
+  return { score, level, decision, summary: summaryFor(decision), findings, recommendations, source: "deterministic-fallback", model: "redline-rules-v1" };
 }
+
+const summaryFor = (decision: Decision): string =>
+  decision === "ALLOW" ? "Policy is bounded enough for a monitored Devnet pilot."
+    : decision === "REVIEW" ? "Policy requires human review before signing."
+      : "Policy exceeds the safety envelope and should not be signed.";
 
 const decisionRank: Record<Decision, number> = { ALLOW: 0, REVIEW: 1, BLOCK: 2 };
 const levelRank: Record<Level, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
@@ -75,8 +80,12 @@ export function mergeAssessments(baseline: Assessment, ai: Assessment, model: st
   const score = Math.max(raised, scoreFloorFor(decision));
   const level = harsherLevel(harsherLevel(baseline.level, ai.level), levelForScore(score));
 
-  const stricter = decision !== ai.decision || level !== ai.level || score !== ai.score;
-  return { score, level, decision, summary: stricter ? baseline.summary : ai.summary, findings: [...new Set([...baseline.findings, ...ai.findings])].slice(0, 5), recommendations: [...new Set([...baseline.recommendations, ...ai.recommendations])].slice(0, 5), source: "openai+deterministic-floor", model };
+  // The sentence has to belong to the verdict it sits under. The old rule fell
+  // back to the baseline's sentence whenever the merge changed anything — so a
+  // policy the model pushed into REVIEW was captioned "bounded enough for a
+  // pilot", the baseline's ALLOW line, directly beneath a red REVIEW.
+  const summary = ai.decision === decision ? ai.summary : baseline.decision === decision ? baseline.summary : summaryFor(decision);
+  return { score, level, decision, summary, findings: [...new Set([...baseline.findings, ...ai.findings])].slice(0, 5), recommendations: [...new Set([...baseline.recommendations, ...ai.recommendations])].slice(0, 5), source: "openai+deterministic-floor", model };
 }
 
 const schema = {
@@ -104,11 +113,20 @@ export async function riskRoutes(app: FastifyInstance) {
           "Assess only operational risk from the supplied policy. Do not predict profit, give investment advice, or invent market data.",
           "Prefer bounded permissions, short validity windows, simulation, allowlists, and human review for high-impact actions.",
           "A BLOCK verdict is appropriate when cumulative blast radius is unacceptable; REVIEW means explicit human approval is required.",
+          // The input is only the knobs the owner turned. Without this the
+          // model cannot know what is always true of a grant, and it penalised
+          // policies for "no address allowlist" — a control the program makes
+          // mandatory — so the same 500 USDC policy came back ALLOW on one call
+          // and REVIEW on the next.
+          "Facts that hold for EVERY policy and are enforced on-chain by the REDLINE program, so never flag them as missing: transfers can only go to an owner-signed allowlist of 1 to 4 destination addresses; only allowlisted token mints can move; every transfer needs the next nonce, so none can be replayed; the grant expires at a fixed time; the owner can revoke it at any moment; funds sit in a program-owned vault and the agent never holds a key to them.",
+          "One real limitation to weigh: there is no per-transfer limit, so a single transfer may spend the entire remaining cap. Treat the spend cap as the worst-case single loss.",
+          "Judge only the numbers supplied. Do not raise severity for controls you were not told about.",
         ].join(" "),
         input,
         schemaName: "redline_agent_risk_assessment",
         schema,
         maxTokens: 700,
+        temperature: 0,
       });
       if (!assessment) return baseline;
       return mergeAssessments(baseline, assessment, modelName());

@@ -6,6 +6,10 @@ export interface JsonModelRequest {
   schemaName: string;
   schema: Record<string, unknown>;
   maxTokens: number;
+  /** Sampling temperature. Leave unset for conversation; set 0 where the same
+   *  input must give the same answer — a verdict that changes between two
+   *  identical requests is not a verdict. */
+  temperature?: number;
 }
 
 export function getApiKey(): string | undefined {
@@ -174,6 +178,7 @@ async function askGeminiNative<T>(req: JsonModelRequest, apiKey: string, model: 
         responseMimeType: "application/json",
         responseSchema: cleanSchemaForGemini(req.schema),
         maxOutputTokens: req.maxTokens,
+        ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
       },
     };
 
@@ -245,6 +250,7 @@ export async function askForJson<T>(req: JsonModelRequest): Promise<T | null> {
     const completion = await client.chat.completions.create({
       model,
       max_tokens: req.maxTokens,
+      ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
       messages: [
         { role: "system", content: `${req.system}\n\nRespond ONLY with a valid JSON object matching this schema: ${JSON.stringify(req.schema)}` },
         { role: "user", content: JSON.stringify(req.input) },
@@ -274,6 +280,7 @@ export async function askForJson<T>(req: JsonModelRequest): Promise<T | null> {
     const completion = await client.chat.completions.create({
       model,
       max_tokens: req.maxTokens,
+      ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
       messages: [
         { role: "system", content: req.system },
         { role: "user", content: JSON.stringify(req.input) },

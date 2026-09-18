@@ -181,3 +181,39 @@ describe("deterministic floor", () => {
     expect(merged.summary).toBe("Destination allowlist is unusually broad.");
   });
 });
+
+describe("mergeAssessments — the sentence belongs to the verdict", () => {
+  // Seen live: the model pushed a 500 USDC policy to 60, the merge made it
+  // REVIEW, and the caption underneath still read "bounded enough for a pilot".
+  const base = { level: "LOW" as const, findings: ["f"], recommendations: ["r"], source: "x", model: "m" };
+
+  it("does not caption a REVIEW with the baseline's ALLOW sentence", () => {
+    const merged = mergeAssessments(
+      { ...base, score: 8, decision: "ALLOW", summary: "Policy is bounded enough for a monitored Devnet pilot." },
+      { ...base, score: 60, decision: "ALLOW", summary: "Looks fine to me." },
+      "m",
+    );
+    expect(merged.decision).toBe("REVIEW");
+    expect(merged.summary).not.toMatch(/bounded enough|looks fine/i);
+    expect(merged.summary).toMatch(/review/i);
+  });
+
+  it("keeps the model's own sentence when the verdict is the model's", () => {
+    const merged = mergeAssessments(
+      { ...base, score: 20, decision: "ALLOW", summary: "baseline says allow" },
+      { ...base, score: 65, level: "HIGH", decision: "REVIEW", summary: "Window is long for this cap." },
+      "m",
+    );
+    expect(merged.summary).toBe("Window is long for this cap.");
+  });
+
+  it("keeps the baseline's sentence when the floor is what decided", () => {
+    const merged = mergeAssessments(
+      { ...base, score: 94, level: "CRITICAL", decision: "BLOCK", summary: "Policy exceeds the safety envelope and should not be signed." },
+      { ...base, score: 10, decision: "ALLOW", summary: "All good." },
+      "m",
+    );
+    expect(merged.decision).toBe("BLOCK");
+    expect(merged.summary).toMatch(/should not be signed/);
+  });
+});
