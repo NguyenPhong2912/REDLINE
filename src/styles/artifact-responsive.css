@@ -209,21 +209,17 @@ code {
 }
 .wallet-slot {
   flex: none;
-  max-width: 260px;
+  display: flex;
+  align-items: center;
 }
 .wallet-slot > span {
   display: none;
 }
+.wallet-slot button,
+.wallet-slot > div,
 .wallet-slot > div > button {
-  color: #101827 !important;
-  background: linear-gradient(#eed5a3, #dfc38c) !important;
-  border: 1px solid #dfc38c !important;
-  box-shadow: 0 3px 0 #8f7340;
-  border-radius: 6px;
-  min-height: 34px;
-}
-.wallet-slot > div > button svg {
-  color: #101827;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 .mobile-navigation {
   position: absolute;
@@ -1761,9 +1757,6 @@ code {
   .tools .tool > span {
     display: none !important;
   }
-  .wallet-slot {
-    max-width: 200px;
-  }
 }
 @media (max-width: 1400px) {
   .hdr {
@@ -1788,9 +1781,6 @@ code {
   }
   .tl-dots {
     display: none;
-  }
-  .wallet-slot {
-    max-width: 180px;
   }
   [data-route="agents"] .agents-grid {
     grid-template-columns: 210px minmax(0, 1fr) 310px;
